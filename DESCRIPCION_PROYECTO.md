@@ -42,15 +42,17 @@ Punto de entrada único: **`is.generador.SoyLaPuerta`** (facade). Todo lo demás
 
 ```
 libreria_is/src/is/generador/
-├── SoyLaPuerta.java              # Fachada (conecta puertos con casos de uso)
+├── SoyLaPuerta.java              # Fachada delgada: solo delega
 ├── domain/                       # Puro, sin dependencias externas
 │   ├── model/                    # ProjectModel, ClassModel, Kind, RelType, ...
 │   ├── policy/                   # DiagramFilter (Builder), DiagramOptions
 │   ├── port/                     # SourceAnalyzerPort, DiagramRendererPort, ...
 │   └── BeanAccessors.java        # Regla estricta getter/setter
-├── application/                  # Analyze/Generate/Export use cases + FilteredProjectBuilder
+├── application/                  # Casos de uso + ClassInfo, ClassInfoService, ProjectQueryService
 └── infrastructure/
-    ├── javaparser/               # ProjectAnalyzer, TypeClassifier
+    ├── javaparser/               # ProjectAnalyzer (orquesta) + SourceScanner, TypeExtractor,
+    │                             # GenericTypeParser, ImportResolver, RelationshipDetector,
+    │                             # ExternalTypeRegistrar, TypeClassifier
     └── plantuml/                 # PlantUmlGenerator, PumlFileWriter, FileSystemDiagramWriter
 ```
 
