@@ -232,19 +232,25 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             return;
         }
         Set<String> externalNames = new HashSet<>();
+        Set<String> knownNames = new HashSet<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
+                knownNames.add(model.getName());
                 if (isExternal(model) && renderedNames.contains(model.getName())) {
                     externalNames.add(model.getName());
                 }
             }
         }
+        // Endpoints hidden by DiagramOptions (known but not rendered).
+        // Relationships to unmodeled names are preserved: PlantUML
+        // declares the missing endpoint implicitly.
+        Set<String> hiddenNames = new HashSet<>(knownNames);
+        hiddenNames.removeAll(renderedNames);
         List<RelationshipModel> internalRels = new ArrayList<>();
         List<RelationshipModel> externalRels = new ArrayList<>();
         for (RelationshipModel relationship : project.getRelationships()) {
-            // Drop relations pointing at hidden (filtered-out) boxes.
-            if (!renderedNames.contains(relationship.getSource())
-                    || !renderedNames.contains(relationship.getTarget())) {
+            if (hiddenNames.contains(relationship.getSource())
+                    || hiddenNames.contains(relationship.getTarget())) {
                 continue;
             }
             if (externalNames.contains(relationship.getSource())

@@ -696,10 +696,6 @@ package "EXTERNAL" {
     <<external>>
   }
 
-  class ID {
-    <<external>>
-  }
-
   class Locale {
     <<external>>
   }
@@ -713,10 +709,6 @@ package "EXTERNAL" {
   }
 
   class SystemModule {
-    <<external>>
-  }
-
-  class T {
     <<external>>
   }
 
@@ -864,8 +856,6 @@ AsignaturaCostoActualizarDto --> BigDecimal
 EstudianteActualizarDto --> UUID
 EstudianteDto --> UUID
 RepositorioBaseAbstracto --> TpaRepository
-RepositorioBaseAbstracto --> T
-RepositorioBaseAbstracto --> ID
 ConfiguracionDeDependencias --> SystemModule
 RutaPersistencia --> Path
 CursoVista --> TableColumn

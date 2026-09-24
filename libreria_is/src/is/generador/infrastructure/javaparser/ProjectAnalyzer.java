@@ -19,6 +19,7 @@ import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
+import com.github.javaparser.ast.type.TypeParameter;
 import com.github.javaparser.ast.type.WildcardType;
 import is.generador.domain.model.AttributeModel;
 import is.generador.domain.model.ClassModel;
@@ -202,6 +203,7 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
         List<String> extendedTypes = new ArrayList<>();
         List<String> implementedTypes = new ArrayList<>();
         List<String> enumConstants = new ArrayList<>();
+        List<String> typeParameters = new ArrayList<>();
 
         for (AnnotationExpr annotation : type.getAnnotations()) {
             stereotypes.add("@" + annotation.getNameAsString());
@@ -211,6 +213,7 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
             ClassOrInterfaceDeclaration declaration = (ClassOrInterfaceDeclaration) type;
             isAbstract = declaration.isAbstract();
             kind = declaration.isInterface() ? "Interface" : (isAbstract ? "AbstractClass" : "Class");
+            typeParameters.addAll(typeParameterNames(declaration.getTypeParameters()));
 
             for (ClassOrInterfaceType extended : declaration.getExtendedTypes()) {
                 extendedTypes.add(extended.getNameAsString());
@@ -232,18 +235,21 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
                 constructors.add(new ConstructorModel(
                         constructor.getNameAsString(),
                         toParameters(constructor.getParameters()),
-                        modifierNames(constructor.getModifiers())));
+                        modifierNames(constructor.getModifiers()),
+                        typeParameterNames(constructor.getTypeParameters())));
             }
             for (MethodDeclaration method : declaration.getMethods()) {
                 methods.add(new MethodModel(
                         method.getNameAsString(),
                         method.getType().asString(),
                         toParameters(method.getParameters()),
-                        modifierNames(method.getModifiers())));
+                        modifierNames(method.getModifiers()),
+                        typeParameterNames(method.getTypeParameters())));
             }
         } else if (type instanceof RecordDeclaration) {
             kind = "Record";
             RecordDeclaration record = (RecordDeclaration) type;
+            typeParameters.addAll(typeParameterNames(record.getTypeParameters()));
             // records can also implement interfaces (RecordDeclaration is NOT a ClassOrInterfaceDeclaration)
             for (ClassOrInterfaceType implemented : record.getImplementedTypes()) {
                 implementedTypes.add(implemented.getNameAsString());
@@ -270,14 +276,16 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
                     constructors.add(new ConstructorModel(
                             constructor.getNameAsString(),
                             toParameters(constructor.getParameters()),
-                            modifierNames(constructor.getModifiers())));
+                            modifierNames(constructor.getModifiers()),
+                            typeParameterNames(constructor.getTypeParameters())));
                 } else if (member instanceof MethodDeclaration) {
                     MethodDeclaration method = (MethodDeclaration) member;
                     methods.add(new MethodModel(
                             method.getNameAsString(),
                             method.getType().asString(),
                             toParameters(method.getParameters()),
-                            modifierNames(method.getModifiers())));
+                            modifierNames(method.getModifiers()),
+                            typeParameterNames(method.getTypeParameters())));
                 }
             }
         } else if (type instanceof EnumDeclaration) {
@@ -302,14 +310,16 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
                     constructors.add(new ConstructorModel(
                             constructor.getNameAsString(),
                             toParameters(constructor.getParameters()),
-                            modifierNames(constructor.getModifiers())));
+                            modifierNames(constructor.getModifiers()),
+                            typeParameterNames(constructor.getTypeParameters())));
                 } else if (member instanceof MethodDeclaration) {
                     MethodDeclaration method = (MethodDeclaration) member;
                     methods.add(new MethodModel(
                             method.getNameAsString(),
                             method.getType().asString(),
                             toParameters(method.getParameters()),
-                            modifierNames(method.getModifiers())));
+                            modifierNames(method.getModifiers()),
+                            typeParameterNames(method.getTypeParameters())));
                 }
             }
         } else if (type instanceof AnnotationDeclaration) {
@@ -317,7 +327,19 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
         }
 
         return new ClassModel(name, packageName, kind, isAbstract, stereotypes,
-                attributes, methods, constructors, extendedTypes, implementedTypes, enumConstants);
+                attributes, methods, constructors, extendedTypes, implementedTypes, enumConstants,
+                typeParameters);
+    }
+
+    /** Names of declared type variables (e.g. {@code <T, ID>} -> [T, ID]). */
+    private static List<String> typeParameterNames(List<TypeParameter> params) {
+        List<String> names = new ArrayList<>();
+        if (params != null) {
+            for (TypeParameter param : params) {
+                names.add(param.getNameAsString());
+            }
+        }
+        return names;
     }
 
     private List<ParameterModel> toParameters(List<Parameter> parameters) {
@@ -352,7 +374,7 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
                     addOnce(relationships, seen, model.getName(), simple, "EXTENDS");
                 }
                 // generics inside extends clause, e.g. extends Base<Package>
-                for (String inner : splitTypeNames(parent)) {
+                for (String inner : visibleTypeNames(splitTypeNames(parent), model.getTypeParameters())) {
                     if (classNames.contains(inner) && !inner.equals(model.getName()) && !inner.equals(simple)) {
                         addOnce(relationships, seen, model.getName(), inner, "ASSOCIATION");
                     }
@@ -363,7 +385,7 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
                 if (classNames.contains(simple)) {
                     addOnce(relationships, seen, model.getName(), simple, "IMPLEMENTS");
                 }
-                for (String inner : splitTypeNames(parent)) {
+                for (String inner : visibleTypeNames(splitTypeNames(parent), model.getTypeParameters())) {
                     if (classNames.contains(inner) && !inner.equals(model.getName()) && !inner.equals(simple)) {
                         addOnce(relationships, seen, model.getName(), inner, "ASSOCIATION");
                     }
@@ -373,7 +395,8 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
             // ASSOCIATION: attribute types (including generic arguments like List<Package>)
             Set<String> associated = new HashSet<>();
             for (AttributeModel attribute : model.getAttributes()) {
-                for (String target : extractReferencedNames(attribute.getType())) {
+                for (String target : visibleTypeNames(extractReferencedNames(attribute.getType()),
+                        model.getTypeParameters())) {
                     if (classNames.contains(target) && !target.equals(model.getName())) {
                         addOnce(relationships, seen, model.getName(), target, "ASSOCIATION");
                         associated.add(target);
@@ -384,13 +407,15 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
             // DEPENDENCY: types used only in method/constructor signatures (params, returns)
             // or record components already covered as attributes are skipped.
             for (MethodModel method : model.getMethods()) {
-                for (String target : extractReferencedNames(method.getReturnType())) {
+                for (String target : visibleTypeNames(extractReferencedNames(method.getReturnType()),
+                        model.getTypeParameters(), method.getTypeParameters())) {
                     if (classNames.contains(target) && !target.equals(model.getName()) && !associated.contains(target)) {
                         addOnce(relationships, seen, model.getName(), target, "DEPENDENCY");
                     }
                 }
                 for (ParameterModel parameter : method.getParameters()) {
-                    for (String target : extractReferencedNames(parameter.getType())) {
+                    for (String target : visibleTypeNames(extractReferencedNames(parameter.getType()),
+                            model.getTypeParameters(), method.getTypeParameters())) {
                         if (classNames.contains(target) && !target.equals(model.getName()) && !associated.contains(target)) {
                             addOnce(relationships, seen, model.getName(), target, "DEPENDENCY");
                         }
@@ -399,7 +424,8 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
             }
             for (ConstructorModel constructor : model.getConstructors()) {
                 for (ParameterModel parameter : constructor.getParameters()) {
-                    for (String target : extractReferencedNames(parameter.getType())) {
+                    for (String target : visibleTypeNames(extractReferencedNames(parameter.getType()),
+                            model.getTypeParameters(), constructor.getTypeParameters())) {
                         if (classNames.contains(target) && !target.equals(model.getName()) && !associated.contains(target)) {
                             addOnce(relationships, seen, model.getName(), target, "DEPENDENCY");
                         }
@@ -437,8 +463,12 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
                     continue;
                 }
                 // 2. Registrar TODOS los tipos referenciados (incluye genéricos
-                //    anidados: Map<String,List<UUID>> -> UUID, no solo el último).
-                for (String target : TypeClassifier.referencedTypeNames(attribute.getType())) {
+                //    anidados: Map<String,List<UUID>> -> UUID, no solo el último),
+                //    salvo variables de tipo declaradas (<T, ID>).
+                Set<String> candidates = visibleTypeNames(
+                        TypeClassifier.referencedTypeNames(attribute.getType()),
+                        model.getTypeParameters());
+                for (String target : candidates) {
                     if (TypeClassifier.shouldIgnoreBox(target)) {
                         continue;
                     }
@@ -461,7 +491,7 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
                             resolvedPkg, "Class", false,
                             stereotypes, new ArrayList<>(), new ArrayList<>(),
                             new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
-                            new ArrayList<>()));
+                            new ArrayList<>(), List.of()));
                     }
                     addOnce(relationships, seen, model.getName(), target, "ASSOCIATION");
                 }
@@ -484,6 +514,25 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
      * "Map&lt;String, List&lt;SubZone&gt;&gt;" -&gt; {Map, String, List, SubZone}.
      */
     Set<String> extractReferencedNames(String typeString) {
+        return visibleTypeNames(extractAllNames(typeString), null);
+    }
+
+    /**
+     * Referenced names minus in-scope type variables (e.g. {@code T}, {@code ID}
+     * from {@code class Repo<T, ID>}); type variables are never real relations.
+     */
+    private static Set<String> visibleTypeNames(Set<String> names, List<String> excluded) {
+        if (excluded != null && !excluded.isEmpty()) {
+            names.removeAll(excluded);
+        }
+        return names;
+    }
+
+    private static Set<String> visibleTypeNames(Set<String> names, List<String> first, List<String> second) {
+        visibleTypeNames(names, first);
+        return visibleTypeNames(names, second);
+    }
+    private Set<String> extractAllNames(String typeString) {
         Set<String> names = new LinkedHashSet<>();
         if (typeString == null || typeString.isBlank()) {
             return names;
