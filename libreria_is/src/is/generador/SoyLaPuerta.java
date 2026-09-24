@@ -1,11 +1,19 @@
 package is.generador;
 
-import is.generador.core.DiagramFilter;
-import is.generador.core.FilteredProjectBuilder;
-import is.generador.core.ProjectAnalyzer;
-import is.generador.core.model.*;
-import is.generador.infra.PlantUmlGenerator;
-import is.generador.infra.PumlFileWriter;
+import is.generador.domain.policy.DiagramFilter;
+import is.generador.application.AnalyzeProjectUseCase;
+import is.generador.application.ExportDiagramUseCase;
+import is.generador.application.FilteredProjectBuilder;
+import is.generador.application.GenerateDiagramUseCase;
+import is.generador.domain.port.DiagramRendererPort;
+import is.generador.domain.port.DiagramWriterPort;
+import is.generador.domain.port.RunStatsProvider;
+import is.generador.domain.port.SourceAnalyzerPort;
+import is.generador.infrastructure.javaparser.ProjectAnalyzer;
+import is.generador.domain.model.*;
+import is.generador.infrastructure.plantuml.FileSystemDiagramWriter;
+import is.generador.infrastructure.plantuml.PlantUmlGenerator;
+import is.generador.infrastructure.plantuml.PumlFileWriter;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,15 +26,17 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Public facade of the "libreria_is" library.
+ * Public facade of the "libreria_is" library (API layer).
  * Uses JavaParser internally (see ProjectAnalyzer) to analyze classes, records,
  * interfaces, enums, stereotypes (annotations), constructors, getters, setters
  * and properties, and to generate PlantUML diagrams.
  *
- * <p>Simplified layout: the canonical model and engines live in
- * {@code is.generador.core} / {@code is.generador.core.model}, rendering and file output in
- * {@code is.generador.infra}. This facade ({@code is.generador.SoyLaPuerta}) is the
- * single public entry point.
+ * <p>Clean Architecture layout:
+ * {@code domain.model} / {@code domain.policy} / {@code domain.port} (pure, no
+ * external deps) &larr; {@code application} (use cases, depends only on ports)
+ * &larr; {@code infrastructure.*} (JavaParser, PlantUML, files).
+ * This facade only wires ports to use cases; all logic lives in the use cases.
+ * Test seam: {@link #SoyLaPuerta(SourceAnalyzerPort, DiagramRendererPort, DiagramWriterPort)}.
  */
 public class SoyLaPuerta {
 
@@ -36,8 +46,24 @@ public class SoyLaPuerta {
             "../proyectoPaUsarLaLibreria/src"
     };
 
-    private final ProjectAnalyzer analyzer = new ProjectAnalyzer();
-    private final PlantUmlGenerator generator = new PlantUmlGenerator();
+    private final SourceAnalyzerPort analyzer;
+    private final DiagramRendererPort renderer;
+    private final AnalyzeProjectUseCase analyzeUseCase;
+    private final GenerateDiagramUseCase generateUseCase;
+    private final ExportDiagramUseCase exportUseCase;
+
+    public SoyLaPuerta() {
+        this(new ProjectAnalyzer(), new PlantUmlGenerator(), new FileSystemDiagramWriter());
+    }
+
+    /** Composition seam: inject ports (production wires infrastructure, tests wire fakes). */
+    public SoyLaPuerta(SourceAnalyzerPort analyzer, DiagramRendererPort renderer, DiagramWriterPort writer) {
+        this.analyzer = analyzer;
+        this.renderer = renderer;
+        this.analyzeUseCase = new AnalyzeProjectUseCase(analyzer);
+        this.generateUseCase = new GenerateDiagramUseCase(analyzer, renderer);
+        this.exportUseCase = new ExportDiagramUseCase(generateUseCase, writer);
+    }
 
     public static class ClassInfo {
         private final String name;
@@ -265,12 +291,11 @@ public class SoyLaPuerta {
     }
 
     public String generatePlantUml(String folderPath) throws IOException {
-        ProjectModel project = analyzer.analyze(folderPath);
-        return generator.generate(project);
+        return generateUseCase.execute(folderPath);
     }
 
     public ProjectModel analyzeProject(String folderPath) throws IOException {
-        return analyzer.analyze(folderPath);
+        return analyzeUseCase.execute(folderPath);
     }
 
     // ---------- package structure ----------
@@ -353,32 +378,32 @@ public class SoyLaPuerta {
 
     /** Number of .java files that failed to parse in the last analysis. */
     public int getErrorCount() {
-        return analyzer.getFailedFileCount();
+        return analyzer instanceof RunStatsProvider stats ? stats.getFailedFileCount() : 0;
     }
 
     /** Number of .java files successfully parsed in the last analysis. */
     public int getParsedFileCount() {
-        return analyzer.getParsedFileCount();
+        return analyzer instanceof RunStatsProvider stats ? stats.getParsedFileCount() : 0;
     }
 
     /** Total .java files found in the last analysis. */
     public int getTotalFileCount() {
-        return analyzer.getTotalJavaFileCount();
+        return analyzer instanceof RunStatsProvider stats ? stats.getTotalJavaFileCount() : 0;
     }
 
     /** Paths of files that failed to parse in the last analysis. */
     public List<String> getFailedFiles() {
-        return analyzer.getFailedFiles();
+        return analyzer instanceof RunStatsProvider stats ? stats.getFailedFiles() : List.of();
     }
 
     /** Paths of files successfully parsed in the last analysis. */
     public List<String> getParsedFiles() {
-        return analyzer.getParsedFiles();
+        return analyzer instanceof RunStatsProvider stats ? stats.getParsedFiles() : List.of();
     }
 
     /** Human-readable "file -> reason" entries for failures in the last analysis. */
     public List<String> getFailureReasons() {
-        return analyzer.getFailureReasons();
+        return analyzer instanceof RunStatsProvider stats ? stats.getFailureReasons() : List.of();
     }
 
     /** One-line summary: "parsed X/Y, failed Z". */
@@ -404,22 +429,22 @@ public class SoyLaPuerta {
 
     // ---------- Clean Architecture bridge (Fase 2/8, canonical model) ----------
 
-    /** Analyzes via the canonical {@code is.generador.core.ProjectAnalyzer} engine. */
+    /** Analyzes via the canonical {@code is.generador.infrastructure.javaparser.ProjectAnalyzer} engine. */
     public ProjectModel analyzeWithUseCase(String folderPath) throws IOException {
         return analyzer.analyze(folderPath);
     }
 
     /** Generates PlantUML via the canonical engine. */
     public String generatePlantUmlViaUseCase(String folderPath) throws IOException {
-        return generator.generate(analyzer.analyze(folderPath));
+        return generateUseCase.execute(folderPath);
     }
 
     /** Generates PlantUML and writes it to {@code outputFile}. */
     public Path exportPlantUml(String folderPath, Path outputFile) throws IOException {
-        return PumlFileWriter.write(outputFile, generatePlantUmlViaUseCase(folderPath));
+        return exportUseCase.execute(folderPath, outputFile);
     }
 
-    /** Package views as canonical {@code is.generador.core.model.PackageModel} (Fase 10). */
+    /** Package views as canonical {@code is.generador.domain.model.PackageModel} (Fase 10). */
     public List<PackageModel> getPackageModels(String folderPath) throws IOException {
         return analyzeWithUseCase(folderPath).getPackages();
     }
@@ -450,18 +475,18 @@ public class SoyLaPuerta {
 
     /** Analyzes applying a {@code DiagramFilter} (blacklist/whitelist) post-analysis. */
     public ProjectModel analyzeFiltered(String folderPath, DiagramFilter filter) throws IOException {
-        ProjectModel project = new ProjectAnalyzer(filter).analyze(folderPath);
+        ProjectModel project = analyzeUseCase.execute(folderPath);
         return new FilteredProjectBuilder(project).withFilter(filter).build();
     }
 
     /** Generates PlantUML applying a {@code DiagramFilter} (blacklist/whitelist). */
     public String generatePlantUml(String folderPath, DiagramFilter filter) throws IOException {
-        return generator.generate(analyzeFiltered(folderPath, filter));
+        return generateUseCase.execute(folderPath, filter);
     }
 
     /** Generates PlantUML with filter and writes it to {@code outputFile}. */
     public Path exportPlantUml(String folderPath, Path outputFile, DiagramFilter filter) throws IOException {
-        return PumlFileWriter.write(outputFile, generatePlantUml(folderPath, filter));
+        return exportUseCase.execute(folderPath, outputFile, filter);
     }
 
     /** @deprecated use {@link #getExternalClasses()} instead. */

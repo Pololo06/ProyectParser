@@ -3,7 +3,7 @@ package com.universidad;
 import com.cleandev.cli.config.CliConfig;
 import com.cleandev.cli.core.CliEngine;
 import com.cleandev.cli.core.SystemModule;
-import com.universidad.config.ConfiguracionDeDependencias;
+import com.universidad.infrastructure.config.ConfiguracionDeDependencias;
 import java.util.List;
 
 
