@@ -1,7 +1,7 @@
 package com.universidad;
 
 import com.cleandev.cli.config.CliConfig;
-import com.universidad.vista.constante.ConfiguracionCli;
+import com.universidad.infrastructure.cli.constante.ConfiguracionCli;
 
 public final class AppScannerCli {
 

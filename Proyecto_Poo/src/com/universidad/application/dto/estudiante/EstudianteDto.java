@@ -1,0 +1,17 @@
+package com.universidad.application.dto.estudiante;
+
+import com.universidad.domain.model.enumeracion.EstadoEntidad;
+import java.util.UUID;
+
+public record EstudianteDto(
+        UUID id,
+        String codigo,
+        String nombre,
+        String correo,
+        String celular,
+        String direccion,
+        EstadoEntidad estado,
+        boolean activo
+        ) {
+
+}
