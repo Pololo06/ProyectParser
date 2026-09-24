@@ -213,6 +213,6 @@ CursoRepositorio <|.. CursoRepositorioImpl
 
 * **AST vs. regex:** se usa JavaParser, no expresiones regulares → soporta genéricos anidados, records, enums, tipos internos y anotaciones con precisión.
 * **Separación Clean Architecture:** `domain` (modelo + policies, puro) ← `application` (casos de uso, solo puertos) ← `infrastructure` (JavaParser, PlantUML, archivos). La fachada solo conecta puertos. El `ProjectModel` es canónico y testeable sin PlantUML.
-* **Whitelist y externas:** si la whitelist tiene algo, las clases externas (`java.util`, etc.) también se evalúan contra ella; para verlas hay que incluir sus paquetes, o usar `--no-external`/`--no-jdk` para ocultarlas.
+* **Whitelist solo para internas (opción B):** las clases externas (`@external`: JDK y librerías) solo obedecen a la blacklist y a `--no-external`/`--no-jdk`. Tras filtrar y vetar, las externas sin relaciones se eliminan (regla de huérfanas): al whitelistear un paquete solo ves las externas que ese paquete usa.
 * **Diagramas útiles, no ruidosos:** primitivos/escalares no crean cajas, externas van a bloque `EXTERNAL` separado, filtros blacklist>whitelist permiten aislar un subsistema.
 * **Trazabilidad:** cada análisis reporta qué archivos se parsearon y cuáles fallaron con motivo, sin tumbar la generación.

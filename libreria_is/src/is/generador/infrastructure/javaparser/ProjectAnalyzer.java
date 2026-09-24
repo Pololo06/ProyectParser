@@ -450,8 +450,9 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
                     String resolvedPkg = fileImportsByClass
                             .getOrDefault(model.getName(), Map.of())
                             .getOrDefault(target, TypeClassifier.resolvePackage(target));
-                    // 3. La caja externa solo se crea si el filtro la permite
-                    if (!filter.isAllowed(resolvedPkg, target)) {
+                    // 3. La caja externa solo se crea si no está en blacklist
+                    // (opción B: la whitelist es solo para clases internas).
+                    if (filter.isBlacklisted(resolvedPkg, target)) {
                         continue;
                     }
                     List<String> stereotypes = new ArrayList<>();

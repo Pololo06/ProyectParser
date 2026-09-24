@@ -33,8 +33,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
 
     /** true si la clase es externa (estereotipo {@code @external}). */
     public static boolean isExternal(ClassModel model) {
-        return model != null && model.getStereotypes() != null
-                && model.getStereotypes().contains("@external");
+        return model != null && model.isExternal();
     }
 
     /** Renders the project grouped by package (default behavior). */

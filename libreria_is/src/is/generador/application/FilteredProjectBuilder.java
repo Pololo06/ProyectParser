@@ -131,10 +131,14 @@ public class FilteredProjectBuilder {
             }
         }
 
-        // 1b. Fusionar DiagramFilter (blacklist veta; whitelist no vacía = restrictivo)
+        // 1b. Fusionar DiagramFilter. Opción B: las externas solo obedecen
+        // a la blacklist; la whitelist es solo para clases internas.
         if (originalProject.getClasses() != null && this.filter != null) {
             for (ClassModel clazz : originalProject.getClasses()) {
-                if (!this.filter.isAllowed(clazz.getPackageName(), clazz.getName())) {
+                boolean vetoed = clazz.isExternal()
+                        ? this.filter.isBlacklisted(clazz.getPackageName(), clazz.getName())
+                        : !this.filter.isAllowed(clazz.getPackageName(), clazz.getName());
+                if (vetoed) {
                     blacklistedClasses.add(clazz.getName());
                 }
             }
@@ -161,6 +165,22 @@ public class FilteredProjectBuilder {
                 }
             }
         }
+
+        // 3b. Regla de huérfanas (opción B): tras filtrar y vetar,
+        // elimina las externas que ya no tengan ninguna relación.
+        // Solo externas: las internas se conservan aunque queden aisladas.
+        Set<String> linkedNames = new HashSet<>();
+        for (RelationshipModel rel : filteredRelationships) {
+            linkedNames.add(rel.getSource());
+            linkedNames.add(rel.getTarget());
+        }
+        List<ClassModel> survivors = new ArrayList<>();
+        for (ClassModel clazz : filteredClasses) {
+            if (!clazz.isExternal() || linkedNames.contains(clazz.getName())) {
+                survivors.add(clazz);
+            }
+        }
+        filteredClasses = survivors;
 
         // 4. Instanciar el ProjectModel canónico con getProjectName()
         return new ProjectModel(originalProject.getProjectName(), filteredClasses, filteredRelationships);

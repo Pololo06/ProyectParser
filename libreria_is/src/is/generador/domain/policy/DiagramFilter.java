@@ -126,6 +126,17 @@ public class DiagramFilter {
     }
 
     /**
+     * true si el par (paquete, clase) está vetado por la blacklist,
+     * sin evaluar la whitelist. Las clases externas solo obedecen
+     * a este criterio (opción B): la whitelist es solo para internas.
+     */
+    public boolean isBlacklisted(String packageName, String className) {
+        String pkg = packageName == null ? "" : packageName.trim();
+        String cls = className == null ? "" : className.trim();
+        return blacklistedPackages.contains(pkg) || blacklistedClasses.contains(cls);
+    }
+
+    /**
      * Indica si el par (paquete, clase) tiene permiso de aparecer.
      * Precedencia: blacklist &gt; whitelist &gt; permitir.
      */

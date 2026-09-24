@@ -52,6 +52,10 @@ public class ClassModel {
     }
     public boolean isAbstract() { return isAbstract; }
     public List<String> getStereotypes() { return stereotypes; }
+    /** true si la clase es externa (estereotipo {@code @external}). */
+    public boolean isExternal() {
+        return stereotypes != null && stereotypes.contains("@external");
+    }
     public List<AttributeModel> getAttributes() { return attributes; }
     public List<MethodModel> getMethods() { return methods; }
     public List<ConstructorModel> getConstructors() { return constructors; }

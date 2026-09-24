@@ -504,12 +504,17 @@ public class AppGenerador {
         blackClasses.forEach(c -> System.out.println("  [-] Blacklist clase: " + c));
 
         List<String> whitePkgs = readSelection(scanner,
-                "> WHITELIST paq. a incluir (Enter=todos): ", packageList);
+                "> WHITELIST paq. a incluir (Enter=todos, solo internas): ", internalPkgs);
         whitePkgs.forEach(p -> System.out.println("  [+] Whitelist paquete: " + p));
 
+        List<String> internalClassNames = new ArrayList<>();
+        for (ClassModel c : internalClasses) {
+            internalClassNames.add(c.getName());
+        }
         List<String> whiteClasses = readSelection(scanner,
-                "> WHITELIST clases a incluir (Enter=todas): ", classNames);
+                "> WHITELIST clases a incluir (Enter=todas, solo internas): ", internalClassNames);
         whiteClasses.forEach(c -> System.out.println("  [+] Whitelist clase: " + c));
+        System.out.println("  (nota: las externas solo obedecen a blacklist y a --no-external/--no-jdk)");
 
         DiagramFilter filter = new DiagramFilter.Builder()
                 .excludePackages(blackPkgs)
