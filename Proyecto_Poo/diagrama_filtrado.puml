@@ -662,6 +662,7 @@ package "com.universidad.tools" {
     -String parseVisibility(List<String> modifiers) {static}
     -void logTrace(String msg) {static}
     -List<String> readSelection(Scanner scanner, String prompt, List<String> items) {static}
+    -List<String> retainKnown(List<String> selected, List<String> known, String kind) {static}
     -ProjectModel reviewRelationships(Scanner scanner, FilteredProjectBuilder builder, ProjectModel filteredModel) {static}
     -void printTypeCounts(List<ClassModel> classes, String title) {static}
     -void printResultPackages(List<PackageModel> pkgs, Set<String> externalPkgs, boolean external) {static}

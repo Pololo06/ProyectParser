@@ -148,6 +148,27 @@ public class AppGenerador {
     }
 
     /**
+     * Filtra una selección de whitelist contra los nombres internos conocidos.
+     * El texto libre que no pertenece a la lista se ignora con aviso: un nombre
+     * externo o desconocido crearía una whitelist no vacía, activaría el modo
+     * restrictivo y podría excluir todas las clases internas. La blacklist
+     * mantiene la selección libre, donde sí puede ser válida.
+     */
+    private static List<String> retainKnown(List<String> selected, List<String> known, String kind) {
+        List<String> kept = new ArrayList<>();
+        if (selected != null) {
+            for (String name : selected) {
+                if (known.contains(name)) {
+                    kept.add(name);
+                } else {
+                    System.out.println("  [!] Ignorado en whitelist (no es " + kind + "): " + name);
+                }
+            }
+        }
+        return kept;
+    }
+
+    /**
      * Revisión interactiva de relaciones (Fase 5): lista las relaciones
      * detectadas y permite vetar las no deseadas antes de generar.
      * Devuelve el modelo reconstruido sin las vetadas.
@@ -503,16 +524,18 @@ public class AppGenerador {
                 "> BLACKLIST clases a excluir (Enter=ninguna): ", classNames);
         blackClasses.forEach(c -> System.out.println("  [-] Blacklist clase: " + c));
 
-        List<String> whitePkgs = readSelection(scanner,
-                "> WHITELIST paq. a incluir (Enter=todos, solo internas): ", internalPkgs);
+        List<String> whitePkgs = retainKnown(readSelection(scanner,
+                "> WHITELIST paq. a incluir (Enter=todos, solo internas): ", internalPkgs),
+                internalPkgs, "paquete interno");
         whitePkgs.forEach(p -> System.out.println("  [+] Whitelist paquete: " + p));
 
         List<String> internalClassNames = new ArrayList<>();
         for (ClassModel c : internalClasses) {
             internalClassNames.add(c.getName());
         }
-        List<String> whiteClasses = readSelection(scanner,
-                "> WHITELIST clases a incluir (Enter=todas, solo internas): ", internalClassNames);
+        List<String> whiteClasses = retainKnown(readSelection(scanner,
+                "> WHITELIST clases a incluir (Enter=todas, solo internas): ", internalClassNames),
+                internalClassNames, "clase interna");
         whiteClasses.forEach(c -> System.out.println("  [+] Whitelist clase: " + c));
         System.out.println("  (nota: las externas solo obedecen a blacklist y a --no-external/--no-jdk)");
 
