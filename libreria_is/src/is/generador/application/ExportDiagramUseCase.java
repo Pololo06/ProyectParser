@@ -1,6 +1,7 @@
 package is.generador.application;
 
 import is.generador.domain.policy.DiagramFilter;
+import is.generador.domain.policy.DiagramOptions;
 import is.generador.domain.port.DiagramWriterPort;
 
 import java.io.IOException;
@@ -27,5 +28,11 @@ public class ExportDiagramUseCase {
 
     public Path execute(String folderPath, Path outputFile, DiagramFilter filter) throws IOException {
         return writer.write(outputFile, generator.execute(folderPath, filter));
+    }
+
+    public Path execute(String folderPath, Path outputFile, DiagramFilter filter, DiagramOptions options)
+            throws IOException {
+        return writer.write(outputFile, generator.execute(folderPath, filter,
+                options == null ? DiagramOptions.defaults() : options));
     }
 }

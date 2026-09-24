@@ -15,117 +15,7 @@ package "com.universidad" {
 
 }
 
-package "com.universidad.config" {
-  class ConfiguracionDeDependencias {
-    -List<SystemModule> modulos
-    -List<ModuloConfigurable> modulosConfigurados
-    +ConfiguracionDeDependencias()
-    +List<SystemModule> getModulos()
-    +void close()
-  }
-
-  enum RutaPersistencia {
-    PROFESORES
-    ESTUDIANTES
-    CURSOS
-    ASIGNATURAS
-    -Path ruta
-    ~RutaPersistencia(String nombreArchivo)
-    +Path obetenerRuta()
-  }
-
-}
-
-package "com.universidad.config.modulos" {
-  class ConfiguracionModuloAsignatura {
-    -AsignaturaRepositorio repositorio
-    -AsignaturaServicio servicio
-    +ConfiguracionModuloAsignatura()
-    +AsignaturaRepositorio getRepositorio()
-    +AsignaturaServicio getServicio()
-    +SystemModule construirVista()
-    +void cerrarRecursos()
-  }
-
-  class ConfiguracionModuloCurso {
-    -CursoRepositorio repositorio
-    -CursoServicio servicio
-    +ConfiguracionModuloCurso()
-    +CursoRepositorio getRepositorio()
-    +CursoServicio getServicio()
-    +SystemModule construirVista()
-    +void cerrarRecursos()
-  }
-
-  class ConfiguracionModuloEstudiante {
-    -EstudianteRepositorio repositorio
-    -EstudianteServicio servicio
-    +ConfiguracionModuloEstudiante()
-    +EstudianteRepositorio getRepositorio()
-    +EstudianteServicio getServicio()
-    +SystemModule construirVista()
-    +void cerrarRecursos()
-  }
-
-  class ConfiguracionModuloProfesor {
-    -ProfesorRepositorio repositorio
-    -ProfesorServicio servicio
-    +ConfiguracionModuloProfesor()
-    +ProfesorRepositorio getRepositorio()
-    +ProfesorServicio getServicio()
-    +SystemModule construirVista()
-    +void cerrarRecursos()
-  }
-
-  interface ModuloConfigurable {
-    ~SystemModule construirVista()
-    ~void cerrarRecursos()
-  }
-
-}
-
-package "com.universidad.controlador" {
-  class AsignaturaControlador {
-    -AsignaturaServicio servicio
-    +AsignaturaControlador(AsignaturaServicio servicio)
-    +AsignaturaCostoDto crearAsignatura(AsignaturaCostoCrearDto dto)
-    +int cantidadAsignatura()
-    +List<AsignaturaCostoDto> listarAsignatura()
-  }
-
-  class CursoControlador {
-    -CursoServicio servicio
-    +CursoControlador(CursoServicio servicio)
-    +CursoDto CrearCurso(CursoCrearDto dto)
-    +List<CursoDto> listarCursos()
-    +long cantidadCursos()
-    +CursoDto actualizarCurso(CursoActualizarDto dto)
-    +boolean eliminarCurso(UUID id)
-  }
-
-  class EstudianteControlador {
-    -EstudianteServicio servicio
-    +EstudianteControlador(EstudianteServicio servicio)
-    +EstudianteDto crearEstudiante(EstudianteCrearDto dto)
-    +List<EstudianteDto> listarEstudiantes()
-    +long cantidadEstudiantes()
-    +EstudianteDto actualizarEstudiante(EstudianteActualizarDto dto)
-    +boolean eliminarEstudiante(UUID id)
-  }
-
-  class ProfesorControlador {
-    -ProfesorServicio servi
-    +ProfesorControlador(ProfesorServicio servi)
-    +ProfesorDto crearProfesor(ProfesorCrearDto dto)
-    +int cantidadProfesores()
-    +List<ProfesorDto> listarProfesores()
-    +ProfesorDto actualizarProfesor(ProfesorActualizarDto dto)
-    +boolean eliminarProfesor(Long id)
-  }
-
-}
-
-package "com.universidad.dto.asignaturacosto" {
+package "com.universidad.application.dto.asignaturacosto" {
   record AsignaturaCostoActualizarDto {
     -Integer id
     -String nuevoNombre
@@ -151,7 +41,7 @@ package "com.universidad.dto.asignaturacosto" {
 
 }
 
-package "com.universidad.dto.curso" {
+package "com.universidad.application.dto.curso" {
   record CursoActualizarDto {
     -UUID id
     -String nuevoNombre
@@ -179,7 +69,7 @@ package "com.universidad.dto.curso" {
 
 }
 
-package "com.universidad.dto.estudiante" {
+package "com.universidad.application.dto.estudiante" {
   record EstudianteActualizarDto {
     -UUID id
     -String nuevoCorreo
@@ -210,7 +100,7 @@ package "com.universidad.dto.estudiante" {
 
 }
 
-package "com.universidad.dto.profesor" {
+package "com.universidad.application.dto.profesor" {
   record ProfesorActualizarDto {
     -Long id
     -String nuevoNombre
@@ -234,7 +124,7 @@ package "com.universidad.dto.profesor" {
 
 }
 
-package "com.universidad.dto.validacion" {
+package "com.universidad.application.dto.validacion" {
   class ReglasValidacion {
     -ReglasValidacion()
     +String limpiarRequerido(String valor, String mensajeError) {static}
@@ -252,7 +142,7 @@ package "com.universidad.dto.validacion" {
 
 }
 
-package "com.universidad.mapeador" {
+package "com.universidad.application.mapper" {
   class AsignaturaMapeador {
     +AsignaturaMapeador()
     +AsignaturaCostoDto toDto(AsignaturaCosto entidad)
@@ -282,7 +172,85 @@ package "com.universidad.mapeador" {
 
 }
 
-package "com.universidad.modelo" {
+package "com.universidad.application.port" {
+  interface AsignaturaServicioPort {
+    ~AsignaturaCostoDto registrarAsignatura(AsignaturaCostoCrearDto dto)
+    ~List<AsignaturaCostoDto> obtenerAsignaturas()
+    ~int contarAsignaturas()
+  }
+
+  interface CursoServicioPort {
+    ~CursoDto registrarCurso(CursoCrearDto dto)
+    ~List<CursoDto> obtenerCursos()
+    ~long contarCursos()
+    ~CursoDto actualizarCurso(CursoActualizarDto dto)
+    ~boolean eliminarCurso(UUID id)
+  }
+
+  interface EstudianteServicioPort {
+    ~EstudianteDto registrarEstudiante(EstudianteCrearDto dto)
+    ~List<EstudianteDto> obtenerEstudiantes()
+    ~long contarEstudiantes()
+    ~EstudianteDto actualizarEstudiante(EstudianteActualizarDto dto)
+    ~boolean eliminarEstudiante(UUID id)
+  }
+
+  interface ProfesorServicioPort {
+    ~ProfesorDto registrarProfesor(ProfesorCrearDto dto)
+    ~List<ProfesorDto> obtenerProfesores()
+    ~int contarProfesores()
+    ~ProfesorDto actualizarProfesor(ProfesorActualizarDto dto)
+    ~boolean eliminarProfesor(Long id)
+  }
+
+}
+
+package "com.universidad.application.service" {
+  class AsignaturaServicio {
+    -AsignaturaMapeador mapeador
+    -AsignaturaRepositorio repositorio
+    +AsignaturaServicio(AsignaturaMapeador mapeador, AsignaturaRepositorio repositorio)
+    +AsignaturaCostoDto registrarAsignatura(AsignaturaCostoCrearDto dto)
+    +List<AsignaturaCostoDto> obtenerAsignaturas()
+    +int contarAsignaturas()
+  }
+
+  class CursoServicio {
+    -CursoMapeador mapeador
+    -CursoRepositorio repositorio
+    +CursoServicio(CursoMapeador mapeador, CursoRepositorio repositorio)
+    +CursoDto registrarCurso(CursoCrearDto dto)
+    +List<CursoDto> obtenerCursos()
+    +long contarCursos()
+    +CursoDto actualizarCurso(CursoActualizarDto dto)
+    +boolean eliminarCurso(UUID id)
+  }
+
+  class EstudianteServicio {
+    -EstudianteMapeador mapeador
+    -EstudianteRepositorio repositorio
+    +EstudianteServicio(EstudianteMapeador mapeador, EstudianteRepositorio repositorio)
+    +EstudianteDto registrarEstudiante(EstudianteCrearDto dto)
+    +List<EstudianteDto> obtenerEstudiantes()
+    +long contarEstudiantes()
+    +EstudianteDto actualizarEstudiante(EstudianteActualizarDto dto)
+    +boolean eliminarEstudiante(UUID id)
+  }
+
+  class ProfesorServicio {
+    -ProfesorMapeador mapeador
+    -ProfesorRepositorio repositorio
+    +ProfesorServicio(ProfesorMapeador mapeador, ProfesorRepositorio repositorio)
+    +ProfesorDto registrarProfesor(ProfesorCrearDto dto)
+    +List<ProfesorDto> obtenerProfesores()
+    +int contarProfesores()
+    +ProfesorDto actualizarProfesor(ProfesorActualizarDto dto)
+    +boolean eliminarProfesor(Long id)
+  }
+
+}
+
+package "com.universidad.domain.model" {
   class AsignaturaCosto {
     -Integer idAsignaturaCosto
     -String nombreAsignatura
@@ -372,7 +340,7 @@ package "com.universidad.modelo" {
 
 }
 
-package "com.universidad.modelo.constante" {
+package "com.universidad.domain.model.constante" {
   class PoliticasAcademicas {
     +int MIN_SEMANAS_ASIGNATURA {static}
     +int MAX_SEMANAS_ASIGNATURA {static}
@@ -383,19 +351,7 @@ package "com.universidad.modelo.constante" {
 
 }
 
-package "com.universidad.modelo.convertidor" {
-  class EstadoEntidadConverter {
-    #Class<EstadoEntidad> getEnumClass()
-  }
-
-  class FechaLocalConverter {
-    +String convertToDatabaseColumn(LocalDate fecha)
-    +LocalDate convertToEntityAttribute(String texto)
-  }
-
-}
-
-package "com.universidad.modelo.enumeracion" {
+package "com.universidad.domain.model.enumeracion" {
   enum EstadoEntidad {
     ACTIVO
     INACTIVO
@@ -409,42 +365,7 @@ package "com.universidad.modelo.enumeracion" {
 
 }
 
-package "com.universidad.persistencia" {
-  class AsignaturaRepositorioImpl {
-    +AsignaturaRepositorioImpl(TpaRepository<AsignaturaCosto,Integer> tpaRepository)
-  }
-
-  class CursoRepositorioImpl {
-    +CursoRepositorioImpl(TpaRepository<Curso,UUID> tpaRepository)
-    #boolean permiteBorradoFisico()
-  }
-
-  class EstudianteRepositorioImpl {
-    +EstudianteRepositorioImpl(TpaRepository<Estudiante,UUID> tpaRepository)
-    #boolean permiteBorradoFisico()
-  }
-
-  class ProfesorRepositorioImpl {
-    +ProfesorRepositorioImpl(TpaRepository<Profesor,Long> tpaRepository)
-    #boolean permiteBorradoFisico()
-  }
-
-  abstract class RepositorioBaseAbstracto {
-    #TpaRepository<T,ID> tpaRepository
-    +RepositorioBaseAbstracto(TpaRepository<T,ID> tpaRepository)
-    #boolean permiteBorradoFisico()
-    +void cerrar()
-    +long contar()
-    +List<T> listarTodos()
-    +boolean eliminar(ID id)
-    +Optional<T> buscarPorId(ID id)
-    +T actualizar(T entidad)
-    +T guardar(T entidad)
-  }
-
-}
-
-package "com.universidad.repositorio" {
+package "com.universidad.domain.repository" {
   interface AsignaturaRepositorio {
   }
 
@@ -469,7 +390,7 @@ package "com.universidad.repositorio" {
 
 }
 
-package "com.universidad.repositorio.cargador" {
+package "com.universidad.domain.repository.cargador" {
   interface CargadorDatos {
     ~void cargarTodos()
     ~void cargarPorIds(List<ID> ids)
@@ -491,52 +412,7 @@ package "com.universidad.repositorio.cargador" {
 
 }
 
-package "com.universidad.servicio" {
-  class AsignaturaServicio {
-    -AsignaturaMapeador mapeador
-    -AsignaturaRepositorio repositorio
-    +AsignaturaServicio(AsignaturaMapeador mapeador, AsignaturaRepositorio repositorio)
-    +AsignaturaCostoDto registrarAsignatura(AsignaturaCostoCrearDto dto)
-    +List<AsignaturaCostoDto> obtenerAsignaturas()
-    +int contarAsignaturas()
-  }
-
-  class CursoServicio {
-    -CursoMapeador mapeador
-    -CursoRepositorio repositorio
-    +CursoServicio(CursoMapeador mapeador, CursoRepositorio repositorio)
-    +CursoDto registrarCurso(CursoCrearDto dto)
-    +List<CursoDto> obtenerCursos()
-    +long contarCursos()
-    +CursoDto actualizarCurso(CursoActualizarDto dto)
-    +boolean eliminarCurso(UUID id)
-  }
-
-  class EstudianteServicio {
-    -EstudianteMapeador mapeador
-    -EstudianteRepositorio repositorio
-    +EstudianteServicio(EstudianteMapeador mapeador, EstudianteRepositorio repositorio)
-    +EstudianteDto registrarEstudiante(EstudianteCrearDto dto)
-    +List<EstudianteDto> obtenerEstudiantes()
-    +long contarEstudiantes()
-    +EstudianteDto actualizarEstudiante(EstudianteActualizarDto dto)
-    +boolean eliminarEstudiante(UUID id)
-  }
-
-  class ProfesorServicio {
-    -ProfesorMapeador mapeador
-    -ProfesorRepositorio repositorio
-    +ProfesorServicio(ProfesorMapeador mapeador, ProfesorRepositorio repositorio)
-    +ProfesorDto registrarProfesor(ProfesorCrearDto dto)
-    +List<ProfesorDto> obtenerProfesores()
-    +int contarProfesores()
-    +ProfesorDto actualizarProfesor(ProfesorActualizarDto dto)
-    +boolean eliminarProfesor(Long id)
-  }
-
-}
-
-package "com.universidad.vista" {
+package "com.universidad.infrastructure.cli" {
   class AsignaturaVista {
     -int ANCHO_TABLA
     -AsignaturaControlador controlador
@@ -602,7 +478,7 @@ package "com.universidad.vista" {
 
 }
 
-package "com.universidad.vista.constante" {
+package "com.universidad.infrastructure.cli.constante" {
   class ConfiguracionCli {
     +String TITULO_SISTEMA {static}
     +String MENSAJE_SALIDA {static}
@@ -621,6 +497,304 @@ package "com.universidad.vista.constante" {
 
 }
 
+package "com.universidad.infrastructure.config" {
+  class ConfiguracionDeDependencias {
+    -List<SystemModule> modulos
+    -List<ModuloConfigurable> modulosConfigurados
+    +ConfiguracionDeDependencias()
+    +List<SystemModule> getModulos()
+    +void close()
+  }
+
+  enum RutaPersistencia {
+    PROFESORES
+    ESTUDIANTES
+    CURSOS
+    ASIGNATURAS
+    -Path ruta
+    ~RutaPersistencia(String nombreArchivo)
+    +Path obtenerRuta()
+    +Path obetenerRuta()
+  }
+
+}
+
+package "com.universidad.infrastructure.config.modulos" {
+  class ConfiguracionModuloAsignatura {
+    -AsignaturaRepositorio repositorio
+    -AsignaturaServicio servicio
+    +ConfiguracionModuloAsignatura()
+    +AsignaturaRepositorio getRepositorio()
+    +AsignaturaServicio getServicio()
+    +SystemModule construirVista()
+    +void cerrarRecursos()
+  }
+
+  class ConfiguracionModuloCurso {
+    -CursoRepositorio repositorio
+    -CursoServicio servicio
+    +ConfiguracionModuloCurso()
+    +CursoRepositorio getRepositorio()
+    +CursoServicio getServicio()
+    +SystemModule construirVista()
+    +void cerrarRecursos()
+  }
+
+  class ConfiguracionModuloEstudiante {
+    -EstudianteRepositorio repositorio
+    -EstudianteServicio servicio
+    +ConfiguracionModuloEstudiante()
+    +EstudianteRepositorio getRepositorio()
+    +EstudianteServicio getServicio()
+    +SystemModule construirVista()
+    +void cerrarRecursos()
+  }
+
+  class ConfiguracionModuloProfesor {
+    -ProfesorRepositorio repositorio
+    -ProfesorServicio servicio
+    +ConfiguracionModuloProfesor()
+    +ProfesorRepositorio getRepositorio()
+    +ProfesorServicio getServicio()
+    +SystemModule construirVista()
+    +void cerrarRecursos()
+  }
+
+  interface ModuloConfigurable {
+    ~SystemModule construirVista()
+    ~void cerrarRecursos()
+  }
+
+}
+
+package "com.universidad.infrastructure.persistence" {
+  class AsignaturaRepositorioImpl {
+    +AsignaturaRepositorioImpl(TpaRepository<AsignaturaCosto,Integer> tpaRepository)
+  }
+
+  class CursoRepositorioImpl {
+    +CursoRepositorioImpl(TpaRepository<Curso,UUID> tpaRepository)
+    #boolean permiteBorradoFisico()
+  }
+
+  class EstudianteRepositorioImpl {
+    +EstudianteRepositorioImpl(TpaRepository<Estudiante,UUID> tpaRepository)
+    #boolean permiteBorradoFisico()
+  }
+
+  class ProfesorRepositorioImpl {
+    +ProfesorRepositorioImpl(TpaRepository<Profesor,Long> tpaRepository)
+    #boolean permiteBorradoFisico()
+  }
+
+  abstract class RepositorioBaseAbstracto {
+    #TpaRepository<T,ID> tpaRepository
+    +RepositorioBaseAbstracto(TpaRepository<T,ID> tpaRepository)
+    #boolean permiteBorradoFisico()
+    +void cerrar()
+    +long contar()
+    +List<T> listarTodos()
+    +boolean eliminar(ID id)
+    +Optional<T> buscarPorId(ID id)
+    +T actualizar(T entidad)
+    +T guardar(T entidad)
+  }
+
+}
+
+package "com.universidad.infrastructure.persistence.convertidor" {
+  class EstadoEntidadConverter {
+    #Class<EstadoEntidad> getEnumClass()
+  }
+
+  class FechaLocalConverter {
+    +String convertToDatabaseColumn(LocalDate fecha)
+    +LocalDate convertToEntityAttribute(String texto)
+  }
+
+}
+
+package "com.universidad.interfaceadapters.controller" {
+  class AsignaturaControlador {
+    -AsignaturaServicioPort servicio
+    +AsignaturaControlador(AsignaturaServicioPort servicio)
+    +AsignaturaCostoDto crearAsignatura(AsignaturaCostoCrearDto dto)
+    +int cantidadAsignatura()
+    +List<AsignaturaCostoDto> listarAsignatura()
+  }
+
+  class CursoControlador {
+    -CursoServicioPort servicio
+    +CursoControlador(CursoServicioPort servicio)
+    +CursoDto crearCurso(CursoCrearDto dto)
+    +CursoDto CrearCurso(CursoCrearDto dto)
+    +List<CursoDto> listarCursos()
+    +long cantidadCursos()
+    +CursoDto actualizarCurso(CursoActualizarDto dto)
+    +boolean eliminarCurso(UUID id)
+  }
+
+  class EstudianteControlador {
+    -EstudianteServicioPort servicio
+    +EstudianteControlador(EstudianteServicioPort servicio)
+    +EstudianteDto crearEstudiante(EstudianteCrearDto dto)
+    +List<EstudianteDto> listarEstudiantes()
+    +long cantidadEstudiantes()
+    +EstudianteDto actualizarEstudiante(EstudianteActualizarDto dto)
+    +boolean eliminarEstudiante(UUID id)
+  }
+
+  class ProfesorControlador {
+    -ProfesorServicioPort servicio
+    +ProfesorControlador(ProfesorServicioPort servicio)
+    +ProfesorDto crearProfesor(ProfesorCrearDto dto)
+    +int cantidadProfesores()
+    +List<ProfesorDto> listarProfesores()
+    +ProfesorDto actualizarProfesor(ProfesorActualizarDto dto)
+    +boolean eliminarProfesor(Long id)
+  }
+
+}
+
+package "com.universidad.tools" {
+  class AppGenerador {
+    -String resolveSourcePath(String[] args) {static}
+    -String parseVisibility(List<String> modifiers) {static}
+    -void logTrace(String msg) {static}
+    -List<String> readSelection(Scanner scanner, String prompt, List<String> items) {static}
+    -List<String> retainKnown(List<String> selected, List<String> known, String kind) {static}
+    -ProjectModel reviewRelationships(Scanner scanner, FilteredProjectBuilder builder, ProjectModel filteredModel) {static}
+    -void printTypeCounts(List<ClassModel> classes, String title) {static}
+    -void printResultPackages(List<PackageModel> pkgs, Set<String> externalPkgs, boolean external) {static}
+    -void printResultClasses(List<ClassModel> classes, boolean external) {static}
+    -String[] positionals(String[] args) {static}
+    -DiagramOptions parseDiagramOptions(String[] args) {static}
+    -void printUsage() {static}
+    -void logOptions(DiagramOptions options) {static}
+    +void main(String[] args) {static}
+  }
+
+  class MuestraTiposExternos {
+    -UUID id
+    -BigDecimal costo
+    -OffsetDateTime momento
+    -String nombre
+    +MuestraTiposExternos()
+    +UUID getId()
+    +void setId(UUID id)
+    +BigDecimal getCosto()
+    +void setCosto(BigDecimal costo)
+    +OffsetDateTime getMomento()
+    +void setMomento(OffsetDateTime momento)
+    +String getNombre()
+    +void setNombre(String nombre)
+  }
+
+}
+
+package "EXTERNAL" {
+  class BigDecimal {
+    <<external>>
+  }
+
+  class Locale {
+    <<external>>
+  }
+
+  class OffsetDateTime {
+    <<external>>
+  }
+
+  class Path {
+    <<external>>
+  }
+
+  class SystemModule {
+    <<external>>
+  }
+
+  class TableColumn {
+    <<external>>
+  }
+
+  class TpaRepository {
+    <<external>>
+  }
+
+  class UUID {
+    <<external>>
+  }
+
+}
+
+EstudianteControlador --> EstudianteServicioPort
+EstudianteControlador ..> EstudianteDto
+EstudianteControlador ..> EstudianteCrearDto
+EstudianteControlador ..> EstudianteActualizarDto
+AsignaturaControlador --> AsignaturaServicioPort
+AsignaturaControlador ..> AsignaturaCostoDto
+AsignaturaControlador ..> AsignaturaCostoCrearDto
+CursoControlador --> CursoServicioPort
+CursoControlador ..> CursoDto
+CursoControlador ..> CursoCrearDto
+CursoControlador ..> CursoActualizarDto
+ProfesorControlador --> ProfesorServicioPort
+ProfesorControlador ..> ProfesorDto
+ProfesorControlador ..> ProfesorCrearDto
+ProfesorControlador ..> ProfesorActualizarDto
+RepositorioBase <|-- CursoRepositorio
+RepositorioBase <|-- ProfesorRepositorio
+CargadorDatos <|.. ProfesorCargador
+ProfesorCargador --> Profesor
+ProfesorCargador --> ProfesorRepositorio
+RepositorioBase <|-- EstudianteRepositorio
+RepositorioBase <|-- AsignaturaRepositorio
+Estudiante --> EstadoEntidad
+Profesor --> EstadoEntidad
+AsignaturaCosto --> EstadoEntidad
+Curso --> EstadoEntidad
+App ..> ConfiguracionDeDependencias
+CursoServicioPort <|.. CursoServicio
+CursoServicio --> CursoMapeador
+CursoServicio --> CursoRepositorio
+CursoServicio ..> CursoDto
+CursoServicio ..> CursoCrearDto
+CursoServicio ..> CursoActualizarDto
+ProfesorServicioPort <|.. ProfesorServicio
+ProfesorServicio --> ProfesorMapeador
+ProfesorServicio --> ProfesorRepositorio
+ProfesorServicio ..> ProfesorDto
+ProfesorServicio ..> ProfesorCrearDto
+ProfesorServicio ..> ProfesorActualizarDto
+AsignaturaServicioPort <|.. AsignaturaServicio
+AsignaturaServicio --> AsignaturaMapeador
+AsignaturaServicio --> AsignaturaRepositorio
+AsignaturaServicio ..> AsignaturaCostoDto
+AsignaturaServicio ..> AsignaturaCostoCrearDto
+EstudianteServicioPort <|.. EstudianteServicio
+EstudianteServicio --> EstudianteMapeador
+EstudianteServicio --> EstudianteRepositorio
+EstudianteServicio ..> EstudianteDto
+EstudianteServicio ..> EstudianteCrearDto
+EstudianteServicio ..> EstudianteActualizarDto
+ProfesorActualizarDto ..> EstadoEntidad
+ProfesorDto --> EstadoEntidad
+CursoActualizarDto ..> EstadoEntidad
+CursoDto --> EstadoEntidad
+AsignaturaCostoDto --> EstadoEntidad
+EstudianteActualizarDto ..> EstadoEntidad
+EstudianteDto --> EstadoEntidad
+EstudianteServicioPort ..> EstudianteDto
+EstudianteServicioPort ..> EstudianteCrearDto
+EstudianteServicioPort ..> EstudianteActualizarDto
+AsignaturaServicioPort ..> AsignaturaCostoDto
+AsignaturaServicioPort ..> AsignaturaCostoCrearDto
+CursoServicioPort ..> CursoDto
+CursoServicioPort ..> CursoCrearDto
+CursoServicioPort ..> CursoActualizarDto
+ProfesorServicioPort ..> ProfesorDto
+ProfesorServicioPort ..> ProfesorCrearDto
+ProfesorServicioPort ..> ProfesorActualizarDto
 Mapeador <|.. ProfesorMapeador
 ProfesorMapeador ..> ProfesorDto
 ProfesorMapeador ..> Profesor
@@ -633,14 +807,6 @@ AsignaturaMapeador ..> AsignaturaCosto
 Mapeador <|.. EstudianteMapeador
 EstudianteMapeador ..> EstudianteDto
 EstudianteMapeador ..> Estudiante
-CursoVista --> CursoControlador
-CursoVista ..> CursoDto
-ProfesorVista --> ProfesorControlador
-ProfesorVista ..> ProfesorDto
-AsignaturaVista --> AsignaturaControlador
-AsignaturaVista ..> AsignaturaCostoDto
-EstudianteVista --> EstudianteControlador
-EstudianteVista ..> EstudianteDto
 RepositorioBaseAbstracto <|-- CursoRepositorioImpl
 CursoRepositorio <|.. CursoRepositorioImpl
 CursoRepositorioImpl ..> Curso
@@ -654,7 +820,7 @@ RepositorioBaseAbstracto <|-- EstudianteRepositorioImpl
 EstudianteRepositorio <|.. EstudianteRepositorioImpl
 EstudianteRepositorioImpl ..> Estudiante
 RepositorioBase <|.. RepositorioBaseAbstracto
-App ..> ConfiguracionDeDependencias
+EstadoEntidadConverter ..> EstadoEntidad
 ConfiguracionDeDependencias --> ModuloConfigurable
 ModuloConfigurable <|.. ConfiguracionModuloEstudiante
 ConfiguracionModuloEstudiante --> EstudianteRepositorio
@@ -668,58 +834,35 @@ ConfiguracionModuloCurso --> CursoServicio
 ModuloConfigurable <|.. ConfiguracionModuloProfesor
 ConfiguracionModuloProfesor --> ProfesorRepositorio
 ConfiguracionModuloProfesor --> ProfesorServicio
-EstudianteControlador --> EstudianteServicio
-EstudianteControlador ..> EstudianteDto
-EstudianteControlador ..> EstudianteCrearDto
-EstudianteControlador ..> EstudianteActualizarDto
-AsignaturaControlador --> AsignaturaServicio
-AsignaturaControlador ..> AsignaturaCostoDto
-AsignaturaControlador ..> AsignaturaCostoCrearDto
-CursoControlador --> CursoServicio
-CursoControlador ..> CursoDto
-CursoControlador ..> CursoCrearDto
-CursoControlador ..> CursoActualizarDto
-ProfesorControlador --> ProfesorServicio
-ProfesorControlador ..> ProfesorDto
-ProfesorControlador ..> ProfesorCrearDto
-ProfesorControlador ..> ProfesorActualizarDto
-ProfesorActualizarDto ..> EstadoEntidad
-ProfesorDto --> EstadoEntidad
-CursoActualizarDto ..> EstadoEntidad
-CursoDto --> EstadoEntidad
-AsignaturaCostoDto --> EstadoEntidad
-EstudianteActualizarDto ..> EstadoEntidad
-EstudianteDto --> EstadoEntidad
-RepositorioBase <|-- CursoRepositorio
-RepositorioBase <|-- ProfesorRepositorio
-CargadorDatos <|.. ProfesorCargador
-ProfesorCargador --> Profesor
-ProfesorCargador --> ProfesorRepositorio
-RepositorioBase <|-- EstudianteRepositorio
-RepositorioBase <|-- AsignaturaRepositorio
-Estudiante --> EstadoEntidad
-Profesor --> EstadoEntidad
-AsignaturaCosto --> EstadoEntidad
-EstadoEntidadConverter ..> EstadoEntidad
-Curso --> EstadoEntidad
-CursoServicio --> CursoMapeador
-CursoServicio --> CursoRepositorio
-CursoServicio ..> CursoDto
-CursoServicio ..> CursoCrearDto
-CursoServicio ..> CursoActualizarDto
-ProfesorServicio --> ProfesorMapeador
-ProfesorServicio --> ProfesorRepositorio
-ProfesorServicio ..> ProfesorDto
-ProfesorServicio ..> ProfesorCrearDto
-ProfesorServicio ..> ProfesorActualizarDto
-AsignaturaServicio --> AsignaturaMapeador
-AsignaturaServicio --> AsignaturaRepositorio
-AsignaturaServicio ..> AsignaturaCostoDto
-AsignaturaServicio ..> AsignaturaCostoCrearDto
-EstudianteServicio --> EstudianteMapeador
-EstudianteServicio --> EstudianteRepositorio
-EstudianteServicio ..> EstudianteDto
-EstudianteServicio ..> EstudianteCrearDto
-EstudianteServicio ..> EstudianteActualizarDto
+CursoVista --> CursoControlador
+CursoVista ..> CursoDto
+ProfesorVista --> ProfesorControlador
+ProfesorVista ..> ProfesorDto
+AsignaturaVista --> AsignaturaControlador
+AsignaturaVista ..> AsignaturaCostoDto
+EstudianteVista --> EstudianteControlador
+EstudianteVista ..> EstudianteDto
+' ---------------- EXTERNAL RELATIONSHIPS ----------------
+Estudiante --> UUID
+AsignaturaCosto --> BigDecimal
+Curso --> UUID
+MuestraTiposExternos --> UUID
+MuestraTiposExternos --> BigDecimal
+MuestraTiposExternos --> OffsetDateTime
+CursoActualizarDto --> UUID
+CursoDto --> UUID
+AsignaturaCostoDto --> BigDecimal
+AsignaturaCostoCrearDto --> BigDecimal
+AsignaturaCostoActualizarDto --> BigDecimal
+EstudianteActualizarDto --> UUID
+EstudianteDto --> UUID
+RepositorioBaseAbstracto --> TpaRepository
+ConfiguracionDeDependencias --> SystemModule
+RutaPersistencia --> Path
+CursoVista --> TableColumn
+ProfesorVista --> TableColumn
+AsignaturaVista --> TableColumn
+ConfiguracionCli --> Locale
+EstudianteVista --> TableColumn
 
 @enduml

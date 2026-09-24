@@ -34,3 +34,38 @@ The project is divided into two primary submodules:
 ### Prerequisites
 * JDK 17+ (or JDK 21)
 * Maven 3.8+ (for `libreria_is`)
+
+### Library usage (filters + display options)
+
+```java
+SoyLaPuerta puerta = new SoyLaPuerta();
+
+// Blacklist/whitelist filter (immutable, built step by step)
+DiagramFilter filtro = new DiagramFilter.Builder()
+    .excludePackage("com.universidad.test")
+    .excludeClass("Utilidades")
+    .includePackage("com.universidad.modelo")
+    .build();
+
+// Display flags (all visible by default)
+DiagramOptions opciones = new DiagramOptions.Builder()
+    .showGettersSetters(false)
+    .showExternal(true)
+    .showJdkTypes(true)
+    .build();
+
+Path salida = puerta.exportPlantUml("ruta/a/src", Path.of("diagrama.puml"), filtro, opciones);
+```
+
+### AppGenerador flags
+
+```
+--no-getters      Hide backing-field getters/setters
+--no-attributes   Hide attributes
+--no-methods      Hide methods
+--no-constructors Hide constructors
+--no-external     Hide @external boxes and their relationships
+--no-jdk          Hide only JDK externals (java.*)
+--flat            Flat output, no package blocks
+--help, -h        Show help
+```

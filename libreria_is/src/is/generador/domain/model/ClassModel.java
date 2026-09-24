@@ -20,12 +20,13 @@ public class ClassModel {
     private List<String> extendedTypes;
     private List<String> implementedTypes;
     private List<String> enumConstants;
+    private List<String> typeParameters;
 
     public ClassModel(String name, String packageName, String kind, boolean isAbstract,
                       List<String> stereotypes, List<AttributeModel> attributes,
                       List<MethodModel> methods, List<ConstructorModel> constructors,
                       List<String> extendedTypes, List<String> implementedTypes,
-                      List<String> enumConstants) {
+                      List<String> enumConstants, List<String> typeParameters) {
         this.name = name;
         this.packageName = packageName;
         this.kind = kind;
@@ -37,6 +38,7 @@ public class ClassModel {
         this.extendedTypes = extendedTypes;
         this.implementedTypes = implementedTypes;
         this.enumConstants = enumConstants;
+        this.typeParameters = typeParameters;
     }
 
     public String getName() { return name; }
@@ -52,10 +54,16 @@ public class ClassModel {
     }
     public boolean isAbstract() { return isAbstract; }
     public List<String> getStereotypes() { return stereotypes; }
+    /** true si la clase es externa (estereotipo {@code @external}). */
+    public boolean isExternal() {
+        return stereotypes != null && stereotypes.contains("@external");
+    }
     public List<AttributeModel> getAttributes() { return attributes; }
     public List<MethodModel> getMethods() { return methods; }
     public List<ConstructorModel> getConstructors() { return constructors; }
     public List<String> getExtendedTypes() { return extendedTypes; }
     public List<String> getImplementedTypes() { return implementedTypes; }
     public List<String> getEnumConstants() { return enumConstants; }
+    /** Type variables declared by this type (e.g. {@code <T, ID>}); never rendered as externals. */
+    public List<String> getTypeParameters() { return typeParameters; }
 }

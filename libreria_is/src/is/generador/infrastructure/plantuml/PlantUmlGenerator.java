@@ -1,5 +1,6 @@
 package is.generador.infrastructure.plantuml;
 
+import is.generador.domain.BeanAccessors;
 import is.generador.domain.model.AttributeModel;
 import is.generador.domain.model.ClassModel;
 import is.generador.domain.model.ConstructorModel;
@@ -9,6 +10,7 @@ import is.generador.domain.model.ParameterModel;
 import is.generador.domain.model.ProjectModel;
 import is.generador.domain.model.RelType;
 import is.generador.domain.model.RelationshipModel;
+import is.generador.domain.policy.DiagramOptions;
 import is.generador.domain.port.DiagramRendererPort;
 
 import java.util.ArrayList;
@@ -31,8 +33,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
 
     /** true si la clase es externa (estereotipo {@code @external}). */
     public static boolean isExternal(ClassModel model) {
-        return model != null && model.getStereotypes() != null
-                && model.getStereotypes().contains("@external");
+        return model != null && model.isExternal();
     }
 
     /** Renders the project grouped by package (default behavior). */
@@ -50,7 +51,18 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         return generate(project, groupByPackage);
     }
 
+    @Override
+    public String render(ProjectModel project, DiagramOptions options) {
+        return generate(project, options);
+    }
+
     public String generate(ProjectModel project, boolean groupByPackage) {
+        return generate(project, new DiagramOptions.Builder().groupByPackage(groupByPackage).build());
+    }
+
+    /** Renders the project applying the given {@link DiagramOptions}. */
+    public String generate(ProjectModel project, DiagramOptions options) {
+        DiagramOptions opt = options == null ? DiagramOptions.defaults() : options;
         StringBuilder builder = new StringBuilder();
         builder.append("@startuml\n");
         builder.append("skinparam classAttributeIconSize 0\n\n");
@@ -62,9 +74,14 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 (isExternal(model) ? externals : internals).add(model);
             }
         }
+        if (!opt.isShowExternal()) {
+            externals.clear();
+        } else if (!opt.isShowJdkTypes()) {
+            externals.removeIf(model -> isJdkPackage(model.getPackageName()));
+        }
         externals.sort(Comparator.comparing(ClassModel::getName));
 
-        if (groupByPackage) {
+        if (opt.isGroupByPackage()) {
             Map<String, List<ClassModel>> byPackage = new TreeMap<>();
             for (ClassModel model : internals) {
                 String pkg = model.getPackageName() == null ? "" : model.getPackageName();
@@ -76,32 +93,54 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             for (Map.Entry<String, List<ClassModel>> entry : byPackage.entrySet()) {
                 builder.append("package \"").append(packageLabel(entry.getKey())).append("\" {\n");
                 for (ClassModel model : entry.getValue()) {
-                    appendClass(builder, model, "  ");
+                    appendClass(builder, model, "  ", opt);
                 }
                 builder.append("}\n\n");
             }
             if (!externals.isEmpty()) {
                 builder.append("package \"EXTERNAL\" {\n");
                 for (ClassModel model : externals) {
-                    appendClass(builder, model, "  ");
+                    appendClass(builder, model, "  ", opt);
                 }
                 builder.append("}\n\n");
             }
         } else {
             for (ClassModel model : internals) {
-                appendClass(builder, model, "");
+                appendClass(builder, model, "", opt);
             }
             if (!externals.isEmpty()) {
                 builder.append("' ---------------- EXTERNAL ----------------\n");
                 for (ClassModel model : externals) {
-                    appendClass(builder, model, "");
+                    appendClass(builder, model, "", opt);
                 }
             }
         }
 
-        appendRelationships(builder, project);
+        appendRelationships(builder, project, renderedNames(internals, externals));
         builder.append("\n@enduml\n");
         return builder.toString();
+    }
+
+    /** Names of the rendered (non-hidden) classes. */
+    private static Set<String> renderedNames(List<ClassModel> internals, List<ClassModel> externals) {
+        Set<String> names = new HashSet<>();
+        if (internals != null) {
+            for (ClassModel model : internals) {
+                names.add(model.getName());
+            }
+        }
+        if (externals != null) {
+            for (ClassModel model : externals) {
+                names.add(model.getName());
+            }
+        }
+        return names;
+    }
+
+    /** true for JDK packages ({@code java.*}), kept apart from third-party externals. */
+    static boolean isJdkPackage(String packageName) {
+        return packageName != null
+                && (packageName.equals("java.lang") || packageName.startsWith("java."));
     }
 
     /** Groups classes by package name, sorted alphabetically (packages and classes). Null-safe. */
@@ -124,7 +163,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         return (packageName == null || packageName.isEmpty()) ? "(default package)" : packageName;
     }
 
-    private void appendClass(StringBuilder builder, ClassModel model, String indent) {
+    private void appendClass(StringBuilder builder, ClassModel model, String indent, DiagramOptions opt) {
         builder.append(indent)
                 .append(keywordFor(model)).append(" ").append(model.getName()).append(" {\n");
 
@@ -141,7 +180,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
         }
 
-        if (model.getAttributes() != null) {
+        if (opt.isShowAttributes() && model.getAttributes() != null) {
             for (AttributeModel attribute : model.getAttributes()) {
                 builder.append(indent).append("  ")
                         .append(visibilityOf(attribute.getModifiers()))
@@ -153,7 +192,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
         }
 
-        if (model.getConstructors() != null) {
+        if (opt.isShowConstructors() && model.getConstructors() != null) {
             for (ConstructorModel constructor : model.getConstructors()) {
                 builder.append(indent).append("  ")
                         .append(visibilityOf(constructor.getModifiers()))
@@ -166,8 +205,12 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
         }
 
-        if (model.getMethods() != null) {
+        if (opt.isShowMethods() && model.getMethods() != null) {
             for (MethodModel method : model.getMethods()) {
+                if (!opt.isShowGettersSetters()
+                        && (BeanAccessors.isGetter(method, model) || BeanAccessors.isSetter(method, model))) {
+                    continue;
+                }
                 builder.append(indent).append("  ")
                         .append(visibilityOf(method.getModifiers()))
                         .append(method.getReturnType())
@@ -184,21 +227,32 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         builder.append(indent).append("}\n\n");
     }
 
-    private void appendRelationships(StringBuilder builder, ProjectModel project) {
+    private void appendRelationships(StringBuilder builder, ProjectModel project, Set<String> renderedNames) {
         if (project.getRelationships() == null) {
             return;
         }
         Set<String> externalNames = new HashSet<>();
+        Set<String> knownNames = new HashSet<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
-                if (isExternal(model)) {
+                knownNames.add(model.getName());
+                if (isExternal(model) && renderedNames.contains(model.getName())) {
                     externalNames.add(model.getName());
                 }
             }
         }
+        // Endpoints hidden by DiagramOptions (known but not rendered).
+        // Relationships to unmodeled names are preserved: PlantUML
+        // declares the missing endpoint implicitly.
+        Set<String> hiddenNames = new HashSet<>(knownNames);
+        hiddenNames.removeAll(renderedNames);
         List<RelationshipModel> internalRels = new ArrayList<>();
         List<RelationshipModel> externalRels = new ArrayList<>();
         for (RelationshipModel relationship : project.getRelationships()) {
+            if (hiddenNames.contains(relationship.getSource())
+                    || hiddenNames.contains(relationship.getTarget())) {
+                continue;
+            }
             if (externalNames.contains(relationship.getSource())
                     || externalNames.contains(relationship.getTarget())) {
                 externalRels.add(relationship);

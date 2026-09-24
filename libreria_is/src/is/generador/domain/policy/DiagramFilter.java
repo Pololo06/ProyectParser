@@ -6,115 +6,134 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Filtro inclusivo/exclusivo para diagramas.
+ * Filtro inclusivo/exclusivo para diagramas. Inmutable: se construye con
+ * {@link Builder} y no se puede modificar después de {@code build()}.
  *
- * <p><b>Blacklist</b> (criterio exclusivo): veta paquetes o clases sin importar
- * el contexto; siempre gana.</p>
+ * <p><b>Blacklist</b> (criterio exclusivo, métodos {@code exclude*}): veta
+ * paquetes o clases sin importar el contexto; siempre gana.</p>
  *
- * <p><b>Whitelist</b> (criterio inclusivo): si contiene al menos un elemento,
- * el filtro pasa a modo restrictivo y todo lo no declarado queda descartado.</p>
+ * <p><b>Whitelist</b> (criterio inclusivo, métodos {@code include*}): si
+ * contiene al menos un elemento, el filtro pasa a modo restrictivo y todo
+ * lo no declarado queda descartado.</p>
  *
  * <p>Precedencia: blacklist &gt; whitelist &gt; permitir.</p>
+ *
+ * <pre>
+ * DiagramFilter filtro = new DiagramFilter.Builder()
+ *     .excludePackage("com.universidad.test")
+ *     .excludeClass("Utilidades")
+ *     .includePackage("com.universidad.modelo")
+ *     .build();
+ * </pre>
  */
 public class DiagramFilter {
 
-    private final Set<String> blacklistedPackages = new HashSet<>();
-    private final Set<String> blacklistedClasses = new HashSet<>();
-    private final Set<String> whitelistedPackages = new HashSet<>();
-    private final Set<String> whitelistedClasses = new HashSet<>();
+    private final Set<String> blacklistedPackages;
+    private final Set<String> blacklistedClasses;
+    private final Set<String> whitelistedPackages;
+    private final Set<String> whitelistedClasses;
 
+    /** Filtro permisivo vacío (todo permitido). */
     public DiagramFilter() {
+        this(new Builder());
     }
 
-    // ---------- blacklist: simple ----------
+    private DiagramFilter(Builder builder) {
+        this.blacklistedPackages = Collections.unmodifiableSet(new HashSet<>(builder.blacklistedPackages));
+        this.blacklistedClasses = Collections.unmodifiableSet(new HashSet<>(builder.blacklistedClasses));
+        this.whitelistedPackages = Collections.unmodifiableSet(new HashSet<>(builder.whitelistedPackages));
+        this.whitelistedClasses = Collections.unmodifiableSet(new HashSet<>(builder.whitelistedClasses));
+    }
 
-    public DiagramFilter addToBlacklistPackage(String packageName) {
-        if (packageName != null && !packageName.trim().isEmpty()) {
-            blacklistedPackages.add(packageName.trim());
+    /** Constructor paso a paso del filtro. Reutilizable: cada {@code build()} es independiente. */
+    public static class Builder {
+        private final Set<String> blacklistedPackages = new HashSet<>();
+        private final Set<String> blacklistedClasses = new HashSet<>();
+        private final Set<String> whitelistedPackages = new HashSet<>();
+        private final Set<String> whitelistedClasses = new HashSet<>();
+
+        /** Veta un paquete (blacklist). */
+        public Builder excludePackage(String packageName) {
+            addClean(this.blacklistedPackages, packageName);
+            return this;
         }
-        return this;
-    }
 
-    public DiagramFilter addToBlacklistClass(String className) {
-        if (className != null && !className.trim().isEmpty()) {
-            blacklistedClasses.add(className.trim());
+        /** Veta una clase (blacklist). */
+        public Builder excludeClass(String className) {
+            addClean(this.blacklistedClasses, className);
+            return this;
         }
-        return this;
-    }
 
-    // ---------- blacklist: bulk ----------
-
-    public DiagramFilter addToBlacklistPackages(Collection<String> packageNames) {
-        if (packageNames != null) {
-            packageNames.forEach(this::addToBlacklistPackage);
+        /** Veta varios paquetes (blacklist). */
+        public Builder excludePackages(Collection<String> packageNames) {
+            addAllClean(this.blacklistedPackages, packageNames);
+            return this;
         }
-        return this;
-    }
 
-    public DiagramFilter addToBlacklistClasses(Collection<String> classNames) {
-        if (classNames != null) {
-            classNames.forEach(this::addToBlacklistClass);
+        /** Veta varias clases (blacklist). */
+        public Builder excludeClasses(Collection<String> classNames) {
+            addAllClean(this.blacklistedClasses, classNames);
+            return this;
         }
-        return this;
-    }
 
-    /** Mete TODOS los paquetes dados a la blacklist (seleccionar todo). */
-    public DiagramFilter blacklistAllPackages(Collection<String> allPackages) {
-        return addToBlacklistPackages(allPackages);
-    }
-
-    /** Mete TODAS las clases dadas a la blacklist (seleccionar todo). */
-    public DiagramFilter blacklistAllClasses(Collection<String> allClasses) {
-        return addToBlacklistClasses(allClasses);
-    }
-
-    // ---------- whitelist: simple ----------
-
-    public DiagramFilter addToWhitelistPackage(String packageName) {
-        if (packageName != null && !packageName.trim().isEmpty()) {
-            whitelistedPackages.add(packageName.trim());
+        /** Incluye un paquete (whitelist). */
+        public Builder includePackage(String packageName) {
+            addClean(this.whitelistedPackages, packageName);
+            return this;
         }
-        return this;
-    }
 
-    public DiagramFilter addToWhitelistClass(String className) {
-        if (className != null && !className.trim().isEmpty()) {
-            whitelistedClasses.add(className.trim());
+        /** Incluye una clase (whitelist). */
+        public Builder includeClass(String className) {
+            addClean(this.whitelistedClasses, className);
+            return this;
         }
-        return this;
-    }
 
-    // ---------- whitelist: bulk ----------
-
-    public DiagramFilter addToWhitelistPackages(Collection<String> packageNames) {
-        if (packageNames != null) {
-            packageNames.forEach(this::addToWhitelistPackage);
+        /** Incluye varios paquetes (whitelist). */
+        public Builder includePackages(Collection<String> packageNames) {
+            addAllClean(this.whitelistedPackages, packageNames);
+            return this;
         }
-        return this;
-    }
 
-    public DiagramFilter addToWhitelistClasses(Collection<String> classNames) {
-        if (classNames != null) {
-            classNames.forEach(this::addToWhitelistClass);
+        /** Incluye varias clases (whitelist). */
+        public Builder includeClasses(Collection<String> classNames) {
+            addAllClean(this.whitelistedClasses, classNames);
+            return this;
         }
-        return this;
-    }
 
-    /** Mete TODOS los paquetes dados a la whitelist (seleccionar todo). */
-    public DiagramFilter whitelistAllPackages(Collection<String> allPackages) {
-        return addToWhitelistPackages(allPackages);
-    }
+        /** Construye el filtro inmutable. */
+        public DiagramFilter build() {
+            return new DiagramFilter(this);
+        }
 
-    /** Mete TODAS las clases dadas a la whitelist (seleccionar todo). */
-    public DiagramFilter whitelistAllClasses(Collection<String> allClasses) {
-        return addToWhitelistClasses(allClasses);
-    }
+        private static void addClean(Set<String> target, String value) {
+            if (value != null && !value.trim().isEmpty()) {
+                target.add(value.trim());
+            }
+        }
 
-    // ---------- consulta ----------
+        private static void addAllClean(Set<String> target, Collection<String> values) {
+            if (values != null) {
+                for (String value : values) {
+                    addClean(target, value);
+                }
+            }
+        }
+    }
 
     /** true si la whitelist tiene al menos un elemento (modo restrictivo). */
     public boolean isRestrictive() {
         return !whitelistedPackages.isEmpty() || !whitelistedClasses.isEmpty();
+    }
+
+    /**
+     * true si el par (paquete, clase) está vetado por la blacklist,
+     * sin evaluar la whitelist. Las clases externas solo obedecen
+     * a este criterio (opción B): la whitelist es solo para internas.
+     */
+    public boolean isBlacklisted(String packageName, String className) {
+        String pkg = packageName == null ? "" : packageName.trim();
+        String cls = className == null ? "" : className.trim();
+        return blacklistedPackages.contains(pkg) || blacklistedClasses.contains(cls);
     }
 
     /**
@@ -134,18 +153,18 @@ public class DiagramFilter {
     }
 
     public Set<String> getBlacklistedPackages() {
-        return Collections.unmodifiableSet(blacklistedPackages);
+        return blacklistedPackages;
     }
 
     public Set<String> getBlacklistedClasses() {
-        return Collections.unmodifiableSet(blacklistedClasses);
+        return blacklistedClasses;
     }
 
     public Set<String> getWhitelistedPackages() {
-        return Collections.unmodifiableSet(whitelistedPackages);
+        return whitelistedPackages;
     }
 
     public Set<String> getWhitelistedClasses() {
-        return Collections.unmodifiableSet(whitelistedClasses);
+        return whitelistedClasses;
     }
 }

@@ -2,6 +2,7 @@ package is.generador.application;
 
 import is.generador.domain.model.ProjectModel;
 import is.generador.domain.policy.DiagramFilter;
+import is.generador.domain.policy.DiagramOptions;
 import is.generador.domain.port.DiagramRendererPort;
 import is.generador.domain.port.SourceAnalyzerPort;
 
@@ -37,5 +38,11 @@ public class GenerateDiagramUseCase {
         ProjectModel project = analyzer.analyze(folderPath);
         ProjectModel filtered = new FilteredProjectBuilder(project).withFilter(filter).build();
         return renderer.render(filtered, groupByPackage);
+    }
+
+    public String execute(String folderPath, DiagramFilter filter, DiagramOptions options) throws IOException {
+        ProjectModel project = analyzer.analyze(folderPath);
+        ProjectModel filtered = new FilteredProjectBuilder(project).withFilter(filter).build();
+        return renderer.render(filtered, options == null ? DiagramOptions.defaults() : options);
     }
 }
