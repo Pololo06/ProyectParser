@@ -20,7 +20,7 @@ public class ConfiguracionModuloCurso implements ModuloConfigurable{
     public ConfiguracionModuloCurso() {
         TpaRepository<Curso, UUID> tpaEngine = TpaRepositoryFactory.create(
                 Curso.class, 
-                RutaPersistencia.CURSOS.obetenerRuta(),
+                RutaPersistencia.CURSOS.obtenerRuta(),
                 true
         );
         

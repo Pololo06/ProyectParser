@@ -431,10 +431,15 @@ public class ProjectAnalyzer {
                 if (TypeClassifier.shouldIgnoreBox(attribute.getType())) {
                     continue;
                 }
-                String target = TypeClassifier.extractTargetType(attribute.getType());
-                if (internal.contains(target)) {
-                    continue;
-                }
+                // 2. Registrar TODOS los tipos referenciados (incluye genéricos
+                //    anidados: Map<String,List<UUID>> -> UUID, no solo el último).
+                for (String target : TypeClassifier.referencedTypeNames(attribute.getType())) {
+                    if (TypeClassifier.shouldIgnoreBox(target)) {
+                        continue;
+                    }
+                    if (internal.contains(target)) {
+                        continue;
+                    }
                 if (!externals.containsKey(target)) {
                     // 2. Prioridad: imports del archivo > mapa común > fallback
                     String resolvedPkg = fileImportsByClass
@@ -451,8 +456,9 @@ public class ProjectAnalyzer {
                             stereotypes, new ArrayList<>(), new ArrayList<>(),
                             new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
                             new ArrayList<>()));
+                    }
+                    addOnce(relationships, seen, model.getName(), target, "ASSOCIATION");
                 }
-                addOnce(relationships, seen, model.getName(), target, "ASSOCIATION");
             }
         }
         classes.addAll(externals.values());

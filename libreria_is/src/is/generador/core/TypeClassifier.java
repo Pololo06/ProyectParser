@@ -1,5 +1,6 @@
 package is.generador.core;
 
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -21,8 +22,13 @@ public class TypeClassifier {
         Map.entry("Date", "java.util"),
         Map.entry("Optional", "java.util"),
         Map.entry("List", "java.util"),
+        Map.entry("ArrayList", "java.util"),
+        Map.entry("LinkedList", "java.util"),
         Map.entry("Set", "java.util"),
+        Map.entry("HashSet", "java.util"),
         Map.entry("Map", "java.util"),
+        Map.entry("HashMap", "java.util"),
+        Map.entry("Collection", "java.util"),
         Map.entry("BigDecimal", "java.math"),
         Map.entry("BigInteger", "java.math"),
         Map.entry("LocalDate", "java.time"),
@@ -32,37 +38,89 @@ public class TypeClassifier {
         Map.entry("ZonedDateTime", "java.time"),
         Map.entry("Instant", "java.time"),
         Map.entry("Duration", "java.time"),
-        Map.entry("Period", "java.time")
+        Map.entry("Period", "java.time"),
+        Map.entry("Path", "java.nio.file"),
+        Map.entry("Paths", "java.nio.file"),
+        Map.entry("Files", "java.nio.file"),
+        Map.entry("IOException", "java.io"),
+        Map.entry("File", "java.io")
+    );
+
+    /** Container types whose own box is noise; only their type arguments matter. */
+    private static final Set<String> CONTAINERS = Set.of(
+        "List", "Set", "Map", "Collection", "Optional",
+        "ArrayList", "LinkedList", "HashSet", "HashMap"
     );
 
     public static boolean shouldIgnoreBox(String rawType) {
-        String clean = extractTargetType(rawType);
-        return clean.isBlank() || PRIMITIVES.contains(clean) || BASIC_SCALARS.contains(clean);
+        if (rawType == null || rawType.isBlank()) {
+            return true;
+        }
+        // Ignorable only if EVERY referenced leaf type is primitive/scalar.
+        Set<String> refs = referencedTypeNames(rawType);
+        if (refs.isEmpty()) {
+            return true;
+        }
+        for (String ref : refs) {
+            if (CONTAINERS.contains(ref)) {
+                continue;
+            }
+            if (!PRIMITIVES.contains(ref) && !BASIC_SCALARS.contains(ref)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static String extractTargetType(String rawType) {
-        if (rawType == null) return "";
-        String clean = rawType.trim();
-        // Bucle recursivo para genéricos anidados (ej. Map<String, List<UUID>> -> UUID)
-        while (clean.contains("<") && clean.contains(">")) {
-            int start = clean.indexOf('<');
-            int end = clean.lastIndexOf('>');
-            clean = clean.substring(start + 1, end).trim();
-            if (clean.contains(",")) {
-                String[] parts = clean.split(",");
-                clean = parts[parts.length - 1].trim();
+        Set<String> refs = referencedTypeNames(rawType);
+        if (refs.isEmpty()) {
+            return "";
+        }
+        // Backward-compatible: last non-container leaf (e.g. Map<String,List<UUID>> -> UUID).
+        String last = "";
+        for (String ref : refs) {
+            if (!CONTAINERS.contains(ref)) {
+                last = ref;
             }
         }
-        return clean.replace("[]", "").trim();
+        return last.isEmpty() ? refs.stream().reduce("", (a, b) -> b) : last;
+    }
+
+    /**
+     * Canonical extractor: every referenced type name, including generic
+     * arguments. {@code "Map<String, List<UUID>>"} -> {@code [Map, String, List, UUID]}.
+     */
+    public static Set<String> referencedTypeNames(String rawType) {
+        Set<String> names = new LinkedHashSet<>();
+        if (rawType == null || rawType.isBlank()) {
+            return names;
+        }
+        for (String token : rawType.split("[^A-Za-z0-9_.]+")) {
+            if (token.isBlank()) {
+                continue;
+            }
+            String simple = token.contains(".") ? token.substring(token.lastIndexOf('.') + 1) : token;
+            simple = simple.replace("[]", "").trim();
+            if (!simple.isEmpty() && Character.isUpperCase(simple.charAt(0))) {
+                names.add(simple);
+            }
+        }
+        return names;
     }
 
     public static String resolvePackage(String typeName) {
+        if (typeName == null || typeName.isBlank()) {
+            return "(unresolved)";
+        }
         if (COMMON_JDK_TYPES.containsKey(typeName)) {
             return COMMON_JDK_TYPES.get(typeName);
         }
         if (typeName.contains(".")) {
             return typeName.substring(0, typeName.lastIndexOf('.'));
         }
+        // Unknown simple name: caller should prefer file imports; java.lang
+        // is only a heuristic for JDK scalars, not a fact.
         return "java.lang";
     }
 }

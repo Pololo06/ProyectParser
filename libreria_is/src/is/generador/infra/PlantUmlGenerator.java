@@ -3,9 +3,11 @@ package is.generador.infra;
 import is.generador.core.model.AttributeModel;
 import is.generador.core.model.ClassModel;
 import is.generador.core.model.ConstructorModel;
+import is.generador.core.model.Kind;
 import is.generador.core.model.MethodModel;
 import is.generador.core.model.ParameterModel;
 import is.generador.core.model.ProjectModel;
+import is.generador.core.model.RelType;
 import is.generador.core.model.RelationshipModel;
 
 import java.util.ArrayList;
@@ -96,9 +98,12 @@ public class PlantUmlGenerator {
         return builder.toString();
     }
 
-    /** Groups classes by package name, sorted alphabetically (packages and classes). */
+    /** Groups classes by package name, sorted alphabetically (packages and classes). Null-safe. */
     public Map<String, List<ClassModel>> groupByPackage(ProjectModel project) {
         Map<String, List<ClassModel>> byPackage = new TreeMap<>();
+        if (project == null || project.getClasses() == null) {
+            return byPackage;
+        }
         for (ClassModel model : project.getClasses()) {
             String pkg = model.getPackageName() == null ? "" : model.getPackageName();
             byPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add(model);
@@ -117,49 +122,57 @@ public class PlantUmlGenerator {
         builder.append(indent)
                 .append(keywordFor(model)).append(" ").append(model.getName()).append(" {\n");
 
-        for (String stereotype : model.getStereotypes()) {
-            builder.append(indent).append("  <<").append(stereotype.replace("@", "")).append(">>\n");
+        if (model.getStereotypes() != null) {
+            for (String stereotype : model.getStereotypes()) {
+                builder.append(indent).append("  <<").append(stereotype.replace("@", "")).append(">>\n");
+            }
         }
 
         // enum literals first, as plain constants
-        if ("Enum".equals(model.getKind()) && model.getEnumConstants() != null) {
+        if (model.getKindEnum() == Kind.ENUM && model.getEnumConstants() != null) {
             for (String constant : model.getEnumConstants()) {
                 builder.append(indent).append("  ").append(constant).append("\n");
             }
         }
 
-        for (AttributeModel attribute : model.getAttributes()) {
-            builder.append(indent).append("  ")
-                    .append(visibilityOf(attribute.getModifiers()))
-                    .append(attribute.getType())
-                    .append(" ")
-                    .append(attribute.getName())
-                    .append(modifierSuffix(attribute.getModifiers()))
-                    .append("\n");
+        if (model.getAttributes() != null) {
+            for (AttributeModel attribute : model.getAttributes()) {
+                builder.append(indent).append("  ")
+                        .append(visibilityOf(attribute.getModifiers()))
+                        .append(attribute.getType())
+                        .append(" ")
+                        .append(attribute.getName())
+                        .append(modifierSuffix(attribute.getModifiers()))
+                        .append("\n");
+            }
         }
 
-        for (ConstructorModel constructor : model.getConstructors()) {
-            builder.append(indent).append("  ")
-                    .append(visibilityOf(constructor.getModifiers()))
-                    .append(constructor.getName())
-                    .append("(")
-                    .append(formatParameters(constructor.getParameters()))
-                    .append(")")
-                    .append(modifierSuffix(constructor.getModifiers()))
-                    .append("\n");
+        if (model.getConstructors() != null) {
+            for (ConstructorModel constructor : model.getConstructors()) {
+                builder.append(indent).append("  ")
+                        .append(visibilityOf(constructor.getModifiers()))
+                        .append(constructor.getName())
+                        .append("(")
+                        .append(formatParameters(constructor.getParameters()))
+                        .append(")")
+                        .append(modifierSuffix(constructor.getModifiers()))
+                        .append("\n");
+            }
         }
 
-        for (MethodModel method : model.getMethods()) {
-            builder.append(indent).append("  ")
-                    .append(visibilityOf(method.getModifiers()))
-                    .append(method.getReturnType())
-                    .append(" ")
-                    .append(method.getName())
-                    .append("(")
-                    .append(formatParameters(method.getParameters()))
-                    .append(")")
-                    .append(modifierSuffix(method.getModifiers()))
-                    .append("\n");
+        if (model.getMethods() != null) {
+            for (MethodModel method : model.getMethods()) {
+                builder.append(indent).append("  ")
+                        .append(visibilityOf(method.getModifiers()))
+                        .append(method.getReturnType())
+                        .append(" ")
+                        .append(method.getName())
+                        .append("(")
+                        .append(formatParameters(method.getParameters()))
+                        .append(")")
+                        .append(modifierSuffix(method.getModifiers()))
+                        .append("\n");
+            }
         }
 
         builder.append(indent).append("}\n\n");
@@ -221,37 +234,48 @@ public class PlantUmlGenerator {
     }
 
     private String keywordFor(ClassModel model) {
-        switch (model.getKind()) {
-            case "Interface":
+        Kind kind = model == null ? Kind.CLASS : model.getKindEnum();
+        switch (kind) {
+            case INTERFACE:
                 return "interface";
-            case "Enum":
+            case ENUM:
                 return "enum";
-            case "Annotation":
+            case ANNOTATION:
                 return "annotation";
-            case "Record":
+            case RECORD:
                 return "record";
             default:
-                if (model.isAbstract()) {
+                if (model != null && model.isAbstract()) {
                     return "abstract class";
                 }
                 return "class";
         }
     }
 
+    static String arrowFor(RelType relationshipType) {
+        if (relationshipType == null) {
+            return "-->";
+        }
+        switch (relationshipType) {
+            case EXTENDS:
+                return "<|--";
+            case IMPLEMENTS:
+                return "<|..";
+            case DEPENDENCY:
+                return "..>";
+            default:
+                return "-->";
+        }
+    }
+
     private String arrowFor(String relationshipType) {
-        if ("EXTENDS".equals(relationshipType)) {
-            return "<|--";
-        }
-        if ("IMPLEMENTS".equals(relationshipType)) {
-            return "<|..";
-        }
-        if ("DEPENDENCY".equals(relationshipType)) {
-            return "..>";
-        }
-        return "-->";
+        return arrowFor(RelType.fromLabel(relationshipType));
     }
 
     private String formatParameters(List<ParameterModel> parameters) {
+        if (parameters == null || parameters.isEmpty()) {
+            return "";
+        }
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < parameters.size(); i++) {
             ParameterModel parameter = parameters.get(i);

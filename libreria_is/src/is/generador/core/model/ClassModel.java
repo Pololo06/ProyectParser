@@ -42,6 +42,14 @@ public class ClassModel {
     public String getName() { return name; }
     public String getPackageName() { return packageName; }
     public String getKind() { return kind; }
+    public Kind getKindEnum() { return Kind.fromLabel(kind); }
+    /** Fully-qualified name ({@code package.Name} or just {@code Name}). */
+    public String getFqn() {
+        if (packageName == null || packageName.isBlank()) {
+            return name;
+        }
+        return packageName + "." + name;
+    }
     public boolean isAbstract() { return isAbstract; }
     public List<String> getStereotypes() { return stereotypes; }
     public List<AttributeModel> getAttributes() { return attributes; }

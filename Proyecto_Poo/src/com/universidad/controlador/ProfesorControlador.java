@@ -10,32 +10,32 @@ import java.util.List;
 //MESERO
 public class ProfesorControlador {
 
-    private final ProfesorServicio servi;
+    private final ProfesorServicio servicio;
 
-    public ProfesorControlador(ProfesorServicio servi) {
-        if (servi == null) {
-            throw new IllegalArgumentException("Pilas con el Controlador");
+    public ProfesorControlador(ProfesorServicio servicio) {
+        if (servicio == null) {
+            throw new IllegalArgumentException("El servicio de profesores es obligatorio");
         }
-        this.servi = servi;
+        this.servicio = servicio;
     }
 
     public ProfesorDto crearProfesor(ProfesorCrearDto dto) {
-        return servi.registrarProfesor(dto);
+        return servicio.registrarProfesor(dto);
     }
 
     public int cantidadProfesores() {
-        return servi.contarProfesores();
+        return servicio.contarProfesores();
     }
 
     public List<ProfesorDto> listarProfesores() {
-        return servi.obtenerProfesores();
+        return servicio.obtenerProfesores();
     }
     public ProfesorDto actualizarProfesor(ProfesorActualizarDto dto) {
-        return servi.actualizarProfesor(dto);
+        return servicio.actualizarProfesor(dto);
     }
 
     public boolean eliminarProfesor(Long id) {
-        return servi.eliminarProfesor(id);
+        return servicio.eliminarProfesor(id);
     }
 
 }

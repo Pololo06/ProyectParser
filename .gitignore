@@ -1,8 +1,16 @@
 /out/
 /build/
 /dist/
+libreria_is/dist/
+Proyecto_Poo/dist/
+Proyecto_Poo/build/
 *.class
 .idea/
 *.iml
 *.log
 .DS_Store
+# jars locales duplicados de Maven/Ant (usar mvn package para regenerar)
+libreria_is/lib/*.jar
+Proyecto_Poo/librerias/libreria_is.jar
+Proyecto_Poo/librerias/javaparser-core.jar
+Proyecto_Poo/dist/lib/

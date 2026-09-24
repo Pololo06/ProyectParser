@@ -15,4 +15,5 @@ public class RelationshipModel {
     public String getSource() { return source; }
     public String getTarget() { return target; }
     public String getType() { return type; }
+    public RelType getTypeEnum() { return RelType.fromLabel(type); }
 }

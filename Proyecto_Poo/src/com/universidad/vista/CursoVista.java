@@ -105,7 +105,7 @@ public class CursoVista implements SystemModule{
                     cupoMaximoCurso
             );
             
-            CursoDto respuesta = controlador.CrearCurso(dto);
+            CursoDto respuesta = controlador.crearCurso(dto);
             
             console.showMessage("Curso registrado Correctamente");
             

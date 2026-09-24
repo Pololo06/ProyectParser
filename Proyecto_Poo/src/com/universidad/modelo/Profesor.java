@@ -26,7 +26,7 @@ public class Profesor {
     ) {
         this.nombreProfesor = nombreProfesor;
         this.celularProfesor = celularProfesor;
-        this.estadoProfesor = estadoProfesor.ACTIVO;
+        this.estadoProfesor = EstadoEntidad.ACTIVO;
     }
 
     // Hidratacion
@@ -48,6 +48,9 @@ public class Profesor {
     }
 
     public void actualizarNombre(String nuevoNombre) {
+        if (nuevoNombre == null || nuevoNombre.isBlank()) {
+            throw new IllegalArgumentException("El nombre del profesor es obligatorio");
+        }
         if (nuevoNombre.equalsIgnoreCase(this.nombreProfesor)) {
             throw new IllegalArgumentException("Los nombre son iguales");
         }
@@ -55,6 +58,9 @@ public class Profesor {
     }
 
     public void actualizarCelular(String nuevoCelular) {
+        if (nuevoCelular == null || nuevoCelular.isBlank()) {
+            throw new IllegalArgumentException("El celular del profesor es obligatorio");
+        }
         if (nuevoCelular.equalsIgnoreCase(this.celularProfesor)) {
             throw new IllegalArgumentException("Celulares iguales");
         }

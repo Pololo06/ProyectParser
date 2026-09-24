@@ -21,9 +21,12 @@ public class ProjectModel {
     public List<ClassModel> getClasses() { return classes; }
     public List<RelationshipModel> getRelationships() { return relationships; }
 
-    /** Derived package views, sorted by package name (Fase 10). */
+    /** Derived package views, sorted by package name (Fase 10). Null-safe. */
     public List<PackageModel> getPackages() {
         Map<String, List<String>> byPackage = new TreeMap<>();
+        if (classes == null) {
+            return List.of();
+        }
         for (ClassModel model : classes) {
             String pkg = model.getPackageName() == null ? "" : model.getPackageName();
             byPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add(model.getName());
