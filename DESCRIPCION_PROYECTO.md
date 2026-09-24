@@ -119,7 +119,7 @@ DiagramOptions opciones = new DiagramOptions.Builder()
 
 `PumlFileWriter.write(path, content)`: crea directorios padre, fuerza extensión `.puml`, escribe UTF-8.
 
-### 3.6. API de `SoyLaPuerta` (resumen)
+### 3.7. API de `SoyLaPuerta` (resumen)
 
 * Análisis/conteo: `countClasses()`, `countByKind()`, `countTotalTypes()`, `getPackages()`, `getPackageNames()`, `getPackageModels()`, `getClassDetails()` / `ClassInfo` (propiedades, constructores, getters/setters JavaBeans reales con campo respaldo), `getExternalClasses()`.
 * Generación: `generatePlantUml()`, `generatePlantUmlViaUseCase()`, `exportPlantUml()`, variantes con `DiagramFilter`.
@@ -133,19 +133,12 @@ Sistema CLI de **gestión universitaria** (estudiantes, profesores, cursos, asig
 ### 4.1. Capas (`src/com/universidad/`)
 
 ```
-App.java / AppScannerCli.java / AppGenerador.java
-├── modelo/          Entidades: Estudiante, Profesor, Curso, AsignaturaCosto
-│   ├── enumeracion/ EstadoEntidad (ACTIVO/INACTIVO)
-│   ├── convertidor/ EstadoEntidadConverter, FechaLocalConverter
-│   └── constante/   PoliticasAcademicas (mín/máx semanas, cupos)
-├── dto/             Records inmutables por entidad (Crear/Actualizar/Dto) + validacion/ReglasValidacion
-├── mapeador/        Mapeador<E,R> (interface) + *Mapeador (entidad ↔ DTO)
-├── repositorio/     Interfaces RepositorioBase<T,ID> + específicas + cargador/ (CargadorDatos, ProfesorCargador con caché)
-├── persistencia/    RepositorioBaseAbstracto + *RepositorioImpl (CRUD sobre TpaRepository)
-├── servicio/        *Servicio (lógica de negocio + validación)
-├── controlador/     *Controlador (fachada usada por las vistas)
-├── vista/           *Vista (menús consola con cleandev-cli) + constante/ConfiguracionCli
-└── config/          ConfiguracionDeDependencias + modulos/ (ConfiguracionModulo* + ModuloConfigurable) + RutaPersistencia
+App.java / AppScannerCli.java
+├── domain/               Entidades (Estudiante, Profesor, ...), repositorios, enumeracion/
+├── application/          DTOs, mappers, servicios, puertos
+├── infrastructure/       cli/ (vistas), config/, persistence/
+├── interfaceadapters/    controller/
+└── tools/                AppGenerador.java + MuestraTiposExternos.java (fixture de externas)
 ```
 
 * **Persistencia:** archivos planos en `misPersistencias/` (`estudiantes.txt`, `profesore.txt`, `cursos.txt`, `asignaturas.txt`, `materias.txt`).
@@ -167,11 +160,14 @@ App.java / AppScannerCli.java / AppGenerador.java
 # 1. Compilar librería y actualizar el JAR usado por la demo
 ./actualizar_libreria.sh
 # (equivale a: cd libreria_is && mvn clean package -DskipTests
-#  + cp libreria_is/target/libreria_is*.jar Proyecto_Poo/librerias/libreria_is.jar)
+#  + cp libreria_is/dist/libreria_is-*.jar Proyecto_Poo/librerias/libreria_is.jar)
 
 # 2. Generar diagrama de la demo (interactivo, pregunta filtros)
 cd Proyecto_Poo
-java -cp "librerias/*:build/classes" com.universidad.AppGenerador src diagrama_filtrado.puml
+java -cp "librerias/*:build/classes" com.universidad.tools.AppGenerador src diagrama_filtrado.puml
+
+# 2b. Con banderas (no interactivas para visualización)
+java -cp "librerias/*:build/classes" com.universidad.tools.AppGenerador src diagrama.puml --no-getters --no-jdk
 
 # 3. Renderizar el .puml con PlantUML / VS Code / IntelliJ / plantuml.com
 ```
@@ -216,6 +212,7 @@ CursoRepositorio <|.. CursoRepositorioImpl
 ## 7. Ideas clave para explicar/defender el proyecto
 
 * **AST vs. regex:** se usa JavaParser, no expresiones regulares → soporta genéricos anidados, records, enums, tipos internos y anotaciones con precisión.
-* **Separación Clean-like:** `core` (modelo + análisis + filtro, sin dependencias de render) vs. `infra` (PlantUML + archivos) vs. fachada. El `ProjectModel` es canónico y testeable sin PlantUML.
+* **Separación Clean Architecture:** `domain` (modelo + policies, puro) ← `application` (casos de uso, solo puertos) ← `infrastructure` (JavaParser, PlantUML, archivos). La fachada solo conecta puertos. El `ProjectModel` es canónico y testeable sin PlantUML.
+* **Whitelist y externas:** si la whitelist tiene algo, las clases externas (`java.util`, etc.) también se evalúan contra ella; para verlas hay que incluir sus paquetes, o usar `--no-external`/`--no-jdk` para ocultarlas.
 * **Diagramas útiles, no ruidosos:** primitivos/escalares no crean cajas, externas van a bloque `EXTERNAL` separado, filtros blacklist>whitelist permiten aislar un subsistema.
 * **Trazabilidad:** cada análisis reporta qué archivos se parsearon y cuáles fallaron con motivo, sin tumbar la generación.

@@ -2,6 +2,9 @@ package com.universidad.tools;
 
 import is.generador.domain.policy.DiagramFilter;
 import is.generador.domain.policy.DiagramOptions;
+import is.generador.domain.BeanAccessors;
+import is.generador.domain.port.DiagramRendererPort;
+import is.generador.domain.port.SourceAnalyzerPort;
 import is.generador.infrastructure.javaparser.ProjectAnalyzer;
 import is.generador.application.FilteredProjectBuilder;
 import is.generador.domain.model.AttributeModel;
@@ -268,7 +271,7 @@ public class AppGenerador {
         }
         List<String> result = new ArrayList<>();
         for (String arg : args) {
-            if (arg != null && !arg.trim().startsWith("--")) {
+            if (arg != null && !arg.trim().startsWith("-")) {
                 result.add(arg);
             }
         }
@@ -313,16 +316,22 @@ public class AppGenerador {
                     break;
                 case "--help":
                 case "-h":
-                    printUsageAndExit();
+                    printUsage();
+                    System.exit(0);
                     break;
                 default:
+                    if (arg.trim().startsWith("-")) {
+                        System.err.println("Flag desconocido: " + arg);
+                        printUsage();
+                        System.exit(2);
+                    }
                     break;
             }
         }
         return options.build();
     }
 
-    private static void printUsageAndExit() {
+    private static void printUsage() {
         System.out.println("Uso: AppGenerador [ruta_src] [salida.puml] [flags]");
         System.out.println("Flags:");
         System.out.println("  --no-getters      Oculta getters/setters con campo respaldo");
@@ -332,7 +341,7 @@ public class AppGenerador {
         System.out.println("  --no-external     Oculta cajas @external y sus relaciones");
         System.out.println("  --no-jdk          Oculta solo externas del JDK (java.*)");
         System.out.println("  --flat            Sin bloques package (plano)");
-        System.exit(0);
+        System.out.println("  --help, -h        Muestra esta ayuda");
     }
 
     private static void logOptions(DiagramOptions options) {
@@ -360,7 +369,7 @@ public class AppGenerador {
 
         ProjectModel originalProject;
         try {
-            ProjectAnalyzer analyzer = new ProjectAnalyzer();
+            SourceAnalyzerPort analyzer = new ProjectAnalyzer();
             originalProject = analyzer.analyze(srcPath);
         } catch (IOException e) {
             errorCount++;
@@ -574,10 +583,9 @@ public class AppGenerador {
                 int setterCount = 0;
                 if (clazz.getMethods() != null) {
                     for (MethodModel m : clazz.getMethods()) {
-                        String name = m.getName();
-                        if (name.startsWith("get") || name.startsWith("is")) {
+                        if (BeanAccessors.isGetter(m, clazz)) {
                             getterCount++;
-                        } else if (name.startsWith("set")) {
+                        } else if (BeanAccessors.isSetter(m, clazz)) {
                             setterCount++;
                         }
                     }
@@ -607,9 +615,9 @@ public class AppGenerador {
                     for (MethodModel m : clazz.getMethods()) {
                         String vis = parseVisibility(m.getModifiers());
                         String tag = "";
-                        if (m.getName().startsWith("get") || m.getName().startsWith("is")) {
+                        if (BeanAccessors.isGetter(m, clazz)) {
                             tag = " [getter]";
-                        } else if (m.getName().startsWith("set")) {
+                        } else if (BeanAccessors.isSetter(m, clazz)) {
                             tag = " [setter]";
                         }
                         System.out.println("    " + vis + " " + m.getName() + "() : " + m.getReturnType() + tag);
@@ -643,8 +651,8 @@ public class AppGenerador {
         }
 
         // 8. Generación del diagrama PlantUML con las banderas elegidas
-        PlantUmlGenerator generator = new PlantUmlGenerator();
-        String pumlContent = generator.generate(filteredModel, options);
+        DiagramRendererPort renderer = new PlantUmlGenerator();
+        String pumlContent = renderer.render(filteredModel, options);
 
         // 9. Banner gigante
         System.out.println("\n" +
