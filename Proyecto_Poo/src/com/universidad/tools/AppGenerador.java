@@ -1,6 +1,7 @@
 package com.universidad.tools;
 
 import is.generador.domain.policy.DiagramFilter;
+import is.generador.domain.policy.DiagramOptions;
 import is.generador.infrastructure.javaparser.ProjectAnalyzer;
 import is.generador.application.FilteredProjectBuilder;
 import is.generador.domain.model.AttributeModel;
@@ -144,6 +145,44 @@ public class AppGenerador {
     }
 
     /**
+     * Revisión interactiva de relaciones (Fase 5): lista las relaciones
+     * detectadas y permite vetar las no deseadas antes de generar.
+     * Devuelve el modelo reconstruido sin las vetadas.
+     */
+    private static ProjectModel reviewRelationships(Scanner scanner,
+            FilteredProjectBuilder builder, ProjectModel filteredModel) {
+        if (filteredModel == null || filteredModel.getRelationships() == null
+                || filteredModel.getRelationships().isEmpty()) {
+            System.out.println("\n  (sin relaciones detectadas)");
+            return filteredModel;
+        }
+        System.out.println("\n==================================================");
+        System.out.println(" RELACIONES DETECTADAS (solo lectura del AST)");
+        System.out.println("==================================================");
+        List<String> relKeys = new ArrayList<>();
+        Map<String, String> relLabels = new java.util.LinkedHashMap<>();
+        int relIdx = 0;
+        for (RelationshipModel rel : filteredModel.getRelationships()) {
+            String key = FilteredProjectBuilder.relationshipKey(rel);
+            String label = rel.getSource() + " " + rel.getType() + " -> " + rel.getTarget();
+            relKeys.add(key);
+            relLabels.put(key, label);
+            System.out.printf("  [%d] %s%n", (++relIdx), label);
+        }
+        List<String> vetoed = readSelection(scanner,
+                "> Relaciones a DESCARTAR (Enter=ninguna): ", relKeys);
+        for (String key : vetoed) {
+            System.out.println("  [x] Relación descartada: " + relLabels.getOrDefault(key, key));
+        }
+        if (vetoed.isEmpty()) {
+            return filteredModel;
+        }
+        builder.excludeRelationships(vetoed);
+        logTrace("Reconstruyendo modelo sin " + vetoed.size() + " relación(es) vetada(s)...");
+        return builder.build();
+    }
+
+    /**
      * Imprime el contador de tipos por kind (Class, Interface, Enum, Record,
      * AbstractClass, Annotation...) discriminando internas y externas, más el total.
      */
@@ -219,16 +258,105 @@ public class AppGenerador {
         }
     }
 
+    /**
+     * Extrae los argumentos posicionales (los que no empiezan con {@code --}).
+     * Los flags de visualización no alteran las posiciones de ruta y salida.
+     */
+    private static String[] positionals(String[] args) {
+        if (args == null) {
+            return new String[0];
+        }
+        List<String> result = new ArrayList<>();
+        for (String arg : args) {
+            if (arg != null && !arg.trim().startsWith("--")) {
+                result.add(arg);
+            }
+        }
+        return result.toArray(new String[0]);
+    }
+
+    /**
+     * Banderas de visualización por argumentos (Fase 2):
+     * --no-getters --no-attributes --no-methods --no-constructors
+     * --no-external --no-jdk --flat --help
+     */
+    private static DiagramOptions parseDiagramOptions(String[] args) {
+        DiagramOptions.Builder options = new DiagramOptions.Builder();
+        if (args == null) {
+            return options.build();
+        }
+        for (String arg : args) {
+            if (arg == null) {
+                continue;
+            }
+            switch (arg.trim().toLowerCase()) {
+                case "--no-getters":
+                    options.showGettersSetters(false);
+                    break;
+                case "--no-attributes":
+                    options.showAttributes(false);
+                    break;
+                case "--no-methods":
+                    options.showMethods(false);
+                    break;
+                case "--no-constructors":
+                    options.showConstructors(false);
+                    break;
+                case "--no-external":
+                    options.showExternal(false);
+                    break;
+                case "--no-jdk":
+                    options.showJdkTypes(false);
+                    break;
+                case "--flat":
+                    options.groupByPackage(false);
+                    break;
+                case "--help":
+                case "-h":
+                    printUsageAndExit();
+                    break;
+                default:
+                    break;
+            }
+        }
+        return options.build();
+    }
+
+    private static void printUsageAndExit() {
+        System.out.println("Uso: AppGenerador [ruta_src] [salida.puml] [flags]");
+        System.out.println("Flags:");
+        System.out.println("  --no-getters      Oculta getters/setters con campo respaldo");
+        System.out.println("  --no-attributes   Oculta atributos");
+        System.out.println("  --no-methods      Oculta métodos");
+        System.out.println("  --no-constructors Oculta constructores");
+        System.out.println("  --no-external     Oculta cajas @external y sus relaciones");
+        System.out.println("  --no-jdk          Oculta solo externas del JDK (java.*)");
+        System.out.println("  --flat            Sin bloques package (plano)");
+        System.exit(0);
+    }
+
+    private static void logOptions(DiagramOptions options) {
+        logTrace(String.format(
+                "Opciones: getters=%s attributes=%s methods=%s constructors=%s external=%s jdk=%s grouped=%s",
+                options.isShowGettersSetters(), options.isShowAttributes(), options.isShowMethods(),
+                options.isShowConstructors(), options.isShowExternal(), options.isShowJdkTypes(),
+                options.isGroupByPackage()));
+    }
+
     public static void main(String[] args) {
         int errorCount = 0;
 
         // 1. Detección automatizada de ruta fuente y archivo de salida
-        String srcPath = resolveSourcePath(args);
-        String outputPathStr = (args.length > 1 && args[1] != null && !args[1].trim().isEmpty())
-                ? args[1].trim()
+        // (los flags --* no cuentan como posicionales).
+        String[] positional = positionals(args);
+        String srcPath = resolveSourcePath(positional);
+        String outputPathStr = (positional.length > 1 && positional[1] != null && !positional[1].trim().isEmpty())
+                ? positional[1].trim()
                 : "diagrama_filtrado.puml";
+        DiagramOptions options = parseDiagramOptions(args);
 
         logTrace("Ruta fuente detectada automáticamente: " + srcPath);
+        logOptions(options);
 
         ProjectModel originalProject;
         try {
@@ -278,7 +406,10 @@ public class AppGenerador {
         packageList = new ArrayList<>(internalPkgs);
         packageList.addAll(externalPkgs);
 
-        // 3. Menú interactivo: Paquetes y Clases ordenados por tipo
+        // 3. Resumen global primero, luego listados (Fase 4).
+        printTypeCounts(classList, "RESUMEN GLOBAL DEL PROYECTO");
+
+        // Menú interactivo: Paquetes y Clases ordenados por tipo
         System.out.println("==================================================");
         System.out.println(" PAQUETES INTERNOS DEL PROYECTO");
         System.out.println("==================================================");
@@ -340,10 +471,7 @@ public class AppGenerador {
             System.out.println("  (ninguna)");
         }
 
-        printTypeCounts(classList, "CONTADOR DE TIPOS DETECTADOS");
-
         Scanner scanner = new Scanner(System.in);
-        DiagramFilter filter = new DiagramFilter();
         FilteredProjectBuilder builder = new FilteredProjectBuilder(originalProject);
 
         // 4. Captura de blacklist/whitelist con selección múltiple.
@@ -356,7 +484,6 @@ public class AppGenerador {
 
         List<String> blackPkgs = readSelection(scanner,
                 "> BLACKLIST paq. a excluir (Enter=ninguno): ", packageList);
-        filter.addToBlacklistPackages(blackPkgs);
         blackPkgs.forEach(p -> System.out.println("  [-] Blacklist paquete: " + p));
 
         List<String> classNames = new ArrayList<>();
@@ -365,18 +492,22 @@ public class AppGenerador {
         }
         List<String> blackClasses = readSelection(scanner,
                 "> BLACKLIST clases a excluir (Enter=ninguna): ", classNames);
-        filter.addToBlacklistClasses(blackClasses);
         blackClasses.forEach(c -> System.out.println("  [-] Blacklist clase: " + c));
 
         List<String> whitePkgs = readSelection(scanner,
                 "> WHITELIST paq. a incluir (Enter=todos): ", packageList);
-        filter.addToWhitelistPackages(whitePkgs);
         whitePkgs.forEach(p -> System.out.println("  [+] Whitelist paquete: " + p));
 
         List<String> whiteClasses = readSelection(scanner,
                 "> WHITELIST clases a incluir (Enter=todas): ", classNames);
-        filter.addToWhitelistClasses(whiteClasses);
         whiteClasses.forEach(c -> System.out.println("  [+] Whitelist clase: " + c));
+
+        DiagramFilter filter = new DiagramFilter.Builder()
+                .excludePackages(blackPkgs)
+                .excludeClasses(blackClasses)
+                .includePackages(whitePkgs)
+                .includeClasses(whiteClasses)
+                .build();
 
         builder.setFilter(filter);
 
@@ -384,9 +515,17 @@ public class AppGenerador {
         logTrace("Construyendo modelo filtrado con Builder...");
         ProjectModel filteredModel = builder.build();
 
-        // 6. Resumen de paquetes y clases sobrevivientes (separados)
+        // 5b. Revisión de relaciones: aceptar o rechazar antes de generar (Fase 5).
+        // Solo se eliminan relaciones detectadas por el AST; nunca se inventan.
+        // Sintaxis: Enter=ninguna (conservar todas) | todo=todas fuera |
+        // rangos (1-5) | lista (1,3,5).
+        filteredModel = reviewRelationships(scanner, builder, filteredModel);
+
+        // 6. Resumen global resultante primero, luego listados (Fase 4).
         List<PackageModel> resultPkgs = filteredModel.getPackages();
         List<ClassModel> resultClasses = filteredModel.getClasses();
+
+        printTypeCounts(resultClasses, "RESUMEN GLOBAL RESULTANTE");
 
         Set<String> resultExternalPkgs = new HashSet<>();
         if (resultClasses != null) {
@@ -416,8 +555,6 @@ public class AppGenerador {
         System.out.println(" CLASES EXTERNAS RESULTANTES");
         System.out.println("--------------------------------------------------");
         printResultClasses(resultClasses, true);
-
-        printTypeCounts(resultClasses, "CONTADOR DE TIPOS RESULTANTES");
 
         // 7. Reporte detallado: internas con todo el detalle; externas compactas
         System.out.println("\n==================================================");
@@ -505,9 +642,9 @@ public class AppGenerador {
             }
         }
 
-        // 8. Generación del diagrama PlantUML sin condicionales repetitivas
+        // 8. Generación del diagrama PlantUML con las banderas elegidas
         PlantUmlGenerator generator = new PlantUmlGenerator();
-        String pumlContent = generator.generate(filteredModel);
+        String pumlContent = generator.generate(filteredModel, options);
 
         // 9. Banner gigante
         System.out.println("\n" +

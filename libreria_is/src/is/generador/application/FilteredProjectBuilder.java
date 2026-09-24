@@ -18,6 +18,7 @@ public class FilteredProjectBuilder {
     private ProjectModel originalProject;
     private final Set<String> excludedPackages = new HashSet<>();
     private final Set<String> excludedClasses = new HashSet<>();
+    private final Set<String> vetoedRelationships = new HashSet<>();
     private DiagramFilter filter;
 
     public FilteredProjectBuilder() {
@@ -71,6 +72,39 @@ public class FilteredProjectBuilder {
         return this;
     }
 
+    /** Clave canónica de una relación: {@code "origen|TIPO|destino"}. */
+    public static String relationshipKey(String source, String type, String target) {
+        return source + "|" + type + "|" + target;
+    }
+
+    /** Clave canónica de un {@code RelationshipModel}. */
+    public static String relationshipKey(RelationshipModel rel) {
+        return relationshipKey(rel.getSource(), rel.getType(), rel.getTarget());
+    }
+
+    /**
+     * Veta una relación detectada (Fase 5: aceptar/rechazar).
+     * Solo elimina; nunca inventa relaciones.
+     */
+    public FilteredProjectBuilder excludeRelationship(String source, String type, String target) {
+        if (source != null && type != null && target != null) {
+            this.vetoedRelationships.add(relationshipKey(source, type, target));
+        }
+        return this;
+    }
+
+    /** Veta varias relaciones por su clave {@code "origen|TIPO|destino"}. */
+    public FilteredProjectBuilder excludeRelationships(Collection<String> relationshipKeys) {
+        if (relationshipKeys != null) {
+            for (String key : relationshipKeys) {
+                if (key != null && !key.trim().isEmpty()) {
+                    this.vetoedRelationships.add(key.trim());
+                }
+            }
+        }
+        return this;
+    }
+
     public ProjectModel build() {
         if (originalProject == null) {
             throw new IllegalStateException("Se requiere un ProjectModel original para construir el modelo filtrado.");
@@ -117,10 +151,12 @@ public class FilteredProjectBuilder {
         }
 
         // 3. Filtrar relaciones comprobando que ambos extremos sobrevivan
+        // y que la relación no haya sido vetada (Fase 5).
         List<RelationshipModel> filteredRelationships = new ArrayList<>();
         if (originalProject.getRelationships() != null) {
             for (RelationshipModel rel : originalProject.getRelationships()) {
-                if (!blacklistedClasses.contains(rel.getSource()) && !blacklistedClasses.contains(rel.getTarget())) {
+                if (!blacklistedClasses.contains(rel.getSource()) && !blacklistedClasses.contains(rel.getTarget())
+                        && !vetoedRelationships.contains(relationshipKey(rel))) {
                     filteredRelationships.add(rel);
                 }
             }

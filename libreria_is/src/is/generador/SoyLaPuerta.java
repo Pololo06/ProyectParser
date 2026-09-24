@@ -1,6 +1,8 @@
 package is.generador;
 
 import is.generador.domain.policy.DiagramFilter;
+import is.generador.domain.policy.DiagramOptions;
+import is.generador.domain.BeanAccessors;
 import is.generador.application.AnalyzeProjectUseCase;
 import is.generador.application.ExportDiagramUseCase;
 import is.generador.application.FilteredProjectBuilder;
@@ -192,61 +194,17 @@ public class SoyLaPuerta {
     }
 
     /**
-     * JavaBeans getter: getXxx() / isXxx() with no params, non-void return
-     * (boolean for isXxx), and a matching attribute (decapitalized suffix).
-     * This avoids counting business methods like getCode() or isFinal()
-     * that have no backing field.
+     * JavaBeans getter con campo respaldo (ver {@code BeanAccessors}).
      */
     private boolean isGetter(MethodModel method, ClassModel model) {
-        String name = method.getName();
-        if (method.getParameters() == null || !method.getParameters().isEmpty()) {
-            return false;
-        }
-        String returnType = method.getReturnType() == null ? "" : method.getReturnType();
-        if (returnType.isEmpty() || "void".equals(returnType)) {
-            return false;
-        }
-        String suffix = null;
-        if (name.startsWith("get") && name.length() > 3 && Character.isUpperCase(name.charAt(3))) {
-            suffix = name.substring(3);
-        } else if (name.startsWith("is") && name.length() > 2 && Character.isUpperCase(name.charAt(2))
-                && ("boolean".equals(returnType) || "Boolean".equals(returnType))) {
-            suffix = name.substring(2);
-        } else {
-            return false;
-        }
-        return hasMatchingAttribute(model, suffix);
+        return BeanAccessors.isGetter(method, model);
     }
 
     /**
-     * JavaBeans setter: setXxx(singleParam), void return, matching attribute.
+     * JavaBeans setter con campo respaldo (ver {@code BeanAccessors}).
      */
     private boolean isSetter(MethodModel method, ClassModel model) {
-        String name = method.getName();
-        if (!name.startsWith("set") || name.length() <= 3 || !Character.isUpperCase(name.charAt(3))) {
-            return false;
-        }
-        if (method.getParameters() == null || method.getParameters().size() != 1) {
-            return false;
-        }
-        String returnType = method.getReturnType() == null ? "" : method.getReturnType();
-        if (!"void".equals(returnType)) {
-            return false;
-        }
-        return hasMatchingAttribute(model, name.substring(3));
-    }
-
-    private boolean hasMatchingAttribute(ClassModel model, String suffix) {
-        if (suffix == null || suffix.isEmpty() || model.getAttributes() == null) {
-            return false;
-        }
-        String field = Character.toLowerCase(suffix.charAt(0)) + suffix.substring(1);
-        for (AttributeModel attr : model.getAttributes()) {
-            if (attr.getName().equals(field) || attr.getName().equalsIgnoreCase(suffix)) {
-                return true;
-            }
-        }
-        return false;
+        return BeanAccessors.isSetter(method, model);
     }
 
     private String formatMethodDeclaration(MethodModel method) {
@@ -481,12 +439,26 @@ public class SoyLaPuerta {
 
     /** Generates PlantUML applying a {@code DiagramFilter} (blacklist/whitelist). */
     public String generatePlantUml(String folderPath, DiagramFilter filter) throws IOException {
-        return generateUseCase.execute(folderPath, filter);
+        return generatePlantUml(folderPath, filter, DiagramOptions.defaults());
+    }
+
+    /** Generates PlantUML applying a {@code DiagramFilter} and {@code DiagramOptions}. */
+    public String generatePlantUml(String folderPath, DiagramFilter filter, DiagramOptions options)
+            throws IOException {
+        return generateUseCase.execute(folderPath, filter,
+                options == null ? DiagramOptions.defaults() : options);
     }
 
     /** Generates PlantUML with filter and writes it to {@code outputFile}. */
     public Path exportPlantUml(String folderPath, Path outputFile, DiagramFilter filter) throws IOException {
-        return exportUseCase.execute(folderPath, outputFile, filter);
+        return exportPlantUml(folderPath, outputFile, filter, DiagramOptions.defaults());
+    }
+
+    /** Generates PlantUML with filter and options, writing it to {@code outputFile}. */
+    public Path exportPlantUml(String folderPath, Path outputFile, DiagramFilter filter, DiagramOptions options)
+            throws IOException {
+        return exportUseCase.execute(folderPath, outputFile, filter,
+                options == null ? DiagramOptions.defaults() : options);
     }
 
     /** @deprecated use {@link #getExternalClasses()} instead. */
