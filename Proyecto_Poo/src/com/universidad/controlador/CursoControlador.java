@@ -21,8 +21,14 @@ public class CursoControlador {
         this.servicio = servicio;
     }
 
-    public CursoDto CrearCurso(CursoCrearDto dto) {
+    public CursoDto crearCurso(CursoCrearDto dto) {
         return servicio.registrarCurso(dto);
+    }
+
+    /** @deprecated usar {@link #crearCurso(CursoCrearDto)}. */
+    @Deprecated
+    public CursoDto CrearCurso(CursoCrearDto dto) {
+        return crearCurso(dto);
     }
 
     public List<CursoDto> listarCursos() {

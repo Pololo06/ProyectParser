@@ -21,7 +21,7 @@ public class ConfiguracionModuloProfesor implements ModuloConfigurable {
 
         TpaRepository<Profesor, Long> tpaEngine = TpaRepositoryFactory.create(
                 Profesor.class,
-                RutaPersistencia.PROFESORES.obetenerRuta(),
+                RutaPersistencia.PROFESORES.obtenerRuta(),
                 false);
 
         ProfesorMapeador mapeador = new ProfesorMapeador();

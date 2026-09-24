@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /** File adapter (Fase 2/7): writes generated PlantUML text to a .puml file. */
 public final class PumlFileWriter {
@@ -16,6 +17,11 @@ public final class PumlFileWriter {
      * Forces the {@code .puml} extension when missing.
      */
     public static Path write(Path target, String content) throws IOException {
+        Objects.requireNonNull(target, "target path is required");
+        Objects.requireNonNull(content, "content is required");
+        if (target.getFileName() == null) {
+            throw new IllegalArgumentException("target path must have a file name");
+        }
         Path resolved = target;
         if (!target.getFileName().toString().endsWith(".puml")) {
             resolved = target.resolveSibling(target.getFileName() + ".puml");

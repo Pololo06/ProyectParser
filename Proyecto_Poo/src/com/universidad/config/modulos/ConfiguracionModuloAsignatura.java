@@ -19,7 +19,7 @@ public class ConfiguracionModuloAsignatura implements ModuloConfigurable{
     public ConfiguracionModuloAsignatura() {
         TpaRepository<AsignaturaCosto, Integer> tpaEngine = TpaRepositoryFactory.create(
                 AsignaturaCosto.class, 
-                RutaPersistencia.ASIGNATURAS.obetenerRuta(),
+                RutaPersistencia.ASIGNATURAS.obtenerRuta(),
                 true
         );
         

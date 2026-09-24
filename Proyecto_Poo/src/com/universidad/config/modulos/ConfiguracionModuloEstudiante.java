@@ -21,7 +21,7 @@ public class ConfiguracionModuloEstudiante implements ModuloConfigurable {
     public ConfiguracionModuloEstudiante() {
         TpaRepository<Estudiante, UUID> tpaEngine = TpaRepositoryFactory.create(
                 Estudiante.class, 
-                RutaPersistencia.ESTUDIANTES.obetenerRuta(),
+                RutaPersistencia.ESTUDIANTES.obtenerRuta(),
                 true
         );
         

@@ -4,7 +4,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public enum RutaPersistencia {
-    PROFESORES("profesore.txt"),
+    PROFESORES("profesores.txt"),
     ESTUDIANTES("estudiantes.txt"),
     CURSOS("cursos.txt"),
     ASIGNATURAS("asignaturas.txt");
@@ -12,14 +12,18 @@ public enum RutaPersistencia {
     private final Path ruta;
     
     RutaPersistencia(String nombreArchivo) {
-        ruta = Paths.get(
-                System.getProperty("user.dir"), 
-                "misPersistencias", 
-                nombreArchivo);
+        String baseDir = System.getProperty("app.data.dir", System.getProperty("user.dir"));
+        ruta = Paths.get(baseDir, "misPersistencias", nombreArchivo);
     }
     
-    public Path obetenerRuta() {
+    public Path obtenerRuta() {
         return ruta;
+    }
+
+    /** @deprecated usar {@link #obtenerRuta()}; se conserva por compatibilidad. */
+    @Deprecated
+    public Path obetenerRuta() {
+        return obtenerRuta();
     }
 }   
 
