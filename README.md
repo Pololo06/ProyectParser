@@ -22,6 +22,10 @@ The project is divided into two primary submodules:
 * `proyect-parser-core/`: The core parsing and export library containing AST traversal logic, internal domain models, and the diagram writer pipeline.
 * `Proyecto_Poo/`: The reference application and domain model implementation demonstrating CLI integration, persistence, and automated diagram output.
 
+## Docs
+
+* [Flujo de la librería en 3 fases](docs/flujo-3-fases.md) (ES): obtención de información → inferencia de relaciones → generación del `.puml`.
+
 ## Tech Stack
 
 * **Language:** Java
