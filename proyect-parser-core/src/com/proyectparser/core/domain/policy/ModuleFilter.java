@@ -6,9 +6,12 @@ import com.proyectparser.core.domain.model.RelType;
 import com.proyectparser.core.domain.model.RelationshipModel;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -18,8 +21,9 @@ import java.util.TreeSet;
  * Selecciona las clases de un módulo vertical (p. ej. {@code Estudiante}) para
  * un diagrama por módulo. Pertenece a {@code domain.policy}: no depende de infraestructura.
  *
- * <p>Incluye las clases internas cuyo nombre contiene el módulo (sin distinguir
- * mayúsculas), sus supertipos transitivos ({@code EXTENDS}/{@code IMPLEMENTS}:
+ * <p>Incluye las clases internas cuyo nombre contiene el módulo como palabras
+ * CamelCase completas (sin distinguir mayúsculas: {@code Curso} coincide con
+ * {@code CursoDto} y {@code ConfiguracionModuloCurso}, no con {@code RecursoX}), sus supertipos transitivos ({@code EXTENDS}/{@code IMPLEMENTS}:
  * interfaces y clases base como {@code RepositorioBase}) y los destinos internos de
  * sus asociaciones directas (p. ej. {@code EstadoEntidad}).</p>
  *
@@ -40,7 +44,7 @@ public final class ModuleFilter {
         if (project == null || project.getClasses() == null || module == null || module.trim().isEmpty()) {
             return names;
         }
-        String needle = module.trim().toLowerCase(Locale.ROOT);
+        List<String> needle = words(module.trim());
         Map<String, ClassModel> internalsById = new HashMap<>();
         Set<String> seeds = new HashSet<>();
         for (ClassModel model : project.getClasses()) {
@@ -48,7 +52,7 @@ public final class ModuleFilter {
                 continue;
             }
             internalsById.put(model.id(), model);
-            if (model.getName() != null && model.getName().toLowerCase(Locale.ROOT).contains(needle)) {
+            if (model.getName() != null && containsWords(words(model.getName()), needle)) {
                 seeds.add(model.id());
             }
         }
@@ -88,5 +92,21 @@ public final class ModuleFilter {
             names.add(internalsById.get(id).getName());
         }
         return names;
+    }
+
+    /** CamelCase words in lower case: {@code "UUIDCursoDto"} gives {@code [uuid, curso, dto]}. */
+    static List<String> words(String name) {
+        List<String> words = new ArrayList<>();
+        for (String word : name.split("(?<=[\\p{Ll}\\p{N}])(?=\\p{Lu})|(?<=\\p{Lu})(?=\\p{Lu}\\p{Ll})|[^\\p{L}\\p{N}]+")) {
+            if (!word.isEmpty()) {
+                words.add(word.toLowerCase(Locale.ROOT));
+            }
+        }
+        return words;
+    }
+
+    /** true if {@code needle} appears as a consecutive run of whole words in {@code words}. */
+    private static boolean containsWords(List<String> words, List<String> needle) {
+        return !needle.isEmpty() && Collections.indexOfSubList(words, needle) >= 0;
     }
 }
