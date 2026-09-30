@@ -21,7 +21,7 @@ proyect-parser-core/target/
 # herramientas de refactor y verificación (no necesarias para ejecutar el proyecto)
 verificar.sh
 verificacion/
-docs/
+# docs/ versionada: documentación de la librería (ver docs/flujo-3-fases.md)
 arquitectura-referencia.md
 proyect-parser-core_tree.txt
 /diagrama_filtrado.puml
