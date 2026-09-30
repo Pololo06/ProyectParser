@@ -4,6 +4,7 @@ import com.proyectparser.core.UseCases;
 import com.proyectparser.core.application.DiagramService;
 import com.proyectparser.core.domain.policy.DiagramFilter;
 import com.proyectparser.core.domain.policy.DiagramOptions;
+import com.proyectparser.core.domain.policy.ModuleFilter;
 import com.proyectparser.core.domain.policy.ProjectFilter;
 import com.proyectparser.core.domain.BeanAccessors;
 import com.proyectparser.core.domain.model.AttributeModel;
@@ -295,18 +296,43 @@ public class AppGenerador {
             return new String[0];
         }
         List<String> result = new ArrayList<>();
-        for (String arg : args) {
-            if (arg != null && !arg.trim().startsWith("-")) {
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            if (arg != null && arg.trim().equalsIgnoreCase("--modulo")) {
+                i++; // su valor no es posicional
+            } else if (arg != null && !arg.trim().startsWith("-")) {
                 result.add(arg);
             }
         }
         return result.toArray(new String[0]);
     }
 
+    /** Valor de {@code --modulo X} o {@code --modulo=X}; null si no se pasó. */
+    private static String parseModule(String[] args) {
+        if (args == null) {
+            return null;
+        }
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i] == null ? "" : args[i].trim();
+            if (arg.toLowerCase().startsWith("--modulo=")) {
+                return arg.substring("--modulo=".length()).trim();
+            }
+            if (arg.equalsIgnoreCase("--modulo")) {
+                if (i + 1 >= args.length || args[i + 1] == null || args[i + 1].trim().startsWith("-")) {
+                    System.err.println("Falta el nombre del módulo: --modulo Estudiante");
+                    printUsage();
+                    System.exit(2);
+                }
+                return args[i + 1].trim();
+            }
+        }
+        return null;
+    }
+
     /**
      * Banderas de visualización por argumentos (Fase 2):
      * --no-getters --no-attributes --no-methods --no-constructors
-     * --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --help
+     * --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X --help
      * Las externas (UUID, BigDecimal...) se omiten por defecto: ya aparecen como
      * tipos de los atributos y sus flechas cruzan todo el diagrama.
      */
@@ -329,6 +355,9 @@ public class AppGenerador {
                 }
                 options.lineType(type);
                 continue;
+            }
+            if (arg.trim().toLowerCase().startsWith("--modulo")) {
+                continue; // lo lee parseModule
             }
             if (arg.trim().toLowerCase().startsWith("--capas=")) {
                 String value = arg.trim().substring("--capas=".length());
@@ -404,6 +433,8 @@ public class AppGenerador {
         System.out.println("  --lineas=TIPO     Estilo de líneas: ortho, polyline o spline (por defecto: el de PlantUML)");
         System.out.println("  --capas[=a,b,...] Ordena capas arriba→abajo y orienta flechas con down/up");
         System.out.println("                    (sin valor: " + String.join(",", DiagramOptions.DEFAULT_LAYERS) + ")");
+        System.out.println("  --modulo X        Solo el módulo X: clases cuyo nombre contiene X, sus supertipos");
+        System.out.println("                    y los destinos de sus asociaciones (se suma a la whitelist)");
         System.out.println("  --help, -h        Muestra esta ayuda");
     }
 
@@ -426,6 +457,7 @@ public class AppGenerador {
                 ? positional[1].trim()
                 : "diagrama_filtrado.puml";
         DiagramOptions options = parseDiagramOptions(args);
+        String module = parseModule(args);
 
         logTrace("Ruta fuente detectada automáticamente: " + srcPath);
         logOptions(options);
@@ -577,6 +609,17 @@ public class AppGenerador {
         List<String> whiteClasses = retainKnown(readSelection(scanner,
                 "> WHITELIST clases a incluir (Enter=todas, solo internas): ", internalClassNames),
                 internalClassNames, "clase interna");
+        if (module != null) {
+            Set<String> moduleClasses = ModuleFilter.classesOf(originalProject, module);
+            if (moduleClasses.isEmpty()) {
+                System.out.println("  [!] Ninguna clase coincide con el módulo: " + module);
+            }
+            for (String name : moduleClasses) {
+                if (!whiteClasses.contains(name)) {
+                    whiteClasses.add(name);
+                }
+            }
+        }
         whiteClasses.forEach(c -> System.out.println("  [+] Whitelist clase: " + c));
         System.out.println("  (nota: las externas solo obedecen a blacklist y a --no-external/--no-jdk)");
 

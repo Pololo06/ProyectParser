@@ -144,6 +144,8 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
 
 ### 3.2 Filtro (`DiagramFilter`, inmutable con `Builder`)
 
+Diagrama por módulo: `ModuleFilter.classesOf(proyecto, "Estudiante")` devuelve las clases internas cuyo nombre contiene el módulo, sus supertipos transitivos y los destinos internos de sus asociaciones directas; `AppGenerador --modulo Estudiante` los suma a la whitelist de clases.
+
 Precedencia: **blacklist > whitelist > permitir**. Las externas solo obedecen a blacklist.
 
 ```java
@@ -177,7 +179,7 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .build();
 ```
 
-Flags de `AppGenerador` equivalentes: `--no-getters --no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...]` (las externas se omiten por defecto en AppGenerador).
+Flags de `AppGenerador` equivalentes: `--no-getters --no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X` (las externas se omiten por defecto en AppGenerador).
 
 ### 3.4 Escritura (`PumlFileWriter`)
 
