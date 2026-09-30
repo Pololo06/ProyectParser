@@ -1,0 +1,379 @@
+package com.proyectparser.core.infrastructure.plantuml;
+
+import com.proyectparser.core.domain.BeanAccessors;
+import com.proyectparser.core.domain.model.AttributeModel;
+import com.proyectparser.core.domain.model.ClassModel;
+import com.proyectparser.core.domain.model.ConstructorModel;
+import com.proyectparser.core.domain.model.Kind;
+import com.proyectparser.core.domain.model.MethodModel;
+import com.proyectparser.core.domain.model.ParameterModel;
+import com.proyectparser.core.domain.model.PackageModel;
+import com.proyectparser.core.domain.model.ProjectModel;
+import com.proyectparser.core.domain.model.RelType;
+import com.proyectparser.core.domain.model.RelationshipModel;
+import com.proyectparser.core.domain.policy.DiagramOptions;
+import com.proyectparser.core.domain.port.DiagramRendererPort;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
+
+/**
+ * Renders the internal domain model as PlantUML class diagram source.
+ *
+ * <p>Project classes are grouped by their Java package into PlantUML
+ * {@code package "..." { }} blocks. External classes (stereotype
+ * {@code @external}) are always rendered apart, in their own
+ * {@code package "EXTERNAL" { }} block at the end, so both worlds never mix.</p>
+ *
+ * <p>Classes are identified by {@link ClassModel#id()}. A homonym (id different from its
+ * name) is declared as {@code class "Foo" as h_a_Foo}, and its relationships use the alias.</p>
+ */
+public class PlantUmlGenerator implements DiagramRendererPort {
+
+    /** By name and, for homonyms, by fqn. */
+    private static final Comparator<ClassModel> BY_NAME = Comparator.comparing(ClassModel::getName)
+            .thenComparing(ClassModel::getFqn);
+
+    @Override
+    public String render(ProjectModel project, boolean groupByPackage) {
+        return generate(project, groupByPackage);
+    }
+
+    @Override
+    public String render(ProjectModel project, DiagramOptions options) {
+        return generate(project, options);
+    }
+
+    private String generate(ProjectModel project, boolean groupByPackage) {
+        return generate(project, new DiagramOptions.Builder().groupByPackage(groupByPackage).build());
+    }
+
+    /** Renders the project applying the given {@link DiagramOptions}. */
+    private String generate(ProjectModel project, DiagramOptions options) {
+        DiagramOptions opt = options == null ? DiagramOptions.defaults() : options;
+        StringBuilder builder = new StringBuilder();
+        builder.append("@startuml\n");
+        builder.append("skinparam classAttributeIconSize 0\n\n");
+
+        List<ClassModel> internals = new ArrayList<>();
+        List<ClassModel> externals = new ArrayList<>();
+        if (project.getClasses() != null) {
+            for (ClassModel model : project.getClasses()) {
+                (model.isExternal() ? externals : internals).add(model);
+            }
+        }
+        if (!opt.isShowExternal()) {
+            externals.clear();
+        } else if (!opt.isShowJdkTypes()) {
+            externals.removeIf(model -> isJdkPackage(model.getPackageName()));
+        }
+        externals.sort(BY_NAME);
+
+        if (opt.isGroupByPackage()) {
+            Map<String, List<ClassModel>> byPackage = new TreeMap<>();
+            for (ClassModel model : internals) {
+                String pkg = model.getPackageName() == null ? "" : model.getPackageName();
+                byPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add(model);
+            }
+            for (List<ClassModel> models : byPackage.values()) {
+                models.sort(BY_NAME);
+            }
+            for (Map.Entry<String, List<ClassModel>> entry : byPackage.entrySet()) {
+                builder.append("package \"").append(PackageModel.displayName(entry.getKey())).append("\" {\n");
+                for (ClassModel model : entry.getValue()) {
+                    appendClass(builder, model, "  ", opt);
+                }
+                builder.append("}\n\n");
+            }
+            if (!externals.isEmpty()) {
+                builder.append("package \"EXTERNAL\" {\n");
+                for (ClassModel model : externals) {
+                    appendClass(builder, model, "  ", opt);
+                }
+                builder.append("}\n\n");
+            }
+        } else {
+            for (ClassModel model : internals) {
+                appendClass(builder, model, "", opt);
+            }
+            if (!externals.isEmpty()) {
+                builder.append("' ---------------- EXTERNAL ----------------\n");
+                for (ClassModel model : externals) {
+                    appendClass(builder, model, "", opt);
+                }
+            }
+        }
+
+        appendRelationships(builder, project, renderedNames(internals, externals));
+        builder.append("\n@enduml\n");
+        return builder.toString();
+    }
+
+    /** Ids of the rendered (non-hidden) classes. */
+    private static Set<String> renderedNames(List<ClassModel> internals, List<ClassModel> externals) {
+        Set<String> names = new HashSet<>();
+        if (internals != null) {
+            for (ClassModel model : internals) {
+                names.add(model.id());
+            }
+        }
+        if (externals != null) {
+            for (ClassModel model : externals) {
+                names.add(model.id());
+            }
+        }
+        return names;
+    }
+
+    /** PlantUML name of a class: its name, or for a homonym its id with non-alphanumerics as {@code _}. */
+    private static String aliasOf(ClassModel model) {
+        if (Objects.equals(model.id(), model.getName())) {
+            return model.getName();
+        }
+        return model.id().replaceAll("[^\\p{L}\\p{N}]", "_");
+    }
+
+    /** true for JDK packages ({@code java.*}), kept apart from third-party externals. */
+    static boolean isJdkPackage(String packageName) {
+        return packageName != null
+                && (packageName.equals("java.lang") || packageName.startsWith("java."));
+    }
+
+    private void appendClass(StringBuilder builder, ClassModel model, String indent, DiagramOptions opt) {
+        builder.append(indent).append(keywordFor(model)).append(" ");
+        String alias = aliasOf(model);
+        if (Objects.equals(alias, model.getName())) {
+            builder.append(alias);
+        } else {
+            builder.append('"').append(model.getName()).append("\" as ").append(alias);
+        }
+        builder.append(" {\n");
+
+        if (model.getStereotypes() != null) {
+            for (String stereotype : model.getStereotypes()) {
+                builder.append(indent).append("  <<").append(stereotype.replace("@", "")).append(">>\n");
+            }
+        }
+
+        // enum literals first, as plain constants
+        if (model.getKindEnum() == Kind.ENUM && model.getEnumConstants() != null) {
+            for (String constant : model.getEnumConstants()) {
+                builder.append(indent).append("  ").append(constant).append("\n");
+            }
+        }
+
+        if (opt.isShowAttributes() && model.getAttributes() != null) {
+            for (AttributeModel attribute : model.getAttributes()) {
+                builder.append(indent).append("  ")
+                        .append(visibilityOf(attribute.getModifiers()))
+                        .append(attribute.getType())
+                        .append(" ")
+                        .append(attribute.getName())
+                        .append(modifierSuffix(attribute.getModifiers()))
+                        .append("\n");
+            }
+        }
+
+        if (opt.isShowConstructors() && model.getConstructors() != null) {
+            for (ConstructorModel constructor : model.getConstructors()) {
+                builder.append(indent).append("  ")
+                        .append(visibilityOf(constructor.getModifiers()))
+                        .append(constructor.getName())
+                        .append("(")
+                        .append(formatParameters(constructor.getParameters()))
+                        .append(")")
+                        .append(modifierSuffix(constructor.getModifiers()))
+                        .append("\n");
+            }
+        }
+
+        if (opt.isShowMethods() && model.getMethods() != null) {
+            for (MethodModel method : model.getMethods()) {
+                if (!opt.isShowGettersSetters()
+                        && (BeanAccessors.isGetter(method, model) || BeanAccessors.isSetter(method, model))) {
+                    continue;
+                }
+                builder.append(indent).append("  ")
+                        .append(visibilityOf(method.getModifiers()))
+                        .append(method.getReturnType())
+                        .append(" ")
+                        .append(method.getName())
+                        .append("(")
+                        .append(formatParameters(method.getParameters()))
+                        .append(")")
+                        .append(modifierSuffix(method.getModifiers()))
+                        .append("\n");
+            }
+        }
+
+        builder.append(indent).append("}\n\n");
+    }
+
+    private void appendRelationships(StringBuilder builder, ProjectModel project, Set<String> renderedNames) {
+        if (project.getRelationships() == null) {
+            return;
+        }
+        Set<String> externalNames = new HashSet<>();
+        Set<String> knownNames = new HashSet<>();
+        Map<String, String> aliases = new HashMap<>();
+        if (project.getClasses() != null) {
+            for (ClassModel model : project.getClasses()) {
+                knownNames.add(model.id());
+                aliases.put(model.id(), aliasOf(model));
+                if (model.isExternal() && renderedNames.contains(model.id())) {
+                    externalNames.add(model.id());
+                }
+            }
+        }
+        // Endpoints hidden by DiagramOptions (known but not rendered).
+        // Relationships to unmodeled names are preserved: PlantUML
+        // declares the missing endpoint implicitly.
+        Set<String> hiddenNames = new HashSet<>(knownNames);
+        hiddenNames.removeAll(renderedNames);
+        List<RelationshipModel> internalRels = new ArrayList<>();
+        List<RelationshipModel> externalRels = new ArrayList<>();
+        for (RelationshipModel relationship : project.getRelationships()) {
+            if (hiddenNames.contains(relationship.getSource())
+                    || hiddenNames.contains(relationship.getTarget())) {
+                continue;
+            }
+            if (externalNames.contains(relationship.getSource())
+                    || externalNames.contains(relationship.getTarget())) {
+                externalRels.add(relationship);
+            } else {
+                internalRels.add(relationship);
+            }
+        }
+        for (RelationshipModel relationship : internalRels) {
+            appendRelationship(builder, relationship, aliases);
+        }
+        if (!externalRels.isEmpty()) {
+            builder.append("' ---------------- EXTERNAL RELATIONSHIPS ----------------\n");
+            for (RelationshipModel relationship : externalRels) {
+                appendRelationship(builder, relationship, aliases);
+            }
+        }
+    }
+
+    private void appendRelationship(StringBuilder builder, RelationshipModel relationship,
+                                    Map<String, String> aliases) {
+        // In PlantUML the triangle head points at the parent:
+        // "Parent <|-- Child", "Interface <|.. Implementation".
+        // Our model stores source=child, target=parent, so swap them here.
+        // Unmodeled endpoints have no alias and are written as they come.
+        String source = aliases.getOrDefault(relationship.getSource(), relationship.getSource());
+        String target = aliases.getOrDefault(relationship.getTarget(), relationship.getTarget());
+        String type = relationship.getType();
+        if (RelType.EXTENDS.label().equals(type) || RelType.IMPLEMENTS.label().equals(type)) {
+                builder.append(target)
+                        .append(" ")
+                        .append(arrowFor(type))
+                        .append(" ")
+                        .append(source)
+                        .append("\n");
+            } else {
+                builder.append(source)
+                        .append(" ")
+                        .append(arrowFor(type))
+                        .append(" ")
+                        .append(target)
+                        .append("\n");
+            }
+    }
+
+    private String keywordFor(ClassModel model) {
+        Kind kind = model == null ? Kind.CLASS : model.getKindEnum();
+        switch (kind) {
+            case INTERFACE:
+                return "interface";
+            case ENUM:
+                return "enum";
+            case ANNOTATION:
+                return "annotation";
+            case RECORD:
+                return "record";
+            default:
+                if (model != null && model.isAbstract()) {
+                    return "abstract class";
+                }
+                return "class";
+        }
+    }
+
+    static String arrowFor(RelType relationshipType) {
+        if (relationshipType == null) {
+            return "-->";
+        }
+        switch (relationshipType) {
+            case EXTENDS:
+                return "<|--";
+            case IMPLEMENTS:
+                return "<|..";
+            case DEPENDENCY:
+                return "..>";
+            default:
+                return "-->";
+        }
+    }
+
+    private String arrowFor(String relationshipType) {
+        return arrowFor(RelType.fromLabel(relationshipType));
+    }
+
+    private String formatParameters(List<ParameterModel> parameters) {
+        if (parameters == null || parameters.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < parameters.size(); i++) {
+            ParameterModel parameter = parameters.get(i);
+            builder.append(parameter.getType()).append(" ").append(parameter.getName());
+            if (i < parameters.size() - 1) {
+                builder.append(", ");
+            }
+        }
+        return builder.toString();
+    }
+
+    private String visibilityOf(List<String> modifiers) {
+        if (modifiers == null) {
+            return "~";
+        }
+        if (modifiers.contains("public")) {
+            return "+";
+        }
+        if (modifiers.contains("private")) {
+            return "-";
+        }
+        if (modifiers.contains("protected")) {
+            return "#";
+        }
+        return "~";
+    }
+
+    /**
+     * PlantUML suffixes for non-visibility modifiers.
+     * e.g. " {static}", " {abstract}". Final is intentionally not rendered:
+     * PlantUML has no standard {final} marker and it would only add noise.
+     */
+    private String modifierSuffix(List<String> modifiers) {
+        if (modifiers == null || modifiers.isEmpty()) {
+            return "";
+        }
+        StringBuilder suffix = new StringBuilder();
+        if (modifiers.contains("static")) {
+            suffix.append(" {static}");
+        }
+        if (modifiers.contains("abstract")) {
+            suffix.append(" {abstract}");
+        }
+        return suffix.toString();
+    }
+}
