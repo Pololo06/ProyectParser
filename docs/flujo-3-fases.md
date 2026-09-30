@@ -2,7 +2,7 @@
 
 > Librería: `proyect-parser-core` (antes `libreria_is`, renombrada en `refactor/clean-architecture-v2`).
 > Punto de entrada público: `com.proyectparser.core.DiagramFacade`.
-> Composición interna: `com.proyectparser.core.CasosDeUso` + `application.DiagramService`.
+> Composición interna: `com.proyectparser.core.UseCases` + `application.DiagramService`.
 
 La librería convierte **carpeta con fuentes Java → modelo → texto PlantUML → archivo `.puml`**.
 Todo el flujo pasa por 3 fases:
@@ -202,7 +202,7 @@ Path salida = fachada.exportPlantUml("ruta/a/src", Path.of("diagrama.puml"), fil
 Por pasos (revisar el modelo entre medias):
 
 ```java
-DiagramService svc = CasosDeUso.diagramas();
+DiagramService svc = UseCases.diagramas();
 ProjectModel proyecto = svc.analyze("ruta/a/src");
 String texto = svc.render(proyecto, opciones);
 Path archivo = svc.write(Path.of("diagrama.puml"), texto);
@@ -221,4 +221,4 @@ Path archivo = svc.write(Path.of("diagrama.puml"), texto);
 | 3 | `PlantUmlGenerator` (`DiagramRendererPort`) | Modelo → texto `@startuml...@enduml` |
 | 3 | `DiagramFilter` / `DiagramOptions` / `ProjectFilter` (`domain.policy`) | Qué se dibuja y cómo |
 | 3 | `PumlFileWriter` (se cablea como `DiagramWriterPort` con `PumlFileWriter::write`) | Texto → archivo `.puml` UTF-8 |
-| Todas | `DiagramService` + `CasosDeUso` | Orquesta `analyze → filter → render → write` |
+| Todas | `DiagramService` + `UseCases` | Orquesta `analyze → filter → render → write` |

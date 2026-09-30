@@ -1,6 +1,6 @@
 package com.universidad.tools;
 
-import com.proyectparser.core.CasosDeUso;
+import com.proyectparser.core.UseCases;
 import com.proyectparser.core.application.DiagramService;
 import com.proyectparser.core.domain.policy.DiagramFilter;
 import com.proyectparser.core.domain.policy.DiagramOptions;
@@ -392,7 +392,7 @@ public class AppGenerador {
         logTrace("Ruta fuente detectada automáticamente: " + srcPath);
         logOptions(options);
 
-        DiagramService diagramas = CasosDeUso.diagramas();
+        DiagramService diagramas = UseCases.diagramas();
         ProjectModel originalProject;
         try {
             originalProject = diagramas.analyze(srcPath);

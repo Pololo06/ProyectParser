@@ -29,7 +29,7 @@ import java.util.Map;
  * {@code domain.model} / {@code domain.policy} / {@code domain.port} (pure, no
  * external deps) &larr; {@code application} (use cases, depends only on ports)
  * &larr; {@code infrastructure.*} (JavaParser, PlantUML, files).
- * The production adapters are chosen in {@link CasosDeUso}, the composition root.
+ * The production adapters are chosen in {@link UseCases}, the composition root.
  * Test seam: {@link #DiagramFacade(SourceAnalyzerPort, DiagramRendererPort, DiagramWriterPort)}.
  */
 public class DiagramFacade {
@@ -79,7 +79,7 @@ public class DiagramFacade {
     private final ProjectQueryService queryService;
 
     public DiagramFacade() {
-        this(CasosDeUso.analizador(), CasosDeUso.renderizador(), CasosDeUso.escritor());
+        this(UseCases.analizador(), UseCases.renderizador(), UseCases.escritor());
     }
 
     /**
