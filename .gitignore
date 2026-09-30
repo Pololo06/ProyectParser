@@ -26,3 +26,5 @@ arquitectura-referencia.md
 proyect-parser-core_tree.txt
 /diagrama_filtrado.puml
 *.bak-*
+docs/diagramas/*.puml
+docs/diagramas/*.png
