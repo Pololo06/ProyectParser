@@ -1,6 +1,5 @@
 package is.generador.infrastructure.javaparser;
 
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -20,7 +19,7 @@ class GenericTypeParser {
      * "Map&lt;String, List&lt;SubZone&gt;&gt;" -&gt; {Map, String, List, SubZone}.
      */
     static Set<String> extractReferencedNames(String typeString) {
-        return visibleTypeNames(extractAllNames(typeString), null);
+        return TypeClassifier.referencedTypeNames(typeString);
     }
 
     /**
@@ -37,23 +36,6 @@ class GenericTypeParser {
     static Set<String> visibleTypeNames(Set<String> names, List<String> first, List<String> second) {
         visibleTypeNames(names, first);
         return visibleTypeNames(names, second);
-    }
-
-    private static Set<String> extractAllNames(String typeString) {        Set<String> names = new LinkedHashSet<>();
-        if (typeString == null || typeString.isBlank()) {
-            return names;
-        }
-        // split on anything that is not a Java identifier part
-        for (String token : typeString.split("[^A-Za-z0-9_.]+")) {
-            if (token.isBlank()) {
-                continue;
-            }
-            String simple = simpleName(token);
-            if (!simple.isEmpty() && Character.isUpperCase(simple.charAt(0))) {
-                names.add(simple);
-            }
-        }
-        return names;
     }
 
     static String simpleName(String typeName) {

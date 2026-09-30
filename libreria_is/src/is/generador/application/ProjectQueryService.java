@@ -35,10 +35,7 @@ public class ProjectQueryService {
         ProjectModel project = analyzer.analyze(folderPath);
         Map<String, List<String>> packages = new TreeMap<>();
         for (ClassModel model : project.getClasses()) {
-            String pkg = model.getPackageName() == null ? "" : model.getPackageName();
-            if (pkg.isEmpty()) {
-                pkg = "(default package)";
-            }
+            String pkg = PackageModel.displayName(model.getPackageName());
             packages.computeIfAbsent(pkg, k -> new ArrayList<>()).add(model.getName());
         }
         for (List<String> names : packages.values()) {

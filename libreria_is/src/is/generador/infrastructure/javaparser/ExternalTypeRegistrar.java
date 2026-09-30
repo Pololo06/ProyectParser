@@ -33,7 +33,7 @@ class ExternalTypeRegistrar {
         }
         Set<String> seen = new HashSet<>();
         for (RelationshipModel rel : relationships) {
-            seen.add(rel.getSource() + "|" + rel.getType() + "|" + rel.getTarget());
+            seen.add(rel.key());
         }
         Map<String, ClassModel> externals = new LinkedHashMap<>();
         for (ClassModel model : classes) {
@@ -71,18 +71,10 @@ class ExternalTypeRegistrar {
                             new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
                             new ArrayList<>(), List.of()));
                     }
-                    addOnce(relationships, seen, model.getName(), target, "ASSOCIATION");
+                    RelationshipDetector.addOnce(relationships, seen, model.getName(), target, "ASSOCIATION");
                 }
             }
         }
         classes.addAll(externals.values());
-    }
-
-    private void addOnce(List<RelationshipModel> relationships, Set<String> seen,
-                         String source, String target, String type) {
-        String key = source + "|" + type + "|" + target;
-        if (seen.add(key)) {
-            relationships.add(new RelationshipModel(source, target, type));
-        }
     }
 }

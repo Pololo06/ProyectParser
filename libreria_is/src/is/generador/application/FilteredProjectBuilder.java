@@ -38,12 +38,12 @@ public class FilteredProjectBuilder {
 
     /** Clave canónica de una relación: {@code "origen|TIPO|destino"}. */
     public static String relationshipKey(String source, String type, String target) {
-        return source + "|" + type + "|" + target;
+        return new RelationshipModel(source, target, type).key();
     }
 
     /** Clave canónica de un {@code RelationshipModel}. */
     public static String relationshipKey(RelationshipModel rel) {
-        return relationshipKey(rel.getSource(), rel.getType(), rel.getTarget());
+        return rel.key();
     }
 
     /** Veta varias relaciones por su clave {@code "origen|TIPO|destino"}. */

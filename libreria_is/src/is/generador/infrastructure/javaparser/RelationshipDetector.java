@@ -94,11 +94,11 @@ class RelationshipDetector {
         }
     }
 
-    private void addOnce(List<RelationshipModel> relationships, Set<String> seen,
-                         String source, String target, String type) {
-        String key = source + "|" + type + "|" + target;
-        if (seen.add(key)) {
-            relationships.add(new RelationshipModel(source, target, type));
+    static void addOnce(List<RelationshipModel> relationships, Set<String> seen,
+                        String source, String target, String type) {
+        RelationshipModel rel = new RelationshipModel(source, target, type);
+        if (seen.add(rel.key())) {
+            relationships.add(rel);
         }
     }
 }
