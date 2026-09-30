@@ -15,7 +15,7 @@ import is.generador.domain.port.DiagramRendererPort;
 import is.generador.domain.port.DiagramWriterPort;
 import is.generador.domain.port.SourceAnalyzerPort;
 import is.generador.infrastructure.javaparser.ProjectAnalyzer;
-import is.generador.infrastructure.plantuml.FileSystemDiagramWriter;
+import is.generador.infrastructure.plantuml.PumlFileWriter;
 import is.generador.infrastructure.plantuml.PlantUmlGenerator;
 
 import java.io.IOException;
@@ -51,7 +51,7 @@ public class SoyLaPuerta {
     private final ProjectQueryService queryService;
 
     public SoyLaPuerta() {
-        this(new ProjectAnalyzer(), new PlantUmlGenerator(), new FileSystemDiagramWriter());
+        this(new ProjectAnalyzer(), new PlantUmlGenerator(), PumlFileWriter::write);
     }
 
     /** Composition seam: inject ports (production wires infrastructure, tests wire fakes). */
