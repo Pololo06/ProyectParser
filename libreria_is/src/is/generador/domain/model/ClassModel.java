@@ -5,8 +5,6 @@ import java.util.List;
 /**
  * Canonical domain type. {@code kind} is one of
  * Class, AbstractClass, Interface, Enum, Record, Annotation.
- * Typed views {@link InterfaceModel}, {@link EnumModel} and {@link RecordModel}
- * exist to satisfy the spec literally; they fix {@code kind} accordingly.
  */
 public class ClassModel {
     private String name;

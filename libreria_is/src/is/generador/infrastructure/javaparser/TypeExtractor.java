@@ -125,8 +125,8 @@ class TypeExtractor {
     }
 
     /**
-     * Campos, constructores y métodos declarados en el cuerpo del tipo, en orden de declaración.
-     * El constructor compacto de un record no es {@link ConstructorDeclaration} y se ignora.
+     * Fields, constructors and methods declared in the type body, in declaration order.
+     * A record's compact constructor is not a {@link ConstructorDeclaration} and is ignored.
      */
     private void extractMembers(TypeDeclaration<?> type, List<AttributeModel> attributes,
                                 List<ConstructorModel> constructors, List<MethodModel> methods) {
