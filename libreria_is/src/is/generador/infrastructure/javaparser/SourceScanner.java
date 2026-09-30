@@ -21,7 +21,7 @@ class SourceScanner {
     private final List<String> parsedFiles = new ArrayList<>();
     private final List<String> failedFiles = new ArrayList<>();
     private final List<String> failureReasons = new ArrayList<>();
-    // Imports por clase (simpleName -> package), según el archivo donde se declaró.
+    // Imports por clase (fqn de la clase -> (simpleName -> package)), según el archivo donde se declaró.
     private final Map<String, Map<String, String>> fileImportsByClass = new HashMap<>();
 
     SourceScanner(TypeExtractor extractor) {

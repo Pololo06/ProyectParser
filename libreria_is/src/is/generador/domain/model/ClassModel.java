@@ -5,6 +5,10 @@ import java.util.List;
 /**
  * Canonical domain type. {@code kind} is one of
  * Class, AbstractClass, Interface, Enum, Record, Annotation.
+ *
+ * <p>Identity: {@link #getFqn()} includes the enclosing types of a nested type
+ * ({@code p.Outer.Inner}); {@link #id()} is the simple name while no other class
+ * of the project shares it, and the fqn otherwise.
  */
 public class ClassModel {
     /** Estereotipo que marca una clase como externa. */
@@ -21,6 +25,8 @@ public class ClassModel {
     private List<String> implementedTypes;
     private List<String> enumConstants;
     private List<String> typeParameters;
+    private String fqn;
+    private String id;
 
     public ClassModel(String name, String packageName, String kind, boolean isAbstract,
                       List<String> stereotypes, List<AttributeModel> attributes,
@@ -39,19 +45,47 @@ public class ClassModel {
         this.implementedTypes = implementedTypes;
         this.enumConstants = enumConstants;
         this.typeParameters = typeParameters;
+        this.fqn = packageName == null || packageName.isBlank() ? name : packageName + "." + name;
+        this.id = name;
+    }
+
+    /** Copy with another fqn, e.g. {@code p.Outer.Inner} for a nested type. */
+    public ClassModel withFqn(String fqn) {
+        ClassModel copy = copy();
+        copy.fqn = fqn;
+        return copy;
+    }
+
+    /** Copy with another id (see {@link #id()}). */
+    public ClassModel withId(String id) {
+        ClassModel copy = copy();
+        copy.id = id;
+        return copy;
+    }
+
+    private ClassModel copy() {
+        ClassModel copy = new ClassModel(name, packageName, kind, isAbstract, stereotypes, attributes,
+                methods, constructors, extendedTypes, implementedTypes, enumConstants, typeParameters);
+        copy.fqn = fqn;
+        copy.id = id;
+        return copy;
     }
 
     public String getName() { return name; }
     public String getPackageName() { return packageName; }
     public String getKind() { return kind; }
     public Kind getKindEnum() { return Kind.fromLabel(kind); }
-    /** Fully-qualified name ({@code package.Name} or just {@code Name}). */
-    public String getFqn() {
-        if (packageName == null || packageName.isBlank()) {
-            return name;
-        }
-        return packageName + "." + name;
-    }
+    /**
+     * Fully-qualified name: {@code package.Name} (or just {@code Name}), with the
+     * enclosing types of a nested type ({@code package.Outer.Name}) when the analyzer sets them.
+     */
+    public String getFqn() { return fqn; }
+    /**
+     * Identifier of the class in its project: the simple name while it is unique among
+     * all the classes (internal and external), the fqn when another class shares it.
+     * Relationship endpoints and the keys of the queries use it. Defaults to the name.
+     */
+    public String id() { return id; }
     public boolean isAbstract() { return isAbstract; }
     public List<String> getStereotypes() { return stereotypes; }
     /** true si la clase es externa (estereotipo {@code @external}). */

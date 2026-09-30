@@ -9,6 +9,8 @@ import is.generador.domain.port.SourceAnalyzerPort;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -90,17 +92,23 @@ public class ProjectQueryService {
 
     /**
      * External classes (stereotype {@code @external}) of the analyzed project,
-     * mapped name -&gt; package (sorted by name).
+     * mapped id -&gt; package, sorted by name and, for homonyms, by fqn.
+     * The id is the simple name, or the fqn when another class shares it.
      */
     public Map<String, String> getExternalClasses(String folderPath) throws IOException {
         ProjectModel project = analyzer.analyze(folderPath);
-        Map<String, String> externals = new TreeMap<>();
+        List<ClassModel> sorted = new ArrayList<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
                 if (model.isExternal()) {
-                    externals.put(model.getName(), model.getPackageName());
+                    sorted.add(model);
                 }
             }
+        }
+        sorted.sort(Comparator.comparing(ClassModel::getName).thenComparing(ClassModel::getFqn));
+        Map<String, String> externals = new LinkedHashMap<>();
+        for (ClassModel model : sorted) {
+            externals.put(model.id(), model.getPackageName());
         }
         return externals;
     }

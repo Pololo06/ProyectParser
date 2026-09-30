@@ -16,9 +16,11 @@ import is.generador.domain.port.DiagramRendererPort;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -29,8 +31,15 @@ import java.util.TreeMap;
  * {@code package "..." { }} blocks. External classes (stereotype
  * {@code @external}) are always rendered apart, in their own
  * {@code package "EXTERNAL" { }} block at the end, so both worlds never mix.</p>
+ *
+ * <p>Classes are identified by {@link ClassModel#id()}. A homonym (id different from its
+ * name) is declared as {@code class "Foo" as h_a_Foo}, and its relationships use the alias.</p>
  */
 public class PlantUmlGenerator implements DiagramRendererPort {
+
+    /** By name and, for homonyms, by fqn. */
+    private static final Comparator<ClassModel> BY_NAME = Comparator.comparing(ClassModel::getName)
+            .thenComparing(ClassModel::getFqn);
 
     @Override
     public String render(ProjectModel project, boolean groupByPackage) {
@@ -65,7 +74,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         } else if (!opt.isShowJdkTypes()) {
             externals.removeIf(model -> isJdkPackage(model.getPackageName()));
         }
-        externals.sort(Comparator.comparing(ClassModel::getName));
+        externals.sort(BY_NAME);
 
         if (opt.isGroupByPackage()) {
             Map<String, List<ClassModel>> byPackage = new TreeMap<>();
@@ -74,7 +83,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 byPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add(model);
             }
             for (List<ClassModel> models : byPackage.values()) {
-                models.sort(Comparator.comparing(ClassModel::getName));
+                models.sort(BY_NAME);
             }
             for (Map.Entry<String, List<ClassModel>> entry : byPackage.entrySet()) {
                 builder.append("package \"").append(PackageModel.displayName(entry.getKey())).append("\" {\n");
@@ -107,20 +116,28 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         return builder.toString();
     }
 
-    /** Names of the rendered (non-hidden) classes. */
+    /** Ids of the rendered (non-hidden) classes. */
     private static Set<String> renderedNames(List<ClassModel> internals, List<ClassModel> externals) {
         Set<String> names = new HashSet<>();
         if (internals != null) {
             for (ClassModel model : internals) {
-                names.add(model.getName());
+                names.add(model.id());
             }
         }
         if (externals != null) {
             for (ClassModel model : externals) {
-                names.add(model.getName());
+                names.add(model.id());
             }
         }
         return names;
+    }
+
+    /** PlantUML name of a class: its name, or for a homonym its id with non-alphanumerics as {@code _}. */
+    private static String aliasOf(ClassModel model) {
+        if (Objects.equals(model.id(), model.getName())) {
+            return model.getName();
+        }
+        return model.id().replaceAll("[^\\p{L}\\p{N}]", "_");
     }
 
     /** true for JDK packages ({@code java.*}), kept apart from third-party externals. */
@@ -130,8 +147,14 @@ public class PlantUmlGenerator implements DiagramRendererPort {
     }
 
     private void appendClass(StringBuilder builder, ClassModel model, String indent, DiagramOptions opt) {
-        builder.append(indent)
-                .append(keywordFor(model)).append(" ").append(model.getName()).append(" {\n");
+        builder.append(indent).append(keywordFor(model)).append(" ");
+        String alias = aliasOf(model);
+        if (Objects.equals(alias, model.getName())) {
+            builder.append(alias);
+        } else {
+            builder.append('"').append(model.getName()).append("\" as ").append(alias);
+        }
+        builder.append(" {\n");
 
         if (model.getStereotypes() != null) {
             for (String stereotype : model.getStereotypes()) {
@@ -199,11 +222,13 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         }
         Set<String> externalNames = new HashSet<>();
         Set<String> knownNames = new HashSet<>();
+        Map<String, String> aliases = new HashMap<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
-                knownNames.add(model.getName());
-                if (model.isExternal() && renderedNames.contains(model.getName())) {
-                    externalNames.add(model.getName());
+                knownNames.add(model.id());
+                aliases.put(model.id(), aliasOf(model));
+                if (model.isExternal() && renderedNames.contains(model.id())) {
+                    externalNames.add(model.id());
                 }
             }
         }
@@ -227,34 +252,38 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
         }
         for (RelationshipModel relationship : internalRels) {
-            appendRelationship(builder, relationship);
+            appendRelationship(builder, relationship, aliases);
         }
         if (!externalRels.isEmpty()) {
             builder.append("' ---------------- EXTERNAL RELATIONSHIPS ----------------\n");
             for (RelationshipModel relationship : externalRels) {
-                appendRelationship(builder, relationship);
+                appendRelationship(builder, relationship, aliases);
             }
         }
     }
 
-    private void appendRelationship(StringBuilder builder, RelationshipModel relationship) {
+    private void appendRelationship(StringBuilder builder, RelationshipModel relationship,
+                                    Map<String, String> aliases) {
         // In PlantUML the triangle head points at the parent:
         // "Parent <|-- Child", "Interface <|.. Implementation".
         // Our model stores source=child, target=parent, so swap them here.
+        // Unmodeled endpoints have no alias and are written as they come.
+        String source = aliases.getOrDefault(relationship.getSource(), relationship.getSource());
+        String target = aliases.getOrDefault(relationship.getTarget(), relationship.getTarget());
         String type = relationship.getType();
         if (RelType.EXTENDS.label().equals(type) || RelType.IMPLEMENTS.label().equals(type)) {
-                builder.append(relationship.getTarget())
+                builder.append(target)
                         .append(" ")
                         .append(arrowFor(type))
                         .append(" ")
-                        .append(relationship.getSource())
+                        .append(source)
                         .append("\n");
             } else {
-                builder.append(relationship.getSource())
+                builder.append(source)
                         .append(" ")
                         .append(arrowFor(type))
                         .append(" ")
-                        .append(relationship.getTarget())
+                        .append(target)
                         .append("\n");
             }
     }

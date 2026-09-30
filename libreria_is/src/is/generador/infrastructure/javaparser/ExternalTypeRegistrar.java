@@ -26,18 +26,19 @@ class ExternalTypeRegistrar {
      * Registers external (non-project, non-primitive) attribute types as
      * stereotyped {@code @external} boxes with their real JDK package and an
      * ASSOCIATION from the using class. Internal types and primitives are ignored.
+     *
+     * <p>A box is keyed by package + name. Two externals with the same simple name are
+     * only kept apart when both packages come from an explicit import or a qualified
+     * name; if one comes from the heuristic, the first box wins, as before.
      */
     void registerExternalTypes(List<ClassModel> classes, List<RelationshipModel> relationships,
-            Map<String, Map<String, String>> fileImportsByClass) {
-        Set<String> internal = new HashSet<>();
-        for (ClassModel model : classes) {
-            internal.add(model.getName());
-        }
+            TypeResolver resolver) {
         Set<String> seen = new HashSet<>();
         for (RelationshipModel rel : relationships) {
             seen.add(rel.key());
         }
-        Map<String, ClassModel> externals = new LinkedHashMap<>();
+        Map<String, ClassModel> externals = new LinkedHashMap<>();   // fqn -> caja
+        Set<String> heuristicBoxes = new HashSet<>();                // fqn de las cajas con paquete heurístico
         for (ClassModel model : classes) {
             if (model.getAttributes() == null) {
                 continue;
@@ -50,33 +51,50 @@ class ExternalTypeRegistrar {
                 // 2. Registrar TODOS los tipos referenciados (incluye genéricos
                 //    anidados: Map<String,List<UUID>> -> UUID, no solo el último),
                 //    salvo variables de tipo declaradas (<T, ID>).
-                Set<String> candidates = GenericTypeParser.visibleTypeNames(
-                        TypeClassifier.referencedTypeNames(attribute.getType()),
-                        model.getTypeParameters());
-                for (String target : candidates) {
+                for (String reference : GenericTypeParser.visibleReferences(attribute.getType(),
+                        model.getTypeParameters())) {
+                    String target = GenericTypeParser.simpleName(reference);
                     if (TypeClassifier.shouldIgnoreBox(target)) {
                         continue;
                     }
-                    if (internal.contains(target)) {
+                    // 3. Paquete: import del archivo o nombre calificado > mapa común > fallback
+                    TypeResolver.Target resolved = resolver.resolve(model, reference);
+                    if (resolved == null || resolved.isInternal()) {
                         continue;
                     }
-                if (!externals.containsKey(target)) {
-                    // 2. Prioridad: imports del archivo > mapa común > fallback
-                    String resolvedPkg = fileImportsByClass
-                            .getOrDefault(model.getName(), Map.of())
-                            .getOrDefault(target, TypeClassifier.resolvePackage(target));
-                    List<String> stereotypes = new ArrayList<>();
-                    stereotypes.add(ClassModel.EXTERNAL_STEREOTYPE);
-                    externals.put(target, new ClassModel(target,
-                            resolvedPkg, Kind.CLASS.label(), false,
-                            stereotypes, new ArrayList<>(), new ArrayList<>(),
-                            new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
-                            new ArrayList<>(), List.of()));
-                    }
-                    RelationshipDetector.addOnce(relationships, seen, model.getName(), target, RelType.ASSOCIATION);
+                    ClassModel box = box(externals, heuristicBoxes, target, resolved);
+                    RelationshipDetector.addOnce(relationships, seen, model.getFqn(), box.getFqn(),
+                            RelType.ASSOCIATION);
                 }
             }
         }
         classes.addAll(externals.values());
+    }
+
+    /** The box for {@code name} in the resolved package, created on first use. */
+    private static ClassModel box(Map<String, ClassModel> externals, Set<String> heuristicBoxes,
+            String name, TypeResolver.Target resolved) {
+        List<String> stereotypes = new ArrayList<>();
+        stereotypes.add(ClassModel.EXTERNAL_STEREOTYPE);
+        ClassModel candidate = new ClassModel(name,
+                resolved.externalPackage(), Kind.CLASS.label(), false,
+                stereotypes, new ArrayList<>(), new ArrayList<>(),
+                new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
+                new ArrayList<>(), List.of());
+        ClassModel same = externals.get(candidate.getFqn());
+        if (same != null) {
+            return same;
+        }
+        for (ClassModel box : externals.values()) {
+            if (box.getName().equals(name)
+                    && (resolved.heuristicPackage() || heuristicBoxes.contains(box.getFqn()))) {
+                return box;
+            }
+        }
+        externals.put(candidate.getFqn(), candidate);
+        if (resolved.heuristicPackage()) {
+            heuristicBoxes.add(candidate.getFqn());
+        }
+        return candidate;
     }
 }

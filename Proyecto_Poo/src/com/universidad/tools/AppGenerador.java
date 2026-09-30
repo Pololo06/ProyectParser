@@ -660,7 +660,7 @@ public class AppGenerador {
                 List<String> usedBy = new ArrayList<>();
                 if (filteredModel.getRelationships() != null) {
                     for (RelationshipModel rel : filteredModel.getRelationships()) {
-                        if (rel.getTarget() != null && rel.getTarget().equals(clazz.getName())
+                        if (rel.getTarget() != null && rel.getTarget().equals(clazz.id())
                                 && !usedBy.contains(rel.getSource())) {
                             usedBy.add(rel.getSource());
                         }

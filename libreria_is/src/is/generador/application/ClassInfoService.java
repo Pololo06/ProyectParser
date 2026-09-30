@@ -47,6 +47,7 @@ public class ClassInfoService {
         return map;
     }
 
+    /** Detail of every class, keyed by its id: the simple name, or the fqn for homonyms. */
     public Map<String, ClassInfo> getClassDetails(String folderPath) throws IOException {
         ProjectModel project = analyzer.analyze(folderPath);
         Map<String, ClassInfo> details = new LinkedHashMap<>();
@@ -79,7 +80,7 @@ public class ClassInfoService {
                 }
             });
 
-            details.put(model.getName(), new ClassInfo(model.getName(), model.getKind(),
+            details.put(model.id(), new ClassInfo(model.getName(), model.getKind(),
                     model.getStereotypes(), properties, constructorSignatures, getters, setters));
         }
         return details;

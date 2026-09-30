@@ -242,14 +242,15 @@ public class SoyLaPuerta {
         return queryService.getPackageModels(folderPath);
     }
 
-    /** External classes of the default project, mapped name -&gt; package (sorted). */
+    /** External classes of the default project, mapped id -&gt; package (sorted). */
     public Map<String, String> getExternalClasses() throws IOException {
         return getExternalClasses(resolveDefaultPath());
     }
 
     /**
      * External classes (stereotype {@code @external}) of the analyzed project,
-     * mapped name -&gt; package (sorted by name).
+     * mapped id -&gt; package (sorted by name). The id is the simple name, or the
+     * fqn when another class of the project shares it.
      */
     public Map<String, String> getExternalClasses(String folderPath) throws IOException {
         return queryService.getExternalClasses(folderPath);

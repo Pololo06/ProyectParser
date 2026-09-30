@@ -17,37 +17,38 @@ import java.util.Set;
  * Solo lectura del AST ya convertido: EXTENDS, IMPLEMENTS,
  * ASSOCIATION (atributos, con genéricos) y DEPENDENCY (firmas).
  * Las variables de tipo declaradas nunca generan relaciones.
+ * Los extremos son fqn; {@code ProjectAnalyzer} los traduce a ids al final.
  */
 class RelationshipDetector {
 
-    void detectRelationships(List<ClassModel> classes, List<RelationshipModel> relationships) {
-        Set<String> classNames = new HashSet<>();
-        for (ClassModel model : classes) {
-            classNames.add(model.getName());
-        }
+    void detectRelationships(List<ClassModel> classes, List<RelationshipModel> relationships,
+                             TypeResolver resolver) {
         Set<String> seen = new HashSet<>();
 
         for (ClassModel model : classes) {
+            String self = model.getFqn();
             for (String parent : model.getExtendedTypes()) {
-                String simple = GenericTypeParser.simpleName(parent);
-                if (classNames.contains(simple)) {
-                    addOnce(relationships, seen, model.getName(), simple, RelType.EXTENDS);
+                String parentFqn = resolver.internal(model, GenericTypeParser.simpleName(parent));
+                if (parentFqn != null) {
+                    addOnce(relationships, seen, self, parentFqn, RelType.EXTENDS);
                 }
                 // generics inside extends clause, e.g. extends Base<Package>
-                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(parent), model.getTypeParameters())) {
-                    if (classNames.contains(inner) && !inner.equals(model.getName()) && !inner.equals(simple)) {
-                        addOnce(relationships, seen, model.getName(), inner, RelType.ASSOCIATION);
+                for (String inner : GenericTypeParser.visibleReferences(parent, model.getTypeParameters())) {
+                    String target = resolver.internal(model, inner);
+                    if (target != null && !target.equals(self) && !target.equals(parentFqn)) {
+                        addOnce(relationships, seen, self, target, RelType.ASSOCIATION);
                     }
                 }
             }
             for (String parent : model.getImplementedTypes()) {
-                String simple = GenericTypeParser.simpleName(parent);
-                if (classNames.contains(simple)) {
-                    addOnce(relationships, seen, model.getName(), simple, RelType.IMPLEMENTS);
+                String parentFqn = resolver.internal(model, GenericTypeParser.simpleName(parent));
+                if (parentFqn != null) {
+                    addOnce(relationships, seen, self, parentFqn, RelType.IMPLEMENTS);
                 }
-                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(parent), model.getTypeParameters())) {
-                    if (classNames.contains(inner) && !inner.equals(model.getName()) && !inner.equals(simple)) {
-                        addOnce(relationships, seen, model.getName(), inner, RelType.ASSOCIATION);
+                for (String inner : GenericTypeParser.visibleReferences(parent, model.getTypeParameters())) {
+                    String target = resolver.internal(model, inner);
+                    if (target != null && !target.equals(self) && !target.equals(parentFqn)) {
+                        addOnce(relationships, seen, self, target, RelType.ASSOCIATION);
                     }
                 }
             }
@@ -55,10 +56,11 @@ class RelationshipDetector {
             // ASSOCIATION: attribute types (including generic arguments like List<Package>)
             Set<String> associated = new HashSet<>();
             for (AttributeModel attribute : model.getAttributes()) {
-                for (String target : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(attribute.getType()),
+                for (String reference : GenericTypeParser.visibleReferences(attribute.getType(),
                         model.getTypeParameters())) {
-                    if (classNames.contains(target) && !target.equals(model.getName())) {
-                        addOnce(relationships, seen, model.getName(), target, RelType.ASSOCIATION);
+                    String target = resolver.internal(model, reference);
+                    if (target != null && !target.equals(self)) {
+                        addOnce(relationships, seen, self, target, RelType.ASSOCIATION);
                         associated.add(target);
                     }
                 }
@@ -67,30 +69,30 @@ class RelationshipDetector {
             // DEPENDENCY: types used only in method/constructor signatures (params, returns)
             // or record components already covered as attributes are skipped.
             for (MethodModel method : model.getMethods()) {
-                for (String target : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(method.getReturnType()),
-                        model.getTypeParameters(), method.getTypeParameters())) {
-                    if (classNames.contains(target) && !target.equals(model.getName()) && !associated.contains(target)) {
-                        addOnce(relationships, seen, model.getName(), target, RelType.DEPENDENCY);
-                    }
-                }
+                addDependencies(relationships, seen, resolver, model, associated, method.getReturnType(),
+                        method.getTypeParameters());
                 for (ParameterModel parameter : method.getParameters()) {
-                    for (String target : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(parameter.getType()),
-                            model.getTypeParameters(), method.getTypeParameters())) {
-                        if (classNames.contains(target) && !target.equals(model.getName()) && !associated.contains(target)) {
-                            addOnce(relationships, seen, model.getName(), target, RelType.DEPENDENCY);
-                        }
-                    }
+                    addDependencies(relationships, seen, resolver, model, associated, parameter.getType(),
+                            method.getTypeParameters());
                 }
             }
             for (ConstructorModel constructor : model.getConstructors()) {
                 for (ParameterModel parameter : constructor.getParameters()) {
-                    for (String target : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(parameter.getType()),
-                            model.getTypeParameters(), constructor.getTypeParameters())) {
-                        if (classNames.contains(target) && !target.equals(model.getName()) && !associated.contains(target)) {
-                            addOnce(relationships, seen, model.getName(), target, RelType.DEPENDENCY);
-                        }
-                    }
+                    addDependencies(relationships, seen, resolver, model, associated, parameter.getType(),
+                            constructor.getTypeParameters());
                 }
+            }
+        }
+    }
+
+    private static void addDependencies(List<RelationshipModel> relationships, Set<String> seen,
+                                        TypeResolver resolver, ClassModel model, Set<String> associated,
+                                        String type, List<String> memberTypeParameters) {
+        for (String reference : GenericTypeParser.visibleReferences(type, model.getTypeParameters(),
+                memberTypeParameters)) {
+            String target = resolver.internal(model, reference);
+            if (target != null && !target.equals(model.getFqn()) && !associated.contains(target)) {
+                addOnce(relationships, seen, model.getFqn(), target, RelType.DEPENDENCY);
             }
         }
     }

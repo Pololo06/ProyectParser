@@ -1,6 +1,9 @@
 package is.generador.domain.model;
 
-/** Relationship kind: EXTENDS, IMPLEMENTS, ASSOCIATION, DEPENDENCY. */
+/**
+ * Relationship kind: EXTENDS, IMPLEMENTS, ASSOCIATION, DEPENDENCY.
+ * Source and target are class ids ({@link ClassModel#id()}).
+ */
 public class RelationshipModel {
     private String source;
     private String target;

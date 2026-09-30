@@ -78,20 +78,28 @@ class TypeClassifier {
      */
     static Set<String> referencedTypeNames(String rawType) {
         Set<String> names = new LinkedHashSet<>();
-        if (rawType == null || rawType.isBlank()) {
-            return names;
-        }
-        for (String token : rawType.split("[^A-Za-z0-9_.]+")) {
-            if (token.isBlank()) {
-                continue;
-            }
-            String simple = token.contains(".") ? token.substring(token.lastIndexOf('.') + 1) : token;
-            simple = simple.trim();
-            if (!simple.isEmpty() && Character.isUpperCase(simple.charAt(0))) {
-                names.add(simple);
-            }
+        for (String reference : referencedTypes(rawType)) {
+            names.add(reference.substring(reference.lastIndexOf('.') + 1));
         }
         return names;
+    }
+
+    /**
+     * Same references as {@link #referencedTypeNames}, but as written:
+     * {@code "Map<String, h.b.Foo>"} -> {@code [Map, String, h.b.Foo]}.
+     */
+    static Set<String> referencedTypes(String rawType) {
+        Set<String> references = new LinkedHashSet<>();
+        if (rawType == null || rawType.isBlank()) {
+            return references;
+        }
+        for (String token : rawType.split("[^A-Za-z0-9_.]+")) {
+            String simple = token.substring(token.lastIndexOf('.') + 1);
+            if (!simple.isEmpty() && Character.isUpperCase(simple.charAt(0))) {
+                references.add(token);
+            }
+        }
+        return references;
     }
 
     static String resolvePackage(String typeName) {

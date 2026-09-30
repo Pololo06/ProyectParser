@@ -14,28 +14,23 @@ class GenericTypeParser {
     }
 
     /**
-     * Extracts every referenced type name from a type string, including generic arguments.
-     * Examples: "List&lt;Package&gt;" -&gt; {List, Package};
-     * "Map&lt;String, List&lt;SubZone&gt;&gt;" -&gt; {Map, String, List, SubZone}.
+     * Every type referenced in a type string, as written ({@code h.b.Foo}, {@code Outer.Inner})
+     * so it can be resolved, including generic arguments, minus in-scope type variables
+     * (e.g. {@code T}, {@code ID} from {@code class Repo<T, ID>}); type variables are never
+     * real relations. Examples: "List&lt;Package&gt;" -&gt; {List, Package};
+     * "Map&lt;String, List&lt;h.b.SubZone&gt;&gt;" -&gt; {Map, String, List, h.b.SubZone}.
      */
-    static Set<String> extractReferencedNames(String typeString) {
-        return TypeClassifier.referencedTypeNames(typeString);
+    static Set<String> visibleReferences(String typeString, List<String> excluded) {
+        return visibleReferences(typeString, excluded, List.of());
     }
 
-    /**
-     * Referenced names minus in-scope type variables (e.g. {@code T}, {@code ID}
-     * from {@code class Repo<T, ID>}); type variables are never real relations.
-     */
-    static Set<String> visibleTypeNames(Set<String> names, List<String> excluded) {
-        if (excluded != null && !excluded.isEmpty()) {
-            names.removeAll(excluded);
-        }
-        return names;
-    }
-
-    static Set<String> visibleTypeNames(Set<String> names, List<String> first, List<String> second) {
-        visibleTypeNames(names, first);
-        return visibleTypeNames(names, second);
+    static Set<String> visibleReferences(String typeString, List<String> first, List<String> second) {
+        Set<String> references = TypeClassifier.referencedTypes(typeString);
+        references.removeIf(reference -> {
+            String name = simpleName(reference);
+            return (first != null && first.contains(name)) || (second != null && second.contains(name));
+        });
+        return references;
     }
 
     static String simpleName(String typeName) {

@@ -14,6 +14,9 @@ import java.util.Set;
  * Política de dominio: qué contiene un diagrama. Aplica un {@link DiagramFilter}
  * (lista negra/blanca) y los vetos de relaciones sobre un {@link ProjectModel}
  * y devuelve un modelo nuevo; no modifica el original.
+ * El filtro decide por paquete y nombre simple; las clases vetadas y los extremos
+ * de las relaciones se cruzan por id ({@link ClassModel#id()}), así que excluir
+ * {@code h.b} no se lleva a la homónima {@code h.a.Foo}.
  */
 public final class ProjectFilter {
 
@@ -56,7 +59,7 @@ public final class ProjectFilter {
                         ? filter.isBlacklisted(clazz.getPackageName(), clazz.getName())
                         : !filter.isAllowed(clazz.getPackageName(), clazz.getName());
                 if (vetoed) {
-                    blacklistedClasses.add(clazz.getName());
+                    blacklistedClasses.add(clazz.id());
                 }
             }
         }
@@ -65,7 +68,7 @@ public final class ProjectFilter {
         List<ClassModel> filteredClasses = new ArrayList<>();
         if (project.getClasses() != null) {
             for (ClassModel clazz : project.getClasses()) {
-                if (!blacklistedClasses.contains(clazz.getName())) {
+                if (!blacklistedClasses.contains(clazz.id())) {
                     filteredClasses.add(clazz);
                 }
             }
@@ -93,7 +96,7 @@ public final class ProjectFilter {
         }
         List<ClassModel> survivors = new ArrayList<>();
         for (ClassModel clazz : filteredClasses) {
-            if (!clazz.isExternal() || linkedNames.contains(clazz.getName())) {
+            if (!clazz.isExternal() || linkedNames.contains(clazz.id())) {
                 survivors.add(clazz);
             }
         }

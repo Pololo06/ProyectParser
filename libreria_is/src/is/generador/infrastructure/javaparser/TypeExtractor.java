@@ -51,11 +51,13 @@ class TypeExtractor {
         for (TypeDeclaration raw : rawTypes) {
             @SuppressWarnings("unchecked")
             TypeDeclaration<?> type = (TypeDeclaration<?>) raw;
-            result.add(buildClassModel(type, packageName));
+            // fqn with the enclosing types (p.Outer.Inner); a local class has none and keeps p.Name.
+            ClassModel model = buildClassModel(type, packageName);
+            result.add(type.getFullyQualifiedName().map(model::withFqn).orElse(model));
         }
         Map<String, String> fileImports = ImportResolver.extractFileImports(compilationUnit);
         for (ClassModel built : result) {
-            fileImportsByClass.merge(built.getName(), new HashMap<>(fileImports),
+            fileImportsByClass.merge(built.getFqn(), new HashMap<>(fileImports),
                     (oldMap, newMap) -> { oldMap.putAll(newMap); return oldMap; });
         }
         return result;
