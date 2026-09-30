@@ -18,7 +18,7 @@ import java.util.Set;
  * Crea cajas {@code @external} con su paquete JDK real y una
  * ASSOCIATION desde la clase que los usa. Internos, primitivos,
  * escalares y variables de tipo se ignoran. El filtrado lo hace
- * {@code FilteredProjectBuilder}.
+ * {@code ProjectFilter}.
  */
 class ExternalTypeRegistrar {
 

@@ -3,6 +3,7 @@ package is.generador.application;
 import is.generador.domain.model.ProjectModel;
 import is.generador.domain.policy.DiagramFilter;
 import is.generador.domain.policy.DiagramOptions;
+import is.generador.domain.policy.ProjectFilter;
 import is.generador.domain.port.DiagramRendererPort;
 import is.generador.domain.port.SourceAnalyzerPort;
 
@@ -11,7 +12,7 @@ import java.util.Objects;
 
 /**
  * Use case: analyze (optionally filtered) and render a diagram.
- * Orchestrates {@link SourceAnalyzerPort} + {@link FilteredProjectBuilder} +
+ * Orchestrates {@link SourceAnalyzerPort} + {@link ProjectFilter} +
  * {@link DiagramRendererPort}; owns no parsing or rendering logic itself.
  */
 public class GenerateDiagramUseCase {
@@ -26,8 +27,7 @@ public class GenerateDiagramUseCase {
 
     public String execute(String folderPath, DiagramFilter filter, DiagramOptions options) throws IOException {
         ProjectModel project = analyzer.analyze(folderPath);
-        ProjectModel filtered = new FilteredProjectBuilder(project)
-                .withFilter(filter == null ? new DiagramFilter() : filter).build();
+        ProjectModel filtered = ProjectFilter.apply(project, filter == null ? new DiagramFilter() : filter);
         return renderer.render(filtered, options == null ? DiagramOptions.defaults() : options);
     }
 }

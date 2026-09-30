@@ -3,13 +3,13 @@ package is.generador;
 import is.generador.application.ClassInfo;
 import is.generador.application.ClassInfoService;
 import is.generador.application.ExportDiagramUseCase;
-import is.generador.application.FilteredProjectBuilder;
 import is.generador.application.GenerateDiagramUseCase;
 import is.generador.application.ProjectQueryService;
 import is.generador.domain.model.PackageModel;
 import is.generador.domain.model.ProjectModel;
 import is.generador.domain.policy.DiagramFilter;
 import is.generador.domain.policy.DiagramOptions;
+import is.generador.domain.policy.ProjectFilter;
 import is.generador.domain.port.DiagramRendererPort;
 import is.generador.domain.port.DiagramWriterPort;
 import is.generador.domain.port.RunStatsProvider;
@@ -263,7 +263,7 @@ public class SoyLaPuerta {
     /** Analyzes applying a {@code DiagramFilter} (blacklist/whitelist) post-analysis. */
     public ProjectModel analyzeFiltered(String folderPath, DiagramFilter filter) throws IOException {
         ProjectModel project = analyzer.analyze(folderPath);
-        return new FilteredProjectBuilder(project).withFilter(filter).build();
+        return ProjectFilter.apply(project, filter);
     }
 
     /** Generates PlantUML applying a {@code DiagramFilter} (blacklist/whitelist). */

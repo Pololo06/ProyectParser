@@ -1,17 +1,18 @@
 package is.generador.application;
 
-import is.generador.domain.model.ClassModel;
 import is.generador.domain.model.ProjectModel;
 import is.generador.domain.model.RelationshipModel;
-
 import is.generador.domain.policy.DiagramFilter;
+import is.generador.domain.policy.ProjectFilter;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
+/**
+ * Temporal: solo conserva la API antigua para que {@code AppGenerador} compile sin
+ * cambios. Delega en {@link ProjectFilter}; se borra en la fase 6 del plan.
+ */
 public class FilteredProjectBuilder {
 
     private ProjectModel originalProject;
@@ -25,28 +26,23 @@ public class FilteredProjectBuilder {
         this.originalProject = originalProject;
     }
 
-    /** Asocia un {@link DiagramFilter} (blacklist/whitelist); null lo limpia. */
     public FilteredProjectBuilder setFilter(DiagramFilter filter) {
         this.filter = filter;
         return this;
     }
 
-    /** Alias fluido de {@link #setFilter(DiagramFilter)}. */
     public FilteredProjectBuilder withFilter(DiagramFilter filter) {
         return setFilter(filter);
     }
 
-    /** Clave canónica de una relación: {@code "origen|TIPO|destino"}. */
     public static String relationshipKey(String source, String type, String target) {
         return new RelationshipModel(source, target, type).key();
     }
 
-    /** Clave canónica de un {@code RelationshipModel}. */
     public static String relationshipKey(RelationshipModel rel) {
         return rel.key();
     }
 
-    /** Veta varias relaciones por su clave {@code "origen|TIPO|destino"}. */
     public FilteredProjectBuilder excludeRelationships(Collection<String> relationshipKeys) {
         if (relationshipKeys != null) {
             for (String key : relationshipKeys) {
@@ -59,64 +55,6 @@ public class FilteredProjectBuilder {
     }
 
     public ProjectModel build() {
-        if (originalProject == null) {
-            throw new IllegalStateException("Se requiere un ProjectModel original para construir el modelo filtrado.");
-        }
-
-        Set<String> blacklistedClasses = new HashSet<>();
-
-        // 1. Fusionar DiagramFilter. Opción B: las externas solo obedecen
-        // a la blacklist; la whitelist es solo para clases internas.
-        if (originalProject.getClasses() != null && this.filter != null) {
-            for (ClassModel clazz : originalProject.getClasses()) {
-                boolean vetoed = clazz.isExternal()
-                        ? this.filter.isBlacklisted(clazz.getPackageName(), clazz.getName())
-                        : !this.filter.isAllowed(clazz.getPackageName(), clazz.getName());
-                if (vetoed) {
-                    blacklistedClasses.add(clazz.getName());
-                }
-            }
-        }
-
-        // 2. Filtrar clases sobrevivientes
-        List<ClassModel> filteredClasses = new ArrayList<>();
-        if (originalProject.getClasses() != null) {
-            for (ClassModel clazz : originalProject.getClasses()) {
-                if (!blacklistedClasses.contains(clazz.getName())) {
-                    filteredClasses.add(clazz);
-                }
-            }
-        }
-
-        // 3. Filtrar relaciones comprobando que ambos extremos sobrevivan
-        // y que la relación no haya sido vetada (Fase 5).
-        List<RelationshipModel> filteredRelationships = new ArrayList<>();
-        if (originalProject.getRelationships() != null) {
-            for (RelationshipModel rel : originalProject.getRelationships()) {
-                if (!blacklistedClasses.contains(rel.getSource()) && !blacklistedClasses.contains(rel.getTarget())
-                        && !vetoedRelationships.contains(relationshipKey(rel))) {
-                    filteredRelationships.add(rel);
-                }
-            }
-        }
-
-        // 3b. Regla de huérfanas (opción B): tras filtrar y vetar,
-        // elimina las externas que ya no tengan ninguna relación.
-        // Solo externas: las internas se conservan aunque queden aisladas.
-        Set<String> linkedNames = new HashSet<>();
-        for (RelationshipModel rel : filteredRelationships) {
-            linkedNames.add(rel.getSource());
-            linkedNames.add(rel.getTarget());
-        }
-        List<ClassModel> survivors = new ArrayList<>();
-        for (ClassModel clazz : filteredClasses) {
-            if (!clazz.isExternal() || linkedNames.contains(clazz.getName())) {
-                survivors.add(clazz);
-            }
-        }
-        filteredClasses = survivors;
-
-        // 4. Instanciar el ProjectModel canónico con getProjectName()
-        return new ProjectModel(originalProject.getProjectName(), filteredClasses, filteredRelationships);
+        return ProjectFilter.apply(originalProject, filter, vetoedRelationships);
     }
 }
