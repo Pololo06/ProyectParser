@@ -5,522 +5,540 @@ skinparam ranksep 100
 set separator none
 hide members
 
-package "com.universidad.application.dto.asignaturacosto" as pkg_com_universidad_application_dto_asignaturacosto {
-  record AsignaturaCostoDto {
-    -id: Integer
-    -nombre: String
-    -semanas: Short
-    -costoBase: BigDecimal
-    -estado: EstadoEntidad
+package "infrastructure.config" as layer_0 {
+  package "com.universidad.infrastructure.config" as pkg_com_universidad_infrastructure_config {
+    class ConfiguracionDeDependencias {
+      -modulos: List<SystemModule>
+      -modulosConfigurados: List<ModuloConfigurable>
+      «create» +ConfiguracionDeDependencias()
+      +getModulos(): List<SystemModule>
+      +close(): void
+    }
+
+  }
+
+  package "com.universidad.infrastructure.config.modulos" as pkg_com_universidad_infrastructure_config_modulos {
+    class ConfiguracionModuloAsignatura {
+      -repositorio: AsignaturaRepositorio
+      -servicio: AsignaturaServicio
+      «create» +ConfiguracionModuloAsignatura()
+      +getRepositorio(): AsignaturaRepositorio
+      +getServicio(): AsignaturaServicio
+      +construirVista(): SystemModule
+      +cerrarRecursos(): void
+    }
+
+    class ConfiguracionModuloCurso {
+      -repositorio: CursoRepositorio
+      -servicio: CursoServicio
+      «create» +ConfiguracionModuloCurso()
+      +getRepositorio(): CursoRepositorio
+      +getServicio(): CursoServicio
+      +construirVista(): SystemModule
+      +cerrarRecursos(): void
+    }
+
+    class ConfiguracionModuloEstudiante {
+      -repositorio: EstudianteRepositorio
+      -servicio: EstudianteServicio
+      «create» +ConfiguracionModuloEstudiante()
+      +getRepositorio(): EstudianteRepositorio
+      +getServicio(): EstudianteServicio
+      +construirVista(): SystemModule
+      +cerrarRecursos(): void
+    }
+
+    class ConfiguracionModuloProfesor {
+      -repositorio: ProfesorRepositorio
+      -servicio: ProfesorServicio
+      «create» +ConfiguracionModuloProfesor()
+      +getRepositorio(): ProfesorRepositorio
+      +getServicio(): ProfesorServicio
+      +construirVista(): SystemModule
+      +cerrarRecursos(): void
+    }
+
+    interface ModuloConfigurable {
+      +construirVista(): SystemModule
+      +cerrarRecursos(): void
+    }
+
   }
 
 }
 
-package "com.universidad.application.dto.curso" as pkg_com_universidad_application_dto_curso {
-  record CursoDto {
-    -id: UUID
-    -codigoCurso: String
-    -nombreCurso: String
-    -creditosCurso: Integer
-    -cupoMaximoCurso: Integer
-    -estado: EstadoEntidad
-    -activo: boolean
+package "infrastructure.cli" as layer_1 {
+  package "com.universidad.infrastructure.cli" as pkg_com_universidad_infrastructure_cli {
+    class AsignaturaVista {
+      -ANCHO_TABLA: int
+      -controlador: AsignaturaControlador
+      -columnasTablaMateria: List<TableColumn>
+      «create» +AsignaturaVista(controlador: AsignaturaControlador)
+      +getModuleName(): String
+      +execute(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -mostrarMenu(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -listarAsignatura(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -textoEstado(dto: AsignaturaCostoDto, formatter: ScreenFormatter): String
+      -extraerDatosAsignatura(dto: AsignaturaCostoDto, formatter: ScreenFormatter): Object[]
+      -crearAsignatura(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+    }
+
+    class CursoVista {
+      -ANCHO_TABLA: int {static}
+      -controlador: CursoControlador
+      -columnas: List<TableColumn>
+      «create» +CursoVista(controlador: CursoControlador)
+      +getModuleName(): String
+      +execute(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -mostrarMenu(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -extraerDatos(dto: CursoDto, formatter: ScreenFormatter): Object[]
+      -crearCurso(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -listarCursos(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -actualizarCurso(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -eliminarCurso(console: Console): void
+      -leerEnteroOpcional(console: Console, mensaje: String): Integer
+    }
+
+    class EstudianteVista {
+      -ANCHO_TABLA: int {static}
+      -controlador: EstudianteControlador
+      -columnas: List<TableColumn>
+      «create» +EstudianteVista(controlador: EstudianteControlador)
+      +getModuleName(): String
+      +execute(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -mostrarMenu(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -extraerDatos(dto: EstudianteDto, formatter: ScreenFormatter): Object[]
+      -crearEstudiante(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -listarEstudiantes(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -actualizarEstudiante(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -eliminarEstudiante(console: Console): void
+      -leerEnteroOpcional(console: Console, mensaje: String): Integer
+    }
+
+    class ProfesorVista {
+      -ANCHO_TABLA: int
+      -controlador: ProfesorControlador
+      -columnasTablaProfe: List<TableColumn>
+      «create» +ProfesorVista(controlador: ProfesorControlador)
+      +getModuleName(): String
+      +execute(cnsl: Console, sf: ScreenFormatter, tr: TableRenderer): void
+      -mostrarMenu(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -textoEstado(dto: ProfesorDto, formatter: ScreenFormatter): String
+      -extraerDatosProfesor(dto: ProfesorDto, formatter: ScreenFormatter): Object[]
+      -listarProfes(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -crearProfe(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -actualizarProfesor(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+      -eliminarProfesor(console: Console): void
+      -leerEnteroOpcional(console: Console, mensaje: String): Integer
+    }
+
   }
 
 }
 
-package "com.universidad.application.dto.estudiante" as pkg_com_universidad_application_dto_estudiante {
-  record EstudianteDto {
-    -id: UUID
-    -codigo: String
-    -nombre: String
-    -correo: String
-    -celular: String
-    -direccion: String
-    -estado: EstadoEntidad
-    -activo: boolean
+package "interfaceadapters" as layer_2 {
+  package "com.universidad.interfaceadapters.controller" as pkg_com_universidad_interfaceadapters_controller {
+    class AsignaturaControlador {
+      -servicio: AsignaturaServicioPort
+      «create» +AsignaturaControlador(servicio: AsignaturaServicioPort)
+      +crearAsignatura(dto: AsignaturaCostoCrearDto): AsignaturaCostoDto
+      +cantidadAsignatura(): int
+      +listarAsignatura(): List<AsignaturaCostoDto>
+    }
+
+    class CursoControlador {
+      -servicio: CursoServicioPort
+      «create» +CursoControlador(servicio: CursoServicioPort)
+      +crearCurso(dto: CursoCrearDto): CursoDto
+      +CrearCurso(dto: CursoCrearDto): CursoDto
+      +listarCursos(): List<CursoDto>
+      +cantidadCursos(): long
+      +actualizarCurso(dto: CursoActualizarDto): CursoDto
+      +eliminarCurso(id: UUID): boolean
+    }
+
+    class EstudianteControlador {
+      -servicio: EstudianteServicioPort
+      «create» +EstudianteControlador(servicio: EstudianteServicioPort)
+      +crearEstudiante(dto: EstudianteCrearDto): EstudianteDto
+      +listarEstudiantes(): List<EstudianteDto>
+      +cantidadEstudiantes(): long
+      +actualizarEstudiante(dto: EstudianteActualizarDto): EstudianteDto
+      +eliminarEstudiante(id: UUID): boolean
+    }
+
+    class ProfesorControlador {
+      -servicio: ProfesorServicioPort
+      «create» +ProfesorControlador(servicio: ProfesorServicioPort)
+      +crearProfesor(dto: ProfesorCrearDto): ProfesorDto
+      +cantidadProfesores(): int
+      +listarProfesores(): List<ProfesorDto>
+      +actualizarProfesor(dto: ProfesorActualizarDto): ProfesorDto
+      +eliminarProfesor(id: Long): boolean
+    }
+
   }
 
 }
 
-package "com.universidad.application.dto.profesor" as pkg_com_universidad_application_dto_profesor {
-  record ProfesorDto {
-    -id: Long
-    -nombre: String
-    -celular: String
-    -estado: EstadoEntidad
-    -activo: Boolean
+package "application" as layer_3 {
+  package "com.universidad.application.dto.asignaturacosto" as pkg_com_universidad_application_dto_asignaturacosto {
+    record AsignaturaCostoDto {
+      -id: Integer
+      -nombre: String
+      -semanas: Short
+      -costoBase: BigDecimal
+      -estado: EstadoEntidad
+    }
+
+  }
+
+  package "com.universidad.application.dto.curso" as pkg_com_universidad_application_dto_curso {
+    record CursoDto {
+      -id: UUID
+      -codigoCurso: String
+      -nombreCurso: String
+      -creditosCurso: Integer
+      -cupoMaximoCurso: Integer
+      -estado: EstadoEntidad
+      -activo: boolean
+    }
+
+  }
+
+  package "com.universidad.application.dto.estudiante" as pkg_com_universidad_application_dto_estudiante {
+    record EstudianteDto {
+      -id: UUID
+      -codigo: String
+      -nombre: String
+      -correo: String
+      -celular: String
+      -direccion: String
+      -estado: EstadoEntidad
+      -activo: boolean
+    }
+
+  }
+
+  package "com.universidad.application.dto.profesor" as pkg_com_universidad_application_dto_profesor {
+    record ProfesorDto {
+      -id: Long
+      -nombre: String
+      -celular: String
+      -estado: EstadoEntidad
+      -activo: Boolean
+    }
+
+  }
+
+  package "com.universidad.application.mapper" as pkg_com_universidad_application_mapper {
+    class AsignaturaMapeador {
+      «create» +AsignaturaMapeador()
+      +toDto(entidad: AsignaturaCosto): AsignaturaCostoDto
+      +toDtoList(entidades: List<AsignaturaCosto>): List<AsignaturaCostoDto>
+    }
+
+    class CursoMapeador {
+      +toDto(entidad: Curso): CursoDto
+      +toDtoList(entidades: List<Curso>): List<CursoDto>
+    }
+
+    class EstudianteMapeador {
+      +toDto(entidad: Estudiante): EstudianteDto
+      +toDtoList(entidades: List<Estudiante>): List<EstudianteDto>
+    }
+
+    interface Mapeador {
+      +toDto(entidad: E): R
+      +toDtoList(entidades: List<E>): List<R>
+    }
+
+    class ProfesorMapeador {
+      «create» +ProfesorMapeador()
+      +toDto(entidad: Profesor): ProfesorDto
+      +toDtoList(entidades: List<Profesor>): List<ProfesorDto>
+    }
+
+  }
+
+  package "com.universidad.application.port" as pkg_com_universidad_application_port {
+    interface AsignaturaServicioPort {
+      +registrarAsignatura(dto: AsignaturaCostoCrearDto): AsignaturaCostoDto
+      +obtenerAsignaturas(): List<AsignaturaCostoDto>
+      +contarAsignaturas(): int
+    }
+
+    interface CursoServicioPort {
+      +registrarCurso(dto: CursoCrearDto): CursoDto
+      +obtenerCursos(): List<CursoDto>
+      +contarCursos(): long
+      +actualizarCurso(dto: CursoActualizarDto): CursoDto
+      +eliminarCurso(id: UUID): boolean
+    }
+
+    interface EstudianteServicioPort {
+      +registrarEstudiante(dto: EstudianteCrearDto): EstudianteDto
+      +obtenerEstudiantes(): List<EstudianteDto>
+      +contarEstudiantes(): long
+      +actualizarEstudiante(dto: EstudianteActualizarDto): EstudianteDto
+      +eliminarEstudiante(id: UUID): boolean
+    }
+
+    interface ProfesorServicioPort {
+      +registrarProfesor(dto: ProfesorCrearDto): ProfesorDto
+      +obtenerProfesores(): List<ProfesorDto>
+      +contarProfesores(): int
+      +actualizarProfesor(dto: ProfesorActualizarDto): ProfesorDto
+      +eliminarProfesor(id: Long): boolean
+    }
+
+  }
+
+  package "com.universidad.application.service" as pkg_com_universidad_application_service {
+    class AsignaturaServicio {
+      -mapeador: AsignaturaMapeador
+      -repositorio: AsignaturaRepositorio
+      «create» +AsignaturaServicio(mapeador: AsignaturaMapeador, repositorio: AsignaturaRepositorio)
+      +registrarAsignatura(dto: AsignaturaCostoCrearDto): AsignaturaCostoDto
+      +obtenerAsignaturas(): List<AsignaturaCostoDto>
+      +contarAsignaturas(): int
+    }
+
+    class CursoServicio {
+      -mapeador: CursoMapeador
+      -repositorio: CursoRepositorio
+      «create» +CursoServicio(mapeador: CursoMapeador, repositorio: CursoRepositorio)
+      +registrarCurso(dto: CursoCrearDto): CursoDto
+      +obtenerCursos(): List<CursoDto>
+      +contarCursos(): long
+      +actualizarCurso(dto: CursoActualizarDto): CursoDto
+      +eliminarCurso(id: UUID): boolean
+    }
+
+    class EstudianteServicio {
+      -mapeador: EstudianteMapeador
+      -repositorio: EstudianteRepositorio
+      «create» +EstudianteServicio(mapeador: EstudianteMapeador, repositorio: EstudianteRepositorio)
+      +registrarEstudiante(dto: EstudianteCrearDto): EstudianteDto
+      +obtenerEstudiantes(): List<EstudianteDto>
+      +contarEstudiantes(): long
+      +actualizarEstudiante(dto: EstudianteActualizarDto): EstudianteDto
+      +eliminarEstudiante(id: UUID): boolean
+    }
+
+    class ProfesorServicio {
+      -mapeador: ProfesorMapeador
+      -repositorio: ProfesorRepositorio
+      «create» +ProfesorServicio(mapeador: ProfesorMapeador, repositorio: ProfesorRepositorio)
+      +registrarProfesor(dto: ProfesorCrearDto): ProfesorDto
+      +obtenerProfesores(): List<ProfesorDto>
+      +contarProfesores(): int
+      +actualizarProfesor(dto: ProfesorActualizarDto): ProfesorDto
+      +eliminarProfesor(id: Long): boolean
+    }
+
   }
 
 }
 
-package "com.universidad.application.mapper" as pkg_com_universidad_application_mapper {
-  class AsignaturaMapeador {
-    «create» +AsignaturaMapeador()
-    +toDto(entidad: AsignaturaCosto): AsignaturaCostoDto
-    +toDtoList(entidades: List<AsignaturaCosto>): List<AsignaturaCostoDto>
+package "domain" as layer_4 {
+  package "com.universidad.domain.model" as pkg_com_universidad_domain_model {
+    class AsignaturaCosto {
+      -idAsignaturaCosto: Integer
+      -nombreAsignatura: String
+      -semanasDuracion: Short
+      -costoBase: BigDecimal
+      -estadoAsignatura: EstadoEntidad
+      «create» #AsignaturaCosto()
+      «create» +AsignaturaCosto(nombreAsignatura: String, semanasDuracion: Short, costoBase: BigDecimal)
+      «create» +AsignaturaCosto(idAsignaturaCosto: Integer, nombreAsignatura: String, semanasDuracion: Short, costoBase: BigDecimal, estadoAsignatura: EstadoEntidad)
+      +actualizarNombre(nuevoNombre: String): void
+      +actualizarSemanas(nuevasSemanas: Short): void
+      +actualizarCosto(nuevoCosto: BigDecimal): void
+      +suspender(): void
+      +reactivar(): void
+      +estaActiva(): boolean
+      +getIdAsignaturaCosto(): Integer
+      +getNombreAsignatura(): String
+      +getSemanasDuracion(): Short
+      +getCostoBase(): BigDecimal
+      +getEstadoAsignatura(): EstadoEntidad
+    }
+
+    class Curso {
+      -idCurso: UUID
+      -codigoCurso: String
+      -nombreCurso: String
+      -creditosCurso: Integer
+      -cupoMaximoCurso: Integer
+      -estadoCurso: EstadoEntidad
+      «create» #Curso()
+      «create» +Curso(codigoCurso: String, nombreCurso: String, creditosCurso: Integer, cupoMaximoCurso: Integer)
+      «create» +Curso(idCurso: UUID, codigoCurso: String, nombreCurso: String, creditosCurso: Integer, cupoMaximoCurso: Integer, estadoCurso: EstadoEntidad)
+      +actualizarNombre(nuevoNombre: String): void
+      +actualizarCupo(nuevoCupo: Integer): void
+      +cambiarEstado(nuevoEstado: EstadoEntidad): void
+      +estaActivo(): boolean
+      +getIdCurso(): UUID
+      +getCodigoCurso(): String
+      +getNombreCurso(): String
+      +getCreditosCurso(): Integer
+      +getCupoMaximoCurso(): Integer
+      +getEstadoCurso(): EstadoEntidad
+    }
+
+    class Estudiante {
+      -idEstudiante: UUID
+      -codigoEstudiante: String
+      -nombreEstudiante: String
+      -direccionEstudiante: String
+      -correoEstudiante: String
+      -celularEstudiante: String
+      -estadoEstudiante: EstadoEntidad
+      «create» #Estudiante()
+      «create» +Estudiante(codigoEstudiante: String, nombreEstudiante: String, correoEstudiante: String, celularEstudiante: String, direccionEstudiante: String)
+      «create» +Estudiante(idEstudiante: UUID, codigoEstudiante: String, nombreEstudiante: String, correoEstudiante: String, celularEstudiante: String, direccionEstudiante: String, estadoEstudiante: EstadoEntidad)
+      +actualizarCorreo(nuevoCorreo: String): void
+      +actualizarCelular(nuevoCelular: String): void
+      +actualizarDireccion(nuevaDireccion: String): void
+      +cambiarEstado(nuevoEstado: EstadoEntidad): void
+      +estaActivo(): boolean
+      +getIdEstudiante(): UUID
+      +getCodigoEstudiante(): String
+      +getNombreEstudiante(): String
+      +getDireccionEstudiante(): String
+      +getCorreoEstudiante(): String
+      +getCelularEstudiante(): String
+      +getEstadoEstudiante(): EstadoEntidad
+    }
+
+    class Profesor {
+      -idProfesor: Long
+      -nombreProfesor: String
+      -celularProfesor: String
+      -estadoProfesor: EstadoEntidad
+      «create» #Profesor()
+      «create» +Profesor(nombreProfesor: String, celularProfesor: String)
+      «create» +Profesor(idProfesor: Long, nombreProfesor: String, celularProfesor: String, estadoProfesor: EstadoEntidad)
+      +actualizarNombre(nuevoNombre: String): void
+      +actualizarCelular(nuevoCelular: String): void
+      +cambiarEstado(nuevoEstado: EstadoEntidad): void
+      +estaActivo(): boolean
+      +getIdProfesor(): Long
+      +getNombreProfesor(): String
+      +getCelularProfesor(): String
+      +getEstadoProfesor(): EstadoEntidad
+    }
+
   }
 
-  class CursoMapeador {
-    +toDto(entidad: Curso): CursoDto
-    +toDtoList(entidades: List<Curso>): List<CursoDto>
+  package "com.universidad.domain.model.enumeracion" as pkg_com_universidad_domain_model_enumeracion {
+    enum EstadoEntidad {
+      ACTIVO
+      INACTIVO
+      -code: int
+      -description: String
+      «create» ~EstadoEntidad(code: int, description: String)
+      +getCode(): int
+      +getDescription(): String
+      +cambiarEstadoA(nuevoEstado: EstadoEntidad): EstadoEntidad
+    }
+
   }
 
-  class EstudianteMapeador {
-    +toDto(entidad: Estudiante): EstudianteDto
-    +toDtoList(entidades: List<Estudiante>): List<EstudianteDto>
+  package "com.universidad.domain.repository" as pkg_com_universidad_domain_repository {
+    interface AsignaturaRepositorio {
+    }
+
+    interface CursoRepositorio {
+    }
+
+    interface EstudianteRepositorio {
+    }
+
+    interface ProfesorRepositorio {
+    }
+
+    interface RepositorioBase {
+      +guardar(entidad: T): T
+      +actualizar(entidad: T): T
+      +buscarPorId(id: ID): Optional<T>
+      +eliminar(id: ID): boolean
+      +listarTodos(): List<T>
+      +contar(): long
+      +cerrar(): void
+    }
+
   }
 
-  interface Mapeador {
-    +toDto(entidad: E): R
-    +toDtoList(entidades: List<E>): List<R>
-  }
+  package "com.universidad.domain.repository.cargador" as pkg_com_universidad_domain_repository_cargador {
+    interface CargadorDatos {
+      +cargarTodos(): void
+      +cargarPorIds(ids: List<ID>): void
+      +registrarEnCache(entidad: T): void
+      +obtener(id: ID): Optional<T>
+      +existe(id: ID): boolean
+    }
 
-  class ProfesorMapeador {
-    «create» +ProfesorMapeador()
-    +toDto(entidad: Profesor): ProfesorDto
-    +toDtoList(entidades: List<Profesor>): List<ProfesorDto>
-  }
+    class ProfesorCargador {
+      -cache: Map<Long,Profesor>
+      -repositorio: ProfesorRepositorio
+      «create» +ProfesorCargador(repositorio: ProfesorRepositorio)
+      +cargarTodos(): void
+      +cargarPorIds(ids: List<Long>): void
+      +registrarEnCache(entidad: Profesor): void
+      +obtener(id: Long): Optional<Profesor>
+      +existe(id: Long): boolean
+    }
 
-}
-
-package "com.universidad.application.port" as pkg_com_universidad_application_port {
-  interface AsignaturaServicioPort {
-    +registrarAsignatura(dto: AsignaturaCostoCrearDto): AsignaturaCostoDto
-    +obtenerAsignaturas(): List<AsignaturaCostoDto>
-    +contarAsignaturas(): int
-  }
-
-  interface CursoServicioPort {
-    +registrarCurso(dto: CursoCrearDto): CursoDto
-    +obtenerCursos(): List<CursoDto>
-    +contarCursos(): long
-    +actualizarCurso(dto: CursoActualizarDto): CursoDto
-    +eliminarCurso(id: UUID): boolean
-  }
-
-  interface EstudianteServicioPort {
-    +registrarEstudiante(dto: EstudianteCrearDto): EstudianteDto
-    +obtenerEstudiantes(): List<EstudianteDto>
-    +contarEstudiantes(): long
-    +actualizarEstudiante(dto: EstudianteActualizarDto): EstudianteDto
-    +eliminarEstudiante(id: UUID): boolean
-  }
-
-  interface ProfesorServicioPort {
-    +registrarProfesor(dto: ProfesorCrearDto): ProfesorDto
-    +obtenerProfesores(): List<ProfesorDto>
-    +contarProfesores(): int
-    +actualizarProfesor(dto: ProfesorActualizarDto): ProfesorDto
-    +eliminarProfesor(id: Long): boolean
-  }
-
-}
-
-package "com.universidad.application.service" as pkg_com_universidad_application_service {
-  class AsignaturaServicio {
-    -mapeador: AsignaturaMapeador
-    -repositorio: AsignaturaRepositorio
-    «create» +AsignaturaServicio(mapeador: AsignaturaMapeador, repositorio: AsignaturaRepositorio)
-    +registrarAsignatura(dto: AsignaturaCostoCrearDto): AsignaturaCostoDto
-    +obtenerAsignaturas(): List<AsignaturaCostoDto>
-    +contarAsignaturas(): int
-  }
-
-  class CursoServicio {
-    -mapeador: CursoMapeador
-    -repositorio: CursoRepositorio
-    «create» +CursoServicio(mapeador: CursoMapeador, repositorio: CursoRepositorio)
-    +registrarCurso(dto: CursoCrearDto): CursoDto
-    +obtenerCursos(): List<CursoDto>
-    +contarCursos(): long
-    +actualizarCurso(dto: CursoActualizarDto): CursoDto
-    +eliminarCurso(id: UUID): boolean
-  }
-
-  class EstudianteServicio {
-    -mapeador: EstudianteMapeador
-    -repositorio: EstudianteRepositorio
-    «create» +EstudianteServicio(mapeador: EstudianteMapeador, repositorio: EstudianteRepositorio)
-    +registrarEstudiante(dto: EstudianteCrearDto): EstudianteDto
-    +obtenerEstudiantes(): List<EstudianteDto>
-    +contarEstudiantes(): long
-    +actualizarEstudiante(dto: EstudianteActualizarDto): EstudianteDto
-    +eliminarEstudiante(id: UUID): boolean
-  }
-
-  class ProfesorServicio {
-    -mapeador: ProfesorMapeador
-    -repositorio: ProfesorRepositorio
-    «create» +ProfesorServicio(mapeador: ProfesorMapeador, repositorio: ProfesorRepositorio)
-    +registrarProfesor(dto: ProfesorCrearDto): ProfesorDto
-    +obtenerProfesores(): List<ProfesorDto>
-    +contarProfesores(): int
-    +actualizarProfesor(dto: ProfesorActualizarDto): ProfesorDto
-    +eliminarProfesor(id: Long): boolean
-  }
-
-}
-
-package "com.universidad.domain.model" as pkg_com_universidad_domain_model {
-  class AsignaturaCosto {
-    -idAsignaturaCosto: Integer
-    -nombreAsignatura: String
-    -semanasDuracion: Short
-    -costoBase: BigDecimal
-    -estadoAsignatura: EstadoEntidad
-    «create» #AsignaturaCosto()
-    «create» +AsignaturaCosto(nombreAsignatura: String, semanasDuracion: Short, costoBase: BigDecimal)
-    «create» +AsignaturaCosto(idAsignaturaCosto: Integer, nombreAsignatura: String, semanasDuracion: Short, costoBase: BigDecimal, estadoAsignatura: EstadoEntidad)
-    +actualizarNombre(nuevoNombre: String): void
-    +actualizarSemanas(nuevasSemanas: Short): void
-    +actualizarCosto(nuevoCosto: BigDecimal): void
-    +suspender(): void
-    +reactivar(): void
-    +estaActiva(): boolean
-    +getIdAsignaturaCosto(): Integer
-    +getNombreAsignatura(): String
-    +getSemanasDuracion(): Short
-    +getCostoBase(): BigDecimal
-    +getEstadoAsignatura(): EstadoEntidad
-  }
-
-  class Curso {
-    -idCurso: UUID
-    -codigoCurso: String
-    -nombreCurso: String
-    -creditosCurso: Integer
-    -cupoMaximoCurso: Integer
-    -estadoCurso: EstadoEntidad
-    «create» #Curso()
-    «create» +Curso(codigoCurso: String, nombreCurso: String, creditosCurso: Integer, cupoMaximoCurso: Integer)
-    «create» +Curso(idCurso: UUID, codigoCurso: String, nombreCurso: String, creditosCurso: Integer, cupoMaximoCurso: Integer, estadoCurso: EstadoEntidad)
-    +actualizarNombre(nuevoNombre: String): void
-    +actualizarCupo(nuevoCupo: Integer): void
-    +cambiarEstado(nuevoEstado: EstadoEntidad): void
-    +estaActivo(): boolean
-    +getIdCurso(): UUID
-    +getCodigoCurso(): String
-    +getNombreCurso(): String
-    +getCreditosCurso(): Integer
-    +getCupoMaximoCurso(): Integer
-    +getEstadoCurso(): EstadoEntidad
-  }
-
-  class Estudiante {
-    -idEstudiante: UUID
-    -codigoEstudiante: String
-    -nombreEstudiante: String
-    -direccionEstudiante: String
-    -correoEstudiante: String
-    -celularEstudiante: String
-    -estadoEstudiante: EstadoEntidad
-    «create» #Estudiante()
-    «create» +Estudiante(codigoEstudiante: String, nombreEstudiante: String, correoEstudiante: String, celularEstudiante: String, direccionEstudiante: String)
-    «create» +Estudiante(idEstudiante: UUID, codigoEstudiante: String, nombreEstudiante: String, correoEstudiante: String, celularEstudiante: String, direccionEstudiante: String, estadoEstudiante: EstadoEntidad)
-    +actualizarCorreo(nuevoCorreo: String): void
-    +actualizarCelular(nuevoCelular: String): void
-    +actualizarDireccion(nuevaDireccion: String): void
-    +cambiarEstado(nuevoEstado: EstadoEntidad): void
-    +estaActivo(): boolean
-    +getIdEstudiante(): UUID
-    +getCodigoEstudiante(): String
-    +getNombreEstudiante(): String
-    +getDireccionEstudiante(): String
-    +getCorreoEstudiante(): String
-    +getCelularEstudiante(): String
-    +getEstadoEstudiante(): EstadoEntidad
-  }
-
-  class Profesor {
-    -idProfesor: Long
-    -nombreProfesor: String
-    -celularProfesor: String
-    -estadoProfesor: EstadoEntidad
-    «create» #Profesor()
-    «create» +Profesor(nombreProfesor: String, celularProfesor: String)
-    «create» +Profesor(idProfesor: Long, nombreProfesor: String, celularProfesor: String, estadoProfesor: EstadoEntidad)
-    +actualizarNombre(nuevoNombre: String): void
-    +actualizarCelular(nuevoCelular: String): void
-    +cambiarEstado(nuevoEstado: EstadoEntidad): void
-    +estaActivo(): boolean
-    +getIdProfesor(): Long
-    +getNombreProfesor(): String
-    +getCelularProfesor(): String
-    +getEstadoProfesor(): EstadoEntidad
   }
 
 }
 
-package "com.universidad.domain.model.enumeracion" as pkg_com_universidad_domain_model_enumeracion {
-  enum EstadoEntidad {
-    ACTIVO
-    INACTIVO
-    -code: int
-    -description: String
-    «create» ~EstadoEntidad(code: int, description: String)
-    +getCode(): int
-    +getDescription(): String
-    +cambiarEstadoA(nuevoEstado: EstadoEntidad): EstadoEntidad
-  }
+package "infrastructure.persistence" as layer_5 {
+  package "com.universidad.infrastructure.persistence" as pkg_com_universidad_infrastructure_persistence {
+    class AsignaturaRepositorioImpl {
+      «create» +AsignaturaRepositorioImpl(tpaRepository: TpaRepository<AsignaturaCosto,Integer>)
+    }
 
-}
+    class CursoRepositorioImpl {
+      «create» +CursoRepositorioImpl(tpaRepository: TpaRepository<Curso,UUID>)
+      #permiteBorradoFisico(): boolean
+    }
 
-package "com.universidad.domain.repository" as pkg_com_universidad_domain_repository {
-  interface AsignaturaRepositorio {
-  }
+    class EstudianteRepositorioImpl {
+      «create» +EstudianteRepositorioImpl(tpaRepository: TpaRepository<Estudiante,UUID>)
+      #permiteBorradoFisico(): boolean
+    }
 
-  interface CursoRepositorio {
-  }
+    class ProfesorRepositorioImpl {
+      «create» +ProfesorRepositorioImpl(tpaRepository: TpaRepository<Profesor,Long>)
+      #permiteBorradoFisico(): boolean
+    }
 
-  interface EstudianteRepositorio {
-  }
+    abstract class RepositorioBaseAbstracto {
+      #tpaRepository: TpaRepository<T,ID>
+      «create» +RepositorioBaseAbstracto(tpaRepository: TpaRepository<T,ID>)
+      #permiteBorradoFisico(): boolean
+      +cerrar(): void
+      +contar(): long
+      +listarTodos(): List<T>
+      +eliminar(id: ID): boolean
+      +buscarPorId(id: ID): Optional<T>
+      +actualizar(entidad: T): T
+      +guardar(entidad: T): T
+    }
 
-  interface ProfesorRepositorio {
-  }
-
-  interface RepositorioBase {
-    +guardar(entidad: T): T
-    +actualizar(entidad: T): T
-    +buscarPorId(id: ID): Optional<T>
-    +eliminar(id: ID): boolean
-    +listarTodos(): List<T>
-    +contar(): long
-    +cerrar(): void
-  }
-
-}
-
-package "com.universidad.domain.repository.cargador" as pkg_com_universidad_domain_repository_cargador {
-  interface CargadorDatos {
-    +cargarTodos(): void
-    +cargarPorIds(ids: List<ID>): void
-    +registrarEnCache(entidad: T): void
-    +obtener(id: ID): Optional<T>
-    +existe(id: ID): boolean
-  }
-
-  class ProfesorCargador {
-    -cache: Map<Long,Profesor>
-    -repositorio: ProfesorRepositorio
-    «create» +ProfesorCargador(repositorio: ProfesorRepositorio)
-    +cargarTodos(): void
-    +cargarPorIds(ids: List<Long>): void
-    +registrarEnCache(entidad: Profesor): void
-    +obtener(id: Long): Optional<Profesor>
-    +existe(id: Long): boolean
-  }
-
-}
-
-package "com.universidad.infrastructure.cli" as pkg_com_universidad_infrastructure_cli {
-  class AsignaturaVista {
-    -ANCHO_TABLA: int
-    -controlador: AsignaturaControlador
-    -columnasTablaMateria: List<TableColumn>
-    «create» +AsignaturaVista(controlador: AsignaturaControlador)
-    +getModuleName(): String
-    +execute(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -mostrarMenu(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -listarAsignatura(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -textoEstado(dto: AsignaturaCostoDto, formatter: ScreenFormatter): String
-    -extraerDatosAsignatura(dto: AsignaturaCostoDto, formatter: ScreenFormatter): Object[]
-    -crearAsignatura(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-  }
-
-  class CursoVista {
-    -ANCHO_TABLA: int {static}
-    -controlador: CursoControlador
-    -columnas: List<TableColumn>
-    «create» +CursoVista(controlador: CursoControlador)
-    +getModuleName(): String
-    +execute(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -mostrarMenu(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -extraerDatos(dto: CursoDto, formatter: ScreenFormatter): Object[]
-    -crearCurso(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -listarCursos(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -actualizarCurso(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -eliminarCurso(console: Console): void
-    -leerEnteroOpcional(console: Console, mensaje: String): Integer
-  }
-
-  class EstudianteVista {
-    -ANCHO_TABLA: int {static}
-    -controlador: EstudianteControlador
-    -columnas: List<TableColumn>
-    «create» +EstudianteVista(controlador: EstudianteControlador)
-    +getModuleName(): String
-    +execute(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -mostrarMenu(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -extraerDatos(dto: EstudianteDto, formatter: ScreenFormatter): Object[]
-    -crearEstudiante(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -listarEstudiantes(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -actualizarEstudiante(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -eliminarEstudiante(console: Console): void
-    -leerEnteroOpcional(console: Console, mensaje: String): Integer
-  }
-
-  class ProfesorVista {
-    -ANCHO_TABLA: int
-    -controlador: ProfesorControlador
-    -columnasTablaProfe: List<TableColumn>
-    «create» +ProfesorVista(controlador: ProfesorControlador)
-    +getModuleName(): String
-    +execute(cnsl: Console, sf: ScreenFormatter, tr: TableRenderer): void
-    -mostrarMenu(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -textoEstado(dto: ProfesorDto, formatter: ScreenFormatter): String
-    -extraerDatosProfesor(dto: ProfesorDto, formatter: ScreenFormatter): Object[]
-    -listarProfes(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -crearProfe(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -actualizarProfesor(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
-    -eliminarProfesor(console: Console): void
-    -leerEnteroOpcional(console: Console, mensaje: String): Integer
-  }
-
-}
-
-package "com.universidad.infrastructure.config" as pkg_com_universidad_infrastructure_config {
-  class ConfiguracionDeDependencias {
-    -modulos: List<SystemModule>
-    -modulosConfigurados: List<ModuloConfigurable>
-    «create» +ConfiguracionDeDependencias()
-    +getModulos(): List<SystemModule>
-    +close(): void
-  }
-
-}
-
-package "com.universidad.infrastructure.config.modulos" as pkg_com_universidad_infrastructure_config_modulos {
-  class ConfiguracionModuloAsignatura {
-    -repositorio: AsignaturaRepositorio
-    -servicio: AsignaturaServicio
-    «create» +ConfiguracionModuloAsignatura()
-    +getRepositorio(): AsignaturaRepositorio
-    +getServicio(): AsignaturaServicio
-    +construirVista(): SystemModule
-    +cerrarRecursos(): void
-  }
-
-  class ConfiguracionModuloCurso {
-    -repositorio: CursoRepositorio
-    -servicio: CursoServicio
-    «create» +ConfiguracionModuloCurso()
-    +getRepositorio(): CursoRepositorio
-    +getServicio(): CursoServicio
-    +construirVista(): SystemModule
-    +cerrarRecursos(): void
-  }
-
-  class ConfiguracionModuloEstudiante {
-    -repositorio: EstudianteRepositorio
-    -servicio: EstudianteServicio
-    «create» +ConfiguracionModuloEstudiante()
-    +getRepositorio(): EstudianteRepositorio
-    +getServicio(): EstudianteServicio
-    +construirVista(): SystemModule
-    +cerrarRecursos(): void
-  }
-
-  class ConfiguracionModuloProfesor {
-    -repositorio: ProfesorRepositorio
-    -servicio: ProfesorServicio
-    «create» +ConfiguracionModuloProfesor()
-    +getRepositorio(): ProfesorRepositorio
-    +getServicio(): ProfesorServicio
-    +construirVista(): SystemModule
-    +cerrarRecursos(): void
-  }
-
-  interface ModuloConfigurable {
-    +construirVista(): SystemModule
-    +cerrarRecursos(): void
-  }
-
-}
-
-package "com.universidad.infrastructure.persistence" as pkg_com_universidad_infrastructure_persistence {
-  class AsignaturaRepositorioImpl {
-    «create» +AsignaturaRepositorioImpl(tpaRepository: TpaRepository<AsignaturaCosto,Integer>)
-  }
-
-  class CursoRepositorioImpl {
-    «create» +CursoRepositorioImpl(tpaRepository: TpaRepository<Curso,UUID>)
-    #permiteBorradoFisico(): boolean
-  }
-
-  class EstudianteRepositorioImpl {
-    «create» +EstudianteRepositorioImpl(tpaRepository: TpaRepository<Estudiante,UUID>)
-    #permiteBorradoFisico(): boolean
-  }
-
-  class ProfesorRepositorioImpl {
-    «create» +ProfesorRepositorioImpl(tpaRepository: TpaRepository<Profesor,Long>)
-    #permiteBorradoFisico(): boolean
-  }
-
-  abstract class RepositorioBaseAbstracto {
-    #tpaRepository: TpaRepository<T,ID>
-    «create» +RepositorioBaseAbstracto(tpaRepository: TpaRepository<T,ID>)
-    #permiteBorradoFisico(): boolean
-    +cerrar(): void
-    +contar(): long
-    +listarTodos(): List<T>
-    +eliminar(id: ID): boolean
-    +buscarPorId(id: ID): Optional<T>
-    +actualizar(entidad: T): T
-    +guardar(entidad: T): T
-  }
-
-}
-
-package "com.universidad.interfaceadapters.controller" as pkg_com_universidad_interfaceadapters_controller {
-  class AsignaturaControlador {
-    -servicio: AsignaturaServicioPort
-    «create» +AsignaturaControlador(servicio: AsignaturaServicioPort)
-    +crearAsignatura(dto: AsignaturaCostoCrearDto): AsignaturaCostoDto
-    +cantidadAsignatura(): int
-    +listarAsignatura(): List<AsignaturaCostoDto>
-  }
-
-  class CursoControlador {
-    -servicio: CursoServicioPort
-    «create» +CursoControlador(servicio: CursoServicioPort)
-    +crearCurso(dto: CursoCrearDto): CursoDto
-    +CrearCurso(dto: CursoCrearDto): CursoDto
-    +listarCursos(): List<CursoDto>
-    +cantidadCursos(): long
-    +actualizarCurso(dto: CursoActualizarDto): CursoDto
-    +eliminarCurso(id: UUID): boolean
-  }
-
-  class EstudianteControlador {
-    -servicio: EstudianteServicioPort
-    «create» +EstudianteControlador(servicio: EstudianteServicioPort)
-    +crearEstudiante(dto: EstudianteCrearDto): EstudianteDto
-    +listarEstudiantes(): List<EstudianteDto>
-    +cantidadEstudiantes(): long
-    +actualizarEstudiante(dto: EstudianteActualizarDto): EstudianteDto
-    +eliminarEstudiante(id: UUID): boolean
-  }
-
-  class ProfesorControlador {
-    -servicio: ProfesorServicioPort
-    «create» +ProfesorControlador(servicio: ProfesorServicioPort)
-    +crearProfesor(dto: ProfesorCrearDto): ProfesorDto
-    +cantidadProfesores(): int
-    +listarProfesores(): List<ProfesorDto>
-    +actualizarProfesor(dto: ProfesorActualizarDto): ProfesorDto
-    +eliminarProfesor(id: Long): boolean
   }
 
 }
 
 ' ---------------- LAYER ORDER ----------------
-pkg_com_universidad_infrastructure_config -[hidden]down- pkg_com_universidad_infrastructure_cli
-pkg_com_universidad_infrastructure_cli -[hidden]down- pkg_com_universidad_interfaceadapters_controller
-pkg_com_universidad_interfaceadapters_controller -[hidden]down- pkg_com_universidad_application_dto_asignaturacosto
-pkg_com_universidad_application_dto_asignaturacosto -[hidden]down- pkg_com_universidad_domain_model
-pkg_com_universidad_domain_model -[hidden]down- pkg_com_universidad_infrastructure_persistence
+layer_0 -[hidden]down- layer_1
+layer_1 -[hidden]down- layer_2
+layer_2 -[hidden]down- layer_3
+layer_3 -[hidden]down- layer_4
+layer_4 -[hidden]down- layer_5
 
 EstudianteControlador -down-> EstudianteServicioPort
 AsignaturaControlador -down-> AsignaturaServicioPort
