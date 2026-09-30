@@ -1,6 +1,5 @@
 package is.generador;
 
-import is.generador.application.AnalyzeProjectUseCase;
 import is.generador.application.ClassInfo;
 import is.generador.application.ClassInfoService;
 import is.generador.application.ExportDiagramUseCase;
@@ -15,7 +14,7 @@ import is.generador.domain.port.DiagramRendererPort;
 import is.generador.domain.port.DiagramWriterPort;
 import is.generador.domain.port.SourceAnalyzerPort;
 import is.generador.infrastructure.javaparser.ProjectAnalyzer;
-import is.generador.infrastructure.plantuml.FileSystemDiagramWriter;
+import is.generador.infrastructure.plantuml.PumlFileWriter;
 import is.generador.infrastructure.plantuml.PlantUmlGenerator;
 
 import java.io.IOException;
@@ -44,20 +43,18 @@ public class SoyLaPuerta {
     };
 
     private final SourceAnalyzerPort analyzer;
-    private final AnalyzeProjectUseCase analyzeUseCase;
     private final GenerateDiagramUseCase generateUseCase;
     private final ExportDiagramUseCase exportUseCase;
     private final ClassInfoService classInfoService;
     private final ProjectQueryService queryService;
 
     public SoyLaPuerta() {
-        this(new ProjectAnalyzer(), new PlantUmlGenerator(), new FileSystemDiagramWriter());
+        this(new ProjectAnalyzer(), new PlantUmlGenerator(), PumlFileWriter::write);
     }
 
     /** Composition seam: inject ports (production wires infrastructure, tests wire fakes). */
     public SoyLaPuerta(SourceAnalyzerPort analyzer, DiagramRendererPort renderer, DiagramWriterPort writer) {
         this.analyzer = analyzer;
-        this.analyzeUseCase = new AnalyzeProjectUseCase(analyzer);
         this.generateUseCase = new GenerateDiagramUseCase(analyzer, renderer);
         this.exportUseCase = new ExportDiagramUseCase(generateUseCase, writer);
         this.classInfoService = new ClassInfoService(analyzer);
@@ -93,11 +90,11 @@ public class SoyLaPuerta {
     }
 
     public String generatePlantUml(String folderPath) throws IOException {
-        return generateUseCase.execute(folderPath);
+        return generatePlantUml(folderPath, new DiagramFilter(), DiagramOptions.defaults());
     }
 
     public ProjectModel analyzeProject(String folderPath) throws IOException {
-        return analyzeUseCase.execute(folderPath);
+        return analyzer.analyze(folderPath);
     }
 
     /** Packages of the default project, mapped to their type names (sorted). */
@@ -198,12 +195,12 @@ public class SoyLaPuerta {
 
     /** Generates PlantUML via the canonical engine. */
     public String generatePlantUmlViaUseCase(String folderPath) throws IOException {
-        return generateUseCase.execute(folderPath);
+        return generatePlantUml(folderPath);
     }
 
     /** Generates PlantUML and writes it to {@code outputFile}. */
     public Path exportPlantUml(String folderPath, Path outputFile) throws IOException {
-        return exportUseCase.execute(folderPath, outputFile);
+        return exportPlantUml(folderPath, outputFile, new DiagramFilter(), DiagramOptions.defaults());
     }
 
     /** Package views as canonical {@code PackageModel}. */
@@ -226,7 +223,7 @@ public class SoyLaPuerta {
 
     /** Analyzes applying a {@code DiagramFilter} (blacklist/whitelist) post-analysis. */
     public ProjectModel analyzeFiltered(String folderPath, DiagramFilter filter) throws IOException {
-        ProjectModel project = analyzeUseCase.execute(folderPath);
+        ProjectModel project = analyzer.analyze(folderPath);
         return new FilteredProjectBuilder(project).withFilter(filter).build();
     }
 
@@ -238,8 +235,7 @@ public class SoyLaPuerta {
     /** Generates PlantUML applying a {@code DiagramFilter} and {@code DiagramOptions}. */
     public String generatePlantUml(String folderPath, DiagramFilter filter, DiagramOptions options)
             throws IOException {
-        return generateUseCase.execute(folderPath, filter,
-                options == null ? DiagramOptions.defaults() : options);
+        return generateUseCase.execute(folderPath, filter, options);
     }
 
     /** Generates PlantUML with filter and writes it to {@code outputFile}. */
@@ -250,7 +246,6 @@ public class SoyLaPuerta {
     /** Generates PlantUML with filter and options, writing it to {@code outputFile}. */
     public Path exportPlantUml(String folderPath, Path outputFile, DiagramFilter filter, DiagramOptions options)
             throws IOException {
-        return exportUseCase.execute(folderPath, outputFile, filter,
-                options == null ? DiagramOptions.defaults() : options);
+        return exportUseCase.execute(folderPath, outputFile, filter, options);
     }
 }

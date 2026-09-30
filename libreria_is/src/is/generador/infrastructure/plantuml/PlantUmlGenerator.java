@@ -7,6 +7,7 @@ import is.generador.domain.model.ConstructorModel;
 import is.generador.domain.model.Kind;
 import is.generador.domain.model.MethodModel;
 import is.generador.domain.model.ParameterModel;
+import is.generador.domain.model.PackageModel;
 import is.generador.domain.model.ProjectModel;
 import is.generador.domain.model.RelType;
 import is.generador.domain.model.RelationshipModel;
@@ -34,16 +35,6 @@ public class PlantUmlGenerator implements DiagramRendererPort {
     /** true si la clase es externa (estereotipo {@code @external}). */
     public static boolean isExternal(ClassModel model) {
         return model != null && model.isExternal();
-    }
-
-    /** Renders the project grouped by package (default behavior). */
-    public String generate(ProjectModel project) {
-        return generate(project, true);
-    }
-
-    /** Renders the project flat, without package blocks (legacy behavior). */
-    public String generateFlat(ProjectModel project) {
-        return generate(project, false);
     }
 
     @Override
@@ -91,7 +82,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 models.sort(Comparator.comparing(ClassModel::getName));
             }
             for (Map.Entry<String, List<ClassModel>> entry : byPackage.entrySet()) {
-                builder.append("package \"").append(packageLabel(entry.getKey())).append("\" {\n");
+                builder.append("package \"").append(PackageModel.displayName(entry.getKey())).append("\" {\n");
                 for (ClassModel model : entry.getValue()) {
                     appendClass(builder, model, "  ", opt);
                 }
@@ -141,26 +132,6 @@ public class PlantUmlGenerator implements DiagramRendererPort {
     static boolean isJdkPackage(String packageName) {
         return packageName != null
                 && (packageName.equals("java.lang") || packageName.startsWith("java."));
-    }
-
-    /** Groups classes by package name, sorted alphabetically (packages and classes). Null-safe. */
-    public Map<String, List<ClassModel>> groupByPackage(ProjectModel project) {
-        Map<String, List<ClassModel>> byPackage = new TreeMap<>();
-        if (project == null || project.getClasses() == null) {
-            return byPackage;
-        }
-        for (ClassModel model : project.getClasses()) {
-            String pkg = model.getPackageName() == null ? "" : model.getPackageName();
-            byPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add(model);
-        }
-        for (List<ClassModel> models : byPackage.values()) {
-            models.sort(Comparator.comparing(ClassModel::getName));
-        }
-        return byPackage;
-    }
-
-    private String packageLabel(String packageName) {
-        return (packageName == null || packageName.isEmpty()) ? "(default package)" : packageName;
     }
 
     private void appendClass(StringBuilder builder, ClassModel model, String indent, DiagramOptions opt) {

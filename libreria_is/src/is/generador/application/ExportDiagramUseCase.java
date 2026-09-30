@@ -22,17 +22,8 @@ public class ExportDiagramUseCase {
         this.writer = Objects.requireNonNull(writer, "writer is required");
     }
 
-    public Path execute(String folderPath, Path outputFile) throws IOException {
-        return writer.write(outputFile, generator.execute(folderPath));
-    }
-
-    public Path execute(String folderPath, Path outputFile, DiagramFilter filter) throws IOException {
-        return writer.write(outputFile, generator.execute(folderPath, filter));
-    }
-
     public Path execute(String folderPath, Path outputFile, DiagramFilter filter, DiagramOptions options)
             throws IOException {
-        return writer.write(outputFile, generator.execute(folderPath, filter,
-                options == null ? DiagramOptions.defaults() : options));
+        return writer.write(outputFile, generator.execute(folderPath, filter, options));
     }
 }

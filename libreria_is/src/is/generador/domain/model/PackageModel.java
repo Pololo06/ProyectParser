@@ -21,6 +21,10 @@ public class PackageModel {
 
     /** Empty package is reported as "(default package)". */
     public String getDisplayName() {
+        return displayName(packageName);
+    }
+
+    public static String displayName(String packageName) {
         return (packageName == null || packageName.isEmpty()) ? "(default package)" : packageName;
     }
 

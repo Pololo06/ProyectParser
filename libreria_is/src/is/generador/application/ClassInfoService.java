@@ -3,6 +3,7 @@ package is.generador.application;
 import is.generador.domain.BeanAccessors;
 import is.generador.domain.model.ClassModel;
 import is.generador.domain.model.MethodModel;
+import is.generador.domain.model.ParameterModel;
 import is.generador.domain.model.ProjectModel;
 import is.generador.domain.port.SourceAnalyzerPort;
 
@@ -62,17 +63,8 @@ public class ClassInfoService {
             model.getConstructors().forEach(constructor -> {
                 String visibility = visibilityKeyword(constructor.getModifiers());
                 String prefix = visibility.isEmpty() ? "" : visibility + " ";
-                StringBuilder signature = new StringBuilder(prefix + constructor.getName() + "(");
-                for (int i = 0; i < constructor.getParameters().size(); i++) {
-                    signature.append(constructor.getParameters().get(i).getType())
-                            .append(" ")
-                            .append(constructor.getParameters().get(i).getName());
-                    if (i < constructor.getParameters().size() - 1) {
-                        signature.append(", ");
-                    }
-                }
-                signature.append(")");
-                constructorSignatures.add(signature.toString());
+                constructorSignatures.add(prefix + constructor.getName() + "("
+                        + formatParameters(constructor.getParameters()) + ")");
             });
 
             List<String> getters = new ArrayList<>();
@@ -98,19 +90,20 @@ public class ClassInfoService {
         if (!visibility.isEmpty()) {
             sb.append(visibility).append(" ");
         }
-        sb.append(method.getReturnType()).append(" ").append(method.getName()).append("(");
-        if (method.getParameters() != null) {
-            for (int i = 0; i < method.getParameters().size(); i++) {
-                sb.append(method.getParameters().get(i).getType())
-                        .append(" ")
-                        .append(method.getParameters().get(i).getName());
-                if (i < method.getParameters().size() - 1) {
-                    sb.append(", ");
-                }
-            }
-        }
-        sb.append(")");
+        sb.append(method.getReturnType()).append(" ").append(method.getName()).append("(")
+                .append(formatParameters(method.getParameters())).append(")");
         return sb.toString();
+    }
+
+    private String formatParameters(List<ParameterModel> parameters) {
+        if (parameters == null) {
+            return "";
+        }
+        List<String> parts = new ArrayList<>();
+        for (ParameterModel parameter : parameters) {
+            parts.add(parameter.getType() + " " + parameter.getName());
+        }
+        return String.join(", ", parts);
     }
 
     private String visibilityKeyword(List<String> modifiers) {

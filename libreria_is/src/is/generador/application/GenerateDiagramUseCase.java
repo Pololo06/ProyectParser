@@ -24,25 +24,10 @@ public class GenerateDiagramUseCase {
         this.renderer = Objects.requireNonNull(renderer, "renderer is required");
     }
 
-    public String execute(String folderPath) throws IOException {
-        return renderer.render(analyzer.analyze(folderPath));
-    }
-
-    public String execute(String folderPath, DiagramFilter filter) throws IOException {
-        ProjectModel project = analyzer.analyze(folderPath);
-        ProjectModel filtered = new FilteredProjectBuilder(project).withFilter(filter).build();
-        return renderer.render(filtered);
-    }
-
-    public String execute(String folderPath, DiagramFilter filter, boolean groupByPackage) throws IOException {
-        ProjectModel project = analyzer.analyze(folderPath);
-        ProjectModel filtered = new FilteredProjectBuilder(project).withFilter(filter).build();
-        return renderer.render(filtered, groupByPackage);
-    }
-
     public String execute(String folderPath, DiagramFilter filter, DiagramOptions options) throws IOException {
         ProjectModel project = analyzer.analyze(folderPath);
-        ProjectModel filtered = new FilteredProjectBuilder(project).withFilter(filter).build();
+        ProjectModel filtered = new FilteredProjectBuilder(project)
+                .withFilter(filter == null ? new DiagramFilter() : filter).build();
         return renderer.render(filtered, options == null ? DiagramOptions.defaults() : options);
     }
 }

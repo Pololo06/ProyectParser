@@ -1,7 +1,7 @@
 package is.generador.infrastructure.javaparser;
 
-import is.generador.application.AnalysisResult;
 import is.generador.domain.model.ClassModel;
+import is.generador.domain.model.ProjectModel;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,10 +56,7 @@ class SourceScanner {
     }
 
     /** Empaqueta la trazabilidad de esta corrida junto al proyecto ya construido. */
-    AnalysisResult finish(is.generador.domain.model.ProjectModel project) {
-        return new AnalysisResult(project,
-                new ArrayList<>(parsedFiles),
-                new ArrayList<>(failedFiles),
-                new ArrayList<>(failureReasons));
+    AnalysisResult finish(ProjectModel project) {
+        return new AnalysisResult(project, parsedFiles, failedFiles, failureReasons);
     }
 }

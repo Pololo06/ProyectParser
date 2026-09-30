@@ -14,3 +14,15 @@ libreria_is/lib/*.jar
 Proyecto_Poo/librerias/libreria_is.jar
 Proyecto_Poo/librerias/javaparser-core.jar
 Proyecto_Poo/dist/lib/
+
+# build local de Maven
+libreria_is/target/
+
+# herramientas de refactor y verificación (no necesarias para ejecutar el proyecto)
+verificar.sh
+verificacion/
+docs/
+arquitectura-referencia.md
+libreria_is_tree.txt
+/diagrama_filtrado.puml
+*.bak-*

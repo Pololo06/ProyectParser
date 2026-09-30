@@ -33,7 +33,7 @@ class RelationshipDetector {
                     addOnce(relationships, seen, model.getName(), simple, "EXTENDS");
                 }
                 // generics inside extends clause, e.g. extends Base<Package>
-                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.splitTypeNames(parent), model.getTypeParameters())) {
+                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(parent), model.getTypeParameters())) {
                     if (classNames.contains(inner) && !inner.equals(model.getName()) && !inner.equals(simple)) {
                         addOnce(relationships, seen, model.getName(), inner, "ASSOCIATION");
                     }
@@ -44,7 +44,7 @@ class RelationshipDetector {
                 if (classNames.contains(simple)) {
                     addOnce(relationships, seen, model.getName(), simple, "IMPLEMENTS");
                 }
-                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.splitTypeNames(parent), model.getTypeParameters())) {
+                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(parent), model.getTypeParameters())) {
                     if (classNames.contains(inner) && !inner.equals(model.getName()) && !inner.equals(simple)) {
                         addOnce(relationships, seen, model.getName(), inner, "ASSOCIATION");
                     }
@@ -94,11 +94,11 @@ class RelationshipDetector {
         }
     }
 
-    private void addOnce(List<RelationshipModel> relationships, Set<String> seen,
-                         String source, String target, String type) {
-        String key = source + "|" + type + "|" + target;
-        if (seen.add(key)) {
-            relationships.add(new RelationshipModel(source, target, type));
+    static void addOnce(List<RelationshipModel> relationships, Set<String> seen,
+                        String source, String target, String type) {
+        RelationshipModel rel = new RelationshipModel(source, target, type);
+        if (seen.add(rel.key())) {
+            relationships.add(rel);
         }
     }
 }
