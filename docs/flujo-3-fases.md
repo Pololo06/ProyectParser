@@ -135,7 +135,7 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
 - Homónimos: `class "Foo" as com_a_Foo` y las relaciones usan el alias.
 - Herencia con extremos invertidos (la punta apunta al padre): el modelo guarda `source=hija, target=padre`, el render escribe `Padre <|-- Hija`, `Interfaz <|.. Impl`.
 - Relaciones hacia extremos ocultos por opciones/filtro se omiten; hacia nombres no modelados se conservan (PlantUML los declara implícitamente).
-- Layout para ordenar las relaciones: `skinparam nodesep 60` y `ranksep 80` (sin `linetype ortho`: apila las líneas y no se distingue su destino).
+- Layout para ordenar las relaciones: `skinparam nodesep 80`, `ranksep 100` y `set separator none` (paquetes planos, sin anidar `com > x > y`) (sin `linetype ortho`: apila las líneas y no se distingue su destino).
 - Se conservan los iconos C/I/A/E de PlantUML (no se usa `strictuml` ni `hide circle`).
 - Sintaxis UML 2.5.1: atributos `-nombre: Tipo`, operaciones `+nombre(p: Tipo): Retorno`, constructores con `«create»`.
 - Visibilidad: `+` public, `-` private, `#` protected, `~` package. Los miembros de interfaz sin modificador se pintan `+` (son públicos en Java). Sufijos: `{static}`, `{abstract}` (`final` no se renderiza).
@@ -173,7 +173,7 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .build();
 ```
 
-Flags de `AppGenerador` equivalentes: `--no-getters --no-attributes --no-methods --no-constructors --no-external --no-jdk --flat`.
+Flags de `AppGenerador` equivalentes: `--no-getters --no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat` (las externas se omiten por defecto en AppGenerador).
 
 ### 3.4 Escritura (`PumlFileWriter`)
 
