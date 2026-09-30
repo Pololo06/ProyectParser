@@ -64,6 +64,7 @@ public class DiagramOptions {
     private final boolean showDependencies;
     private final boolean shortSignatures;
     private final boolean hideOrphans;
+    private final boolean summary;
     private final Set<String> allowedDependencies;
     private final LineType lineType;
     private final Map<String, Integer> layers;
@@ -79,6 +80,7 @@ public class DiagramOptions {
         this.showDependencies = builder.showDependencies;
         this.shortSignatures = builder.shortSignatures;
         this.hideOrphans = builder.hideOrphans;
+        this.summary = builder.summary;
         this.allowedDependencies = Collections.unmodifiableSet(new TreeSet<>(builder.allowedDependencies));
         this.lineType = builder.lineType;
         this.layers = Collections.unmodifiableMap(new LinkedHashMap<>(builder.layers));
@@ -100,6 +102,7 @@ public class DiagramOptions {
         private boolean showDependencies = true;
         private boolean shortSignatures = false;
         private boolean hideOrphans = false;
+        private boolean summary = false;
         private Set<String> allowedDependencies = new TreeSet<>();
         private LineType lineType = LineType.DEFAULT;
         private Map<String, Integer> layers = new LinkedHashMap<>();
@@ -117,6 +120,7 @@ public class DiagramOptions {
                 this.showDependencies = base.showDependencies;
                 this.shortSignatures = base.shortSignatures;
                 this.hideOrphans = base.hideOrphans;
+                this.summary = base.summary;
                 this.allowedDependencies = new TreeSet<>(base.allowedDependencies);
                 this.lineType = base.lineType;
                 this.layers = new LinkedHashMap<>(base.layers);
@@ -165,6 +169,8 @@ public class DiagramOptions {
         public Builder shortSignatures(boolean shorten) { this.shortSignatures = shorten; return this; }
         /** true omits classes with no visible relationship once options and filters apply. */
         public Builder hideOrphans(boolean hide) { this.hideOrphans = hide; return this; }
+        /** true emits {@code hide members}: an overview with class names only. */
+        public Builder summary(boolean summary) { this.summary = summary; return this; }
         public Builder showDependencies(boolean show) { this.showDependencies = show; return this; }
 
         public DiagramOptions build() {
@@ -212,6 +218,7 @@ public class DiagramOptions {
         return showDependencies || allowedDependencies.contains(dependencyKey(sourceName, targetName));
     }
 
+    public boolean isSummary() { return summary; }
     public boolean isHideOrphans() { return hideOrphans; }
     public boolean isShortSignatures() { return shortSignatures; }
     public boolean isShowDependencies() { return showDependencies; }

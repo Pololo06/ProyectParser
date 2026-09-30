@@ -62,4 +62,10 @@ class PlantUmlGeneratorTest {
         assertFalse(declara(puml, "D"));
         assertFalse(declara(puml, "E"));
     }
+
+    @Test
+    void resumenEmiteHideMembersSoloSiSePide() {
+        assertTrue(render(new DiagramOptions.Builder().summary(true)).contains("\nhide members\n"));
+        assertFalse(render(new DiagramOptions.Builder()).contains("hide members"));
+    }
 }

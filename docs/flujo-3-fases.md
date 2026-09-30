@@ -140,6 +140,7 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
 - Los records se emiten como `record X { }`: PlantUML de 2020 (1.2020.x) no lo soporta. Salida real verificada con PlantUML 1.2026.8.
 - Se conservan los iconos C/I/A/E de PlantUML (no se usa `strictuml` ni `hide circle`).
 - Sintaxis UML 2.5.1: atributos `-nombre: Tipo`, operaciones `+nombre(p: Tipo): Retorno`, constructores con `«create»`.
+- Resumen (`--resumen`, `DiagramOptions.summary`): emite `hide members` en la cabecera; las cajas muestran solo el nombre.
 - Sin huérfanos (`--sin-huerfanos`, `DiagramOptions.hideOrphans`): se omiten las clases sin ninguna relación visible después de filtros y opciones (p. ej. `--sin-dependencias`).
 - Firmas cortas (`--firmas-cortas`, `DiagramOptions.shortSignatures`): métodos y constructores con más de 3 parámetros se pintan `nombre(…n)`, con n = cantidad de parámetros (`+Estudiante(…7)`), para distinguir sobrecargas.
 - Visibilidad: `+` public, `-` private, `#` protected, `~` package. Los miembros de interfaz sin modificador se pintan `+` (son públicos en Java). Sufijos: `{static}`, `{abstract}` (`final` no se renderiza).
@@ -182,7 +183,7 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .build();
 ```
 
-Flags de `AppGenerador` equivalentes: `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X` (las externas se omiten por defecto en AppGenerador).
+Flags de `AppGenerador` equivalentes: `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X` (las externas se omiten por defecto en AppGenerador).
 
 ### 3.4 Escritura (`PumlFileWriter`)
 

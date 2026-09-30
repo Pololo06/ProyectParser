@@ -68,7 +68,12 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         builder.append("skinparam nodesep 80\n");
         builder.append("skinparam ranksep 100\n");
         // Flat package boxes: com.x.y stays one box instead of nested com > x > y.
-        builder.append("set separator none\n\n");
+        builder.append("set separator none\n");
+        if (opt.isSummary()) {
+            // Overview: class boxes only; members stay in the source for other views.
+            builder.append("hide members\n");
+        }
+        builder.append("\n");
 
         List<ClassModel> internals = new ArrayList<>();
         List<ClassModel> externals = new ArrayList<>();
