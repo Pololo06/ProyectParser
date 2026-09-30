@@ -148,25 +148,25 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
 
 ### 3.2 Filtro (`DiagramFilter`, inmutable con `Builder`)
 
-Diagrama por módulo: `ModuleFilter.classesOf(proyecto, "Estudiante")` devuelve las clases internas cuyo nombre contiene el módulo como palabras CamelCase completas (`Curso` coincide con `CursoDto` y `ConfiguracionModuloCurso`, no con `RecursoX`), sus supertipos transitivos y los destinos internos de sus asociaciones directas; `AppGenerador --modulo Estudiante` los suma a la whitelist de clases. Con `--sin-dependencias`, algunas `..>` del módulo se conservan según la regla dto/port/mapper (abajo).
+Diagrama por módulo: `ModuleFilter.classesOf(proyecto, "Estudiante")` devuelve las clases internas cuyo nombre contiene el módulo como palabras CamelCase completas (`Curso` coincide con `CursoDto` y `ConfiguracionModuloCurso`, no con `RecursoX`), sus supertipos transitivos y los destinos internos de sus asociaciones directas; `AppGenerador --modulo Estudiante` los suma a la whitelist de clases. Con `--sin-dependencias`, las `..>` del módulo se conservan salvo las redundantes por supertipo (abajo).
 
-#### Regla dto/port/mapper (`--modulo` + `--sin-dependencias`)
+#### Regla de redundancia por supertipo (`--modulo` + `--sin-dependencias`)
 
 `ModuleFilter.dependenciesOf(proyecto, módulo)` decide qué dependencias (`..>`) sobreviven; el generador las recibe como pares `Origen->Destino` en `DiagramOptions.allowedDependencies`:
 
 1. Solo se consideran `DEPENDENCY` (tipos usados en firmas); asociaciones y herencia no se tocan.
 2. Origen y destino deben estar **nombrados por el módulo** (`ModuleFilter.namedClassesOf`: `Estudiante`, `EstudianteDto`, `EstudianteMapeador`…). Los supertipos y asociaciones de contexto (`RepositorioBase`, `Mapeador`, `EstadoEntidad`) no cuentan.
-3. Si el destino es un **DTO** (su paquete tiene el segmento `dto`), el origen debe ser un **puerto** (segmento `port`) o un **mapeador** (segmento `mapper`). Las de controlador, servicio y vista hacia DTOs se descartan: el puerto ya declara el contrato con esos DTOs y el servicio lo implementa, así que repetirlas solo agrega un haz de flechas.
-4. El resto (p. ej. `EstudianteMapeador ..> Estudiante`, `EstudianteRepositorioImpl ..> Estudiante`) se conserva: son las que conectan el dominio con la vista del módulo.
+3. `A ..> X` es **redundante** y se omite si `A` extiende o implementa **directamente** un tipo que ya conserva `..> X`: `EstudianteServicio` implementa `EstudianteServicioPort`, que ya declara el contrato con los DTOs.
+4. Las cadenas por asociaciones **no** cuentan: `EstudianteVista --> EstudianteControlador --> EstudianteServicioPort ..> EstudianteDto` no oculta `EstudianteVista ..> EstudianteDto`, que es una dependencia real de la vista.
 
 | Dependencia | ¿Se conserva? |
 |---|---|
-| `EstudianteServicioPort ..> EstudianteDto` | sí (puerto → DTO) |
-| `EstudianteMapeador ..> EstudianteDto` | sí (mapeador → DTO) |
-| `EstudianteMapeador ..> Estudiante` | sí (destino no es DTO) |
-| `EstudianteServicio ..> EstudianteDto` | no (servicio → DTO) |
-| `EstudianteControlador ..> EstudianteCrearDto` | no (controlador → DTO) |
-| `EstudianteVista ..> EstudianteDto` | no (vista → DTO) |
+| `EstudianteServicioPort ..> EstudianteDto` | sí |
+| `EstudianteMapeador ..> EstudianteDto` | sí |
+| `EstudianteMapeador ..> Estudiante` | sí |
+| `EstudianteControlador ..> EstudianteCrearDto` | sí (solo asociación hacia el puerto) |
+| `EstudianteVista ..> EstudianteDto` | sí (solo asociaciones hacia el puerto) |
+| `EstudianteServicio ..> EstudianteDto` | no (su supertipo directo `EstudianteServicioPort` ya la tiene) |
 
 Sin `--modulo`, `--sin-dependencias` omite todas las `..>`.
 

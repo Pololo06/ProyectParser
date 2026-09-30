@@ -76,7 +76,7 @@ Path salida = fachada.exportPlantUml("ruta/a/src", Path.of("diagrama.puml"), fil
 --resumen         Overview: class names only (hide members)
 --sin-huerfanos   Omit classes with no visible relationship after filters
 --firmas-cortas   Show (…n) for methods/constructors with more than 3 parameters
---sin-dependencias Omit ..> arrows (with --modulo, keeps the module's own; to DTOs only from port/mapper)
+--sin-dependencias Omit ..> arrows (with --modulo, keeps the module's own, minus those a direct supertype already has)
 --lineas=TYPE     Line style: ortho, polyline or spline (default: PlantUML's)
 --capas[=a,b,...] Order layers top to bottom and direct arrows down/up
 --agrupar-capas   (Experimental) With --capas: wrap each layer's packages in a container

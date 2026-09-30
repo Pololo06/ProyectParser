@@ -199,6 +199,9 @@ pkg_com_universidad_application_dto_estudiante -[hidden]down- pkg_com_universida
 pkg_com_universidad_domain_model -[hidden]down- pkg_com_universidad_infrastructure_persistence
 
 EstudianteControlador -down-> EstudianteServicioPort
+EstudianteControlador .down.> EstudianteDto
+EstudianteControlador .down.> EstudianteCrearDto
+EstudianteControlador .down.> EstudianteActualizarDto
 RepositorioBase <|-- EstudianteRepositorio
 Estudiante --> EstadoEntidad
 EstudianteServicioPort <|.. EstudianteServicio
@@ -219,5 +222,6 @@ ModuloConfigurable <|.. ConfiguracionModuloEstudiante
 ConfiguracionModuloEstudiante -down-> EstudianteRepositorio
 ConfiguracionModuloEstudiante -down-> EstudianteServicio
 EstudianteVista -down-> EstudianteControlador
+EstudianteVista .down.> EstudianteDto
 
 @enduml

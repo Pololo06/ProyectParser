@@ -115,10 +115,11 @@ public final class ModuleFilter {
 
     /**
      * Dependencias ({@code ..>}) que la vista del módulo conserva con {@code --sin-dependencias},
-     * como claves {@link DiagramOptions#dependencyKey}: ambas puntas nombradas por el módulo y,
-     * si el destino es un DTO (paquete con segmento {@code dto}), solo desde un puerto o un
-     * mapeador (segmento {@code port} o {@code mapper}); las de controlador, servicio y vista
-     * hacia DTOs se descartan porque ya se ven a través del puerto.
+     * como claves {@link DiagramOptions#dependencyKey}: ambas puntas nombradas por el módulo, salvo
+     * las redundantes. {@code A ..> X} es redundante si un supertipo directo de {@code A}
+     * ({@code EXTENDS}/{@code IMPLEMENTS}) ya conserva {@code ..> X}: p. ej.
+     * {@code EstudianteServicio ..> EstudianteDto} cuando {@code EstudianteServicioPort ..> EstudianteDto}.
+     * Las cadenas por asociaciones no cuentan ({@code EstudianteVista ..> EstudianteDto} se conserva).
      */
     public static Set<String> dependenciesOf(ProjectModel project, String module) {
         Set<String> keys = new TreeSet<>();
@@ -130,27 +131,34 @@ public final class ModuleFilter {
         for (ClassModel model : project.getClasses()) {
             byId.put(model.id(), model);
         }
+        Map<String, Set<String>> supertypes = new HashMap<>();
+        Map<String, Set<String>> dependencies = new HashMap<>();
         for (RelationshipModel rel : project.getRelationships()) {
-            if (RelType.fromLabel(rel.getType()) != RelType.DEPENDENCY) {
-                continue;
-            }
+            RelType type = RelType.fromLabel(rel.getType());
             ClassModel source = byId.get(rel.getSource());
             ClassModel target = byId.get(rel.getTarget());
-            if (source == null || target == null
-                    || !named.contains(source.getName()) || !named.contains(target.getName())) {
+            if (source == null || target == null) {
                 continue;
             }
-            if (hasSegment(target, "dto") && !hasSegment(source, "port") && !hasSegment(source, "mapper")) {
-                continue;
+            if (type == RelType.EXTENDS || type == RelType.IMPLEMENTS) {
+                supertypes.computeIfAbsent(source.getName(), k -> new HashSet<>()).add(target.getName());
+            } else if (type == RelType.DEPENDENCY
+                    && named.contains(source.getName()) && named.contains(target.getName())) {
+                dependencies.computeIfAbsent(source.getName(), k -> new HashSet<>()).add(target.getName());
             }
-            keys.add(DiagramOptions.dependencyKey(source.getName(), target.getName()));
+        }
+        for (Map.Entry<String, Set<String>> entry : dependencies.entrySet()) {
+            for (String target : entry.getValue()) {
+                boolean redundant = false;
+                for (String parent : supertypes.getOrDefault(entry.getKey(), Set.of())) {
+                    redundant |= dependencies.getOrDefault(parent, Set.of()).contains(target);
+                }
+                if (!redundant) {
+                    keys.add(DiagramOptions.dependencyKey(entry.getKey(), target));
+                }
+            }
         }
         return keys;
-    }
-
-    private static boolean hasSegment(ClassModel model, String segment) {
-        return model.getPackageName() != null
-                && ("." + model.getPackageName() + ".").contains("." + segment + ".");
     }
 
     /** CamelCase words in lower case: {@code "UUIDCursoDto"} gives {@code [uuid, curso, dto]}. */

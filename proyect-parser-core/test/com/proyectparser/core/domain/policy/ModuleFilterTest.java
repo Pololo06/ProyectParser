@@ -42,6 +42,12 @@ class ModuleFilterTest {
                 clase("EstadoEntidad", "x.domain.model", "ENUM"),
                 clase("RecursoX", "x.domain.model", "CLASS"),
                 clase("Estudiante", "x.domain.model", "CLASS"),
+                clase("EstudianteDto", "x.application.dto", "RECORD"),
+                clase("EstudianteServicio", "x.application.service", "CLASS"),
+                clase("EstudianteServicioPort", "x.application.port", "INTERFACE"),
+                clase("EstudianteMapeador", "x.application.mapper", "CLASS"),
+                clase("EstudianteVista", "x.interfaceadapters.view", "CLASS"),
+                clase("EstudianteControlador", "x.interfaceadapters.controller", "CLASS"),
                 externa("UUID")
         ), List.of(
                 rel("CursoServicio", "CursoServicioPort", RelType.IMPLEMENTS),
@@ -53,7 +59,15 @@ class ModuleFilterTest {
                 rel("CursoControlador", "CursoDto", RelType.DEPENDENCY),
                 rel("CursoServicioPort", "CursoDto", RelType.DEPENDENCY),
                 rel("CursoMapeador", "CursoDto", RelType.DEPENDENCY),
-                rel("CursoMapeador", "Curso", RelType.DEPENDENCY)
+                rel("CursoMapeador", "Curso", RelType.DEPENDENCY),
+                rel("EstudianteServicio", "EstudianteServicioPort", RelType.IMPLEMENTS),
+                rel("EstudianteServicioPort", "EstudianteDto", RelType.DEPENDENCY),
+                rel("EstudianteServicio", "EstudianteDto", RelType.DEPENDENCY),
+                rel("EstudianteMapeador", "EstudianteDto", RelType.DEPENDENCY),
+                rel("EstudianteMapeador", "Estudiante", RelType.DEPENDENCY),
+                rel("EstudianteVista", "EstudianteControlador", RelType.ASSOCIATION),
+                rel("EstudianteControlador", "EstudianteServicioPort", RelType.ASSOCIATION),
+                rel("EstudianteVista", "EstudianteDto", RelType.DEPENDENCY)
         ));
     }
 
@@ -100,8 +114,24 @@ class ModuleFilterTest {
     }
 
     @Test
-    void haciaDtosSoloSeConservanLasDelPuertoYElMapeador() {
-        assertEquals(Set.of("CursoServicioPort->CursoDto", "CursoMapeador->CursoDto", "CursoMapeador->Curso"),
+    void omiteLaDependenciaQueUnSupertipoDirectoYaTiene() {
+        Set<String> deps = ModuleFilter.dependenciesOf(proyecto(), "Estudiante");
+        assertTrue(deps.contains("EstudianteServicioPort->EstudianteDto"), deps.toString());
+        assertFalse(deps.contains("EstudianteServicio->EstudianteDto"), deps.toString());
+    }
+
+    @Test
+    void conservaLasDependenciasNoRedundantes() {
+        Set<String> deps = ModuleFilter.dependenciesOf(proyecto(), "Estudiante");
+        assertTrue(deps.contains("EstudianteMapeador->Estudiante"), deps.toString());
+        // Vista -> Controlador -> Port es una cadena de asociaciones: no la vuelve redundante.
+        assertTrue(deps.contains("EstudianteVista->EstudianteDto"), deps.toString());
+    }
+
+    @Test
+    void conservaLasDependenciasEntreClasesDelModuloSalvoLasRedundantes() {
+        assertEquals(Set.of("CursoServicioPort->CursoDto", "CursoControlador->CursoDto",
+                        "CursoMapeador->CursoDto", "CursoMapeador->Curso"),
                 ModuleFilter.dependenciesOf(proyecto(), "Curso"));
     }
 
@@ -113,7 +143,7 @@ class ModuleFilterTest {
                 .build();
         assertTrue(opciones.showsDependency("CursoServicioPort", "CursoDto"));
         assertFalse(opciones.showsDependency("CursoServicio", "CursoDto"));
-        assertFalse(opciones.showsDependency("CursoControlador", "CursoDto"));
+        assertTrue(opciones.showsDependency("CursoControlador", "CursoDto"));
         assertFalse(opciones.showsDependency("CursoServicio", "RecursoX"));
         assertTrue(new DiagramOptions.Builder().build().showsDependency("CursoServicio", "RecursoX"));
     }
