@@ -20,6 +20,7 @@ import com.github.javaparser.ast.type.TypeParameter;
 import is.generador.domain.model.AttributeModel;
 import is.generador.domain.model.ClassModel;
 import is.generador.domain.model.ConstructorModel;
+import is.generador.domain.model.Kind;
 import is.generador.domain.model.MethodModel;
 import is.generador.domain.model.ParameterModel;
 
@@ -62,7 +63,7 @@ class TypeExtractor {
 
     private ClassModel buildClassModel(TypeDeclaration<?> type, String packageName) {
         String name = type.getNameAsString();
-        String kind = "Class";
+        String kind = Kind.CLASS.label();
         boolean isAbstract = false;
         List<String> stereotypes = new ArrayList<>();
         List<AttributeModel> attributes = new ArrayList<>();
@@ -80,7 +81,7 @@ class TypeExtractor {
         if (type instanceof ClassOrInterfaceDeclaration) {
             ClassOrInterfaceDeclaration declaration = (ClassOrInterfaceDeclaration) type;
             isAbstract = declaration.isAbstract();
-            kind = declaration.isInterface() ? "Interface" : (isAbstract ? "AbstractClass" : "Class");
+            kind = declaration.isInterface() ? Kind.INTERFACE.label() : (isAbstract ? Kind.ABSTRACT_CLASS.label() : Kind.CLASS.label());
             typeParameters.addAll(typeParameterNames(declaration.getTypeParameters()));
 
             for (ClassOrInterfaceType extended : declaration.getExtendedTypes()) {
@@ -92,7 +93,7 @@ class TypeExtractor {
 
             extractMembers(declaration, attributes, constructors, methods);
         } else if (type instanceof RecordDeclaration) {
-            kind = "Record";
+            kind = Kind.RECORD.label();
             RecordDeclaration record = (RecordDeclaration) type;
             typeParameters.addAll(typeParameterNames(record.getTypeParameters()));
             // records can also implement interfaces (RecordDeclaration is NOT a ClassOrInterfaceDeclaration)
@@ -108,7 +109,7 @@ class TypeExtractor {
             }
             extractMembers(record, attributes, constructors, methods);
         } else if (type instanceof EnumDeclaration) {
-            kind = "Enum";
+            kind = Kind.ENUM.label();
             EnumDeclaration enumDeclaration = (EnumDeclaration) type;
             // enum literals / constants
             for (EnumConstantDeclaration entry : enumDeclaration.getEntries()) {
@@ -116,7 +117,7 @@ class TypeExtractor {
             }
             extractMembers(enumDeclaration, attributes, constructors, methods);
         } else if (type instanceof AnnotationDeclaration) {
-            kind = "Annotation";
+            kind = Kind.ANNOTATION.label();
         }
 
         return new ClassModel(name, packageName, kind, isAbstract, stereotypes,

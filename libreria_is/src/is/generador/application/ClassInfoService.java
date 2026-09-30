@@ -2,6 +2,7 @@ package is.generador.application;
 
 import is.generador.domain.BeanAccessors;
 import is.generador.domain.model.ClassModel;
+import is.generador.domain.model.Kind;
 import is.generador.domain.model.MethodModel;
 import is.generador.domain.model.ParameterModel;
 import is.generador.domain.model.ProjectModel;
@@ -53,7 +54,7 @@ public class ClassInfoService {
         for (ClassModel model : project.getClasses()) {
             List<String> properties = new ArrayList<>();
             model.getAttributes().forEach(a -> properties.add(a.getType() + " " + a.getName()));
-            if ("Enum".equals(model.getKind()) && model.getEnumConstants() != null) {
+            if (Kind.ENUM.label().equals(model.getKind()) && model.getEnumConstants() != null) {
                 for (String constant : model.getEnumConstants()) {
                     properties.add("constant " + constant);
                 }

@@ -247,7 +247,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         // "Parent <|-- Child", "Interface <|.. Implementation".
         // Our model stores source=child, target=parent, so swap them here.
         String type = relationship.getType();
-        if ("EXTENDS".equals(type) || "IMPLEMENTS".equals(type)) {
+        if (RelType.EXTENDS.label().equals(type) || RelType.IMPLEMENTS.label().equals(type)) {
                 builder.append(relationship.getTarget())
                         .append(" ")
                         .append(arrowFor(type))

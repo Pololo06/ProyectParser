@@ -2,6 +2,8 @@ package is.generador.infrastructure.javaparser;
 
 import is.generador.domain.model.AttributeModel;
 import is.generador.domain.model.ClassModel;
+import is.generador.domain.model.Kind;
+import is.generador.domain.model.RelType;
 import is.generador.domain.model.RelationshipModel;
 
 import java.util.ArrayList;
@@ -66,12 +68,12 @@ class ExternalTypeRegistrar {
                     List<String> stereotypes = new ArrayList<>();
                     stereotypes.add(ClassModel.EXTERNAL_STEREOTYPE);
                     externals.put(target, new ClassModel(target,
-                            resolvedPkg, "Class", false,
+                            resolvedPkg, Kind.CLASS.label(), false,
                             stereotypes, new ArrayList<>(), new ArrayList<>(),
                             new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
                             new ArrayList<>(), List.of()));
                     }
-                    RelationshipDetector.addOnce(relationships, seen, model.getName(), target, "ASSOCIATION");
+                    RelationshipDetector.addOnce(relationships, seen, model.getName(), target, RelType.ASSOCIATION);
                 }
             }
         }
