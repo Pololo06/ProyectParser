@@ -434,7 +434,7 @@ public class AppGenerador {
         System.out.println("  --no-external     Oculta las externas (es el valor por defecto)");
         System.out.println("  --no-jdk          Oculta solo externas del JDK (java.*)");
         System.out.println("  --flat            Sin bloques package (plano)");
-        System.out.println("  --firmas-cortas   Muestra (...) en métodos/constructores con más de "
+        System.out.println("  --firmas-cortas   Muestra (…n) (n = nº de parámetros) en métodos/constructores con más de "
                 + DiagramOptions.SHORT_SIGNATURE_MAX_PARAMS + " parámetros");
         System.out.println("  --sin-dependencias Omite las flechas ..> (dependencias); con --modulo conserva las");
         System.out.println("                    que van entre clases del módulo (hacia DTOs solo desde puerto/mapeador)");

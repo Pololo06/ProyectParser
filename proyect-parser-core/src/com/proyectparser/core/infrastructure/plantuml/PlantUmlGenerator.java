@@ -392,7 +392,8 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             return "";
         }
         if (opt.isShortSignatures() && parameters.size() > DiagramOptions.SHORT_SIGNATURE_MAX_PARAMS) {
-            return "...";
+            // Keep the count so overloads stay distinguishable: Estudiante(\u20267).
+            return "\u2026" + parameters.size();
         }
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < parameters.size(); i++) {

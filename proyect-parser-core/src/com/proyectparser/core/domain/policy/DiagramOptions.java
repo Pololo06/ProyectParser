@@ -29,7 +29,7 @@ public class DiagramOptions {
      * Clean Architecture layer order used by {@code --capas} without a value (top to bottom).
      * {@code infrastructure.config} (composition root) goes first: it creates everything below.
      */
-    /** With short signatures, members with more parameters than this show {@code (...)}. */
+    /** With short signatures, members with more parameters than this show {@code (…n)}. */
     public static final int SHORT_SIGNATURE_MAX_PARAMS = 3;
 
     public static final List<String> DEFAULT_LAYERS = List.of(
@@ -157,7 +157,7 @@ public class DiagramOptions {
             this.allowedDependencies = keys == null ? new TreeSet<>() : new TreeSet<>(keys);
             return this;
         }
-        /** true shows {@code (...)} for methods/constructors with more than {@link #SHORT_SIGNATURE_MAX_PARAMS} parameters. */
+        /** true shows {@code (…n)}, n = parameter count, for methods/constructors with more than {@link #SHORT_SIGNATURE_MAX_PARAMS} parameters. */
         public Builder shortSignatures(boolean shorten) { this.shortSignatures = shorten; return this; }
         public Builder showDependencies(boolean show) { this.showDependencies = show; return this; }
 

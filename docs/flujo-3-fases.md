@@ -140,7 +140,7 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
 - Los records se emiten como `record X { }`: PlantUML de 2020 (1.2020.x) no lo soporta. Salida real verificada con PlantUML 1.2026.8.
 - Se conservan los iconos C/I/A/E de PlantUML (no se usa `strictuml` ni `hide circle`).
 - Sintaxis UML 2.5.1: atributos `-nombre: Tipo`, operaciones `+nombre(p: Tipo): Retorno`, constructores con `«create»`.
-- Firmas cortas (`--firmas-cortas`, `DiagramOptions.shortSignatures`): métodos y constructores con más de 3 parámetros se pintan `nombre(...)`.
+- Firmas cortas (`--firmas-cortas`, `DiagramOptions.shortSignatures`): métodos y constructores con más de 3 parámetros se pintan `nombre(…n)`, con n = cantidad de parámetros (`+Estudiante(…7)`), para distinguir sobrecargas.
 - Visibilidad: `+` public, `-` private, `#` protected, `~` package. Los miembros de interfaz sin modificador se pintan `+` (son públicos en Java). Sufijos: `{static}`, `{abstract}` (`final` no se renderiza).
 - Enums: literales primero como constantes planas. Getters/setters se detectan por campo respaldo real (`BeanAccessors`) y se pueden ocultar.
 
