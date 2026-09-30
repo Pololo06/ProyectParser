@@ -32,11 +32,6 @@ import java.util.TreeMap;
  */
 public class PlantUmlGenerator implements DiagramRendererPort {
 
-    /** true si la clase es externa (estereotipo {@code @external}). */
-    public static boolean isExternal(ClassModel model) {
-        return model != null && model.isExternal();
-    }
-
     @Override
     public String render(ProjectModel project, boolean groupByPackage) {
         return generate(project, groupByPackage);
@@ -47,12 +42,12 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         return generate(project, options);
     }
 
-    public String generate(ProjectModel project, boolean groupByPackage) {
+    private String generate(ProjectModel project, boolean groupByPackage) {
         return generate(project, new DiagramOptions.Builder().groupByPackage(groupByPackage).build());
     }
 
     /** Renders the project applying the given {@link DiagramOptions}. */
-    public String generate(ProjectModel project, DiagramOptions options) {
+    private String generate(ProjectModel project, DiagramOptions options) {
         DiagramOptions opt = options == null ? DiagramOptions.defaults() : options;
         StringBuilder builder = new StringBuilder();
         builder.append("@startuml\n");

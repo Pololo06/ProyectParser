@@ -1,12 +1,11 @@
 package com.universidad.tools;
 
+import is.generador.CasosDeUso;
+import is.generador.application.DiagramService;
 import is.generador.domain.policy.DiagramFilter;
 import is.generador.domain.policy.DiagramOptions;
+import is.generador.domain.policy.ProjectFilter;
 import is.generador.domain.BeanAccessors;
-import is.generador.domain.port.DiagramRendererPort;
-import is.generador.domain.port.SourceAnalyzerPort;
-import is.generador.infrastructure.javaparser.ProjectAnalyzer;
-import is.generador.application.FilteredProjectBuilder;
 import is.generador.domain.model.AttributeModel;
 import is.generador.domain.model.ClassModel;
 import is.generador.domain.model.ConstructorModel;
@@ -14,8 +13,6 @@ import is.generador.domain.model.MethodModel;
 import is.generador.domain.model.PackageModel;
 import is.generador.domain.model.ProjectModel;
 import is.generador.domain.model.RelationshipModel;
-import is.generador.infrastructure.plantuml.PlantUmlGenerator;
-import is.generador.infrastructure.plantuml.PumlFileWriter;
 
 import java.io.File;
 import java.io.IOException;
@@ -174,7 +171,7 @@ public class AppGenerador {
      * Devuelve el modelo reconstruido sin las vetadas.
      */
     private static ProjectModel reviewRelationships(Scanner scanner,
-            FilteredProjectBuilder builder, ProjectModel filteredModel) {
+            ProjectModel originalProject, DiagramFilter filter, ProjectModel filteredModel) {
         if (filteredModel == null || filteredModel.getRelationships() == null
                 || filteredModel.getRelationships().isEmpty()) {
             System.out.println("\n  (sin relaciones detectadas)");
@@ -187,7 +184,7 @@ public class AppGenerador {
         Map<String, String> relLabels = new java.util.LinkedHashMap<>();
         int relIdx = 0;
         for (RelationshipModel rel : filteredModel.getRelationships()) {
-            String key = FilteredProjectBuilder.relationshipKey(rel);
+            String key = rel.key();
             String label = rel.getSource() + " " + rel.getType() + " -> " + rel.getTarget();
             relKeys.add(key);
             relLabels.put(key, label);
@@ -201,9 +198,8 @@ public class AppGenerador {
         if (vetoed.isEmpty()) {
             return filteredModel;
         }
-        builder.excludeRelationships(vetoed);
         logTrace("Reconstruyendo modelo sin " + vetoed.size() + " relación(es) vetada(s)...");
-        return builder.build();
+        return ProjectFilter.apply(originalProject, filter, vetoed);
     }
 
     /**
@@ -221,7 +217,7 @@ public class AppGenerador {
         if (classes != null) {
             for (ClassModel c : classes) {
                 String kind = c.getKind() == null ? "(unknown)" : c.getKind();
-                if (PlantUmlGenerator.isExternal(c)) {
+                if (c.isExternal()) {
                     external.put(kind, external.getOrDefault(kind, 0) + 1);
                     totalExt++;
                 } else {
@@ -266,7 +262,7 @@ public class AppGenerador {
         private static void printResultClasses(List<ClassModel> classes, boolean external) {        boolean any = false;
         if (classes != null) {
             for (ClassModel c : classes) {
-                if (PlantUmlGenerator.isExternal(c) != external) {
+                if (c.isExternal() != external) {
                     continue;
                 }
                 any = true;
@@ -388,10 +384,10 @@ public class AppGenerador {
         logTrace("Ruta fuente detectada automáticamente: " + srcPath);
         logOptions(options);
 
+        DiagramService diagramas = CasosDeUso.diagramas();
         ProjectModel originalProject;
         try {
-            SourceAnalyzerPort analyzer = new ProjectAnalyzer();
-            originalProject = analyzer.analyze(srcPath);
+            originalProject = diagramas.analyze(srcPath);
         } catch (IOException e) {
             errorCount++;
             logTrace("Error crítico al analizar código fuente: " + e.getMessage());
@@ -419,7 +415,7 @@ public class AppGenerador {
         List<ClassModel> internalClasses = new ArrayList<>();
         List<ClassModel> externalClasses = new ArrayList<>();
         for (ClassModel c : classList) {
-            (PlantUmlGenerator.isExternal(c) ? externalClasses : internalClasses).add(c);
+            (c.isExternal() ? externalClasses : internalClasses).add(c);
         }
         classList = new ArrayList<>(internalClasses);
         classList.addAll(externalClasses);
@@ -502,7 +498,6 @@ public class AppGenerador {
         }
 
         Scanner scanner = new Scanner(System.in);
-        FilteredProjectBuilder builder = new FilteredProjectBuilder(originalProject);
 
         // 4. Captura de blacklist/whitelist con selección múltiple.
         // Sintaxis por prompt: Enter = ninguno | todo/all = todos |
@@ -546,17 +541,15 @@ public class AppGenerador {
                 .includeClasses(whiteClasses)
                 .build();
 
-        builder.setFilter(filter);
-
-        // 5. Construcción del modelo limpio mediante el Builder
+        // 5. Construcción del modelo limpio mediante ProjectFilter (política de dominio)
         logTrace("Construyendo modelo filtrado con Builder...");
-        ProjectModel filteredModel = builder.build();
+        ProjectModel filteredModel = ProjectFilter.apply(originalProject, filter);
 
         // 5b. Revisión de relaciones: aceptar o rechazar antes de generar (Fase 5).
         // Solo se eliminan relaciones detectadas por el AST; nunca se inventan.
         // Sintaxis: Enter=ninguna (conservar todas) | todo=todas fuera |
         // rangos (1-5) | lista (1,3,5).
-        filteredModel = reviewRelationships(scanner, builder, filteredModel);
+        filteredModel = reviewRelationships(scanner, originalProject, filter, filteredModel);
 
         // 6. Resumen global resultante primero, luego listados (Fase 4).
         List<PackageModel> resultPkgs = filteredModel.getPackages();
@@ -567,7 +560,7 @@ public class AppGenerador {
         Set<String> resultExternalPkgs = new HashSet<>();
         if (resultClasses != null) {
             for (ClassModel c : resultClasses) {
-                if (PlantUmlGenerator.isExternal(c)) {
+                if (c.isExternal()) {
                     resultExternalPkgs.add(c.getPackageName());
                 }
             }
@@ -599,7 +592,7 @@ public class AppGenerador {
         System.out.println("==================================================");
         if (resultClasses != null) {
             for (ClassModel clazz : resultClasses) {
-                if (PlantUmlGenerator.isExternal(clazz)) {
+                if (clazz.isExternal()) {
                     continue;
                 }
                 System.out.println("\n--------------------------------------------------");
@@ -661,7 +654,7 @@ public class AppGenerador {
         System.out.println("==================================================");
         if (resultClasses != null) {
             for (ClassModel clazz : resultClasses) {
-                if (!PlantUmlGenerator.isExternal(clazz)) {
+                if (!clazz.isExternal()) {
                     continue;
                 }
                 List<String> usedBy = new ArrayList<>();
@@ -679,8 +672,7 @@ public class AppGenerador {
         }
 
         // 8. Generación del diagrama PlantUML con las banderas elegidas
-        DiagramRendererPort renderer = new PlantUmlGenerator();
-        String pumlContent = renderer.render(filteredModel, options);
+        String pumlContent = diagramas.render(filteredModel, options);
 
         // 9. Banner gigante
         System.out.println("\n" +
@@ -696,7 +688,7 @@ public class AppGenerador {
         // 10. Exportar a archivo
         Path outputPath = Paths.get(outputPathStr);
         try {
-            PumlFileWriter.write(outputPath, pumlContent);
+            diagramas.write(outputPath, pumlContent);
             logTrace("Diagrama exportado con éxito en: " + outputPath.toAbsolutePath());
             System.out.println("[✓] Diagrama guardado en: " + outputPath.toAbsolutePath());
         } catch (IOException e) {

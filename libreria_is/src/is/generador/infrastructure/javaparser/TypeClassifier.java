@@ -4,7 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class TypeClassifier {
+class TypeClassifier {
 
     private static final Set<String> PRIMITIVES = Set.of(
         "byte", "short", "int", "long", "float", "double", "boolean", "char", "void"
@@ -52,7 +52,7 @@ public class TypeClassifier {
         "ArrayList", "LinkedList", "HashSet", "HashMap"
     );
 
-    public static boolean shouldIgnoreBox(String rawType) {
+    static boolean shouldIgnoreBox(String rawType) {
         if (rawType == null || rawType.isBlank()) {
             return true;
         }
@@ -76,7 +76,7 @@ public class TypeClassifier {
      * Canonical extractor: every referenced type name, including generic
      * arguments. {@code "Map<String, List<UUID>>"} -> {@code [Map, String, List, UUID]}.
      */
-    public static Set<String> referencedTypeNames(String rawType) {
+    static Set<String> referencedTypeNames(String rawType) {
         Set<String> names = new LinkedHashSet<>();
         if (rawType == null || rawType.isBlank()) {
             return names;
@@ -94,7 +94,7 @@ public class TypeClassifier {
         return names;
     }
 
-    public static String resolvePackage(String typeName) {
+    static String resolvePackage(String typeName) {
         if (typeName == null || typeName.isBlank()) {
             return "(unresolved)";
         }
