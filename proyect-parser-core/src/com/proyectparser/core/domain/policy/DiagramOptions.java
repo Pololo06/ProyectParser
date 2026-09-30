@@ -65,6 +65,7 @@ public class DiagramOptions {
     private final boolean shortSignatures;
     private final boolean hideOrphans;
     private final boolean summary;
+    private final boolean groupLayers;
     private final Set<String> allowedDependencies;
     private final LineType lineType;
     private final Map<String, Integer> layers;
@@ -81,6 +82,7 @@ public class DiagramOptions {
         this.shortSignatures = builder.shortSignatures;
         this.hideOrphans = builder.hideOrphans;
         this.summary = builder.summary;
+        this.groupLayers = builder.groupLayers;
         this.allowedDependencies = Collections.unmodifiableSet(new TreeSet<>(builder.allowedDependencies));
         this.lineType = builder.lineType;
         this.layers = Collections.unmodifiableMap(new LinkedHashMap<>(builder.layers));
@@ -103,6 +105,7 @@ public class DiagramOptions {
         private boolean shortSignatures = false;
         private boolean hideOrphans = false;
         private boolean summary = false;
+        private boolean groupLayers = false;
         private Set<String> allowedDependencies = new TreeSet<>();
         private LineType lineType = LineType.DEFAULT;
         private Map<String, Integer> layers = new LinkedHashMap<>();
@@ -121,6 +124,7 @@ public class DiagramOptions {
                 this.shortSignatures = base.shortSignatures;
                 this.hideOrphans = base.hideOrphans;
                 this.summary = base.summary;
+                this.groupLayers = base.groupLayers;
                 this.allowedDependencies = new TreeSet<>(base.allowedDependencies);
                 this.lineType = base.lineType;
                 this.layers = new LinkedHashMap<>(base.layers);
@@ -171,6 +175,8 @@ public class DiagramOptions {
         public Builder hideOrphans(boolean hide) { this.hideOrphans = hide; return this; }
         /** true emits {@code hide members}: an overview with class names only. */
         public Builder summary(boolean summary) { this.summary = summary; return this; }
+        /** true wraps the packages of each layer in a container named after the layer (needs layers). */
+        public Builder groupLayers(boolean group) { this.groupLayers = group; return this; }
         public Builder showDependencies(boolean show) { this.showDependencies = show; return this; }
 
         public DiagramOptions build() {
@@ -218,6 +224,7 @@ public class DiagramOptions {
         return showDependencies || allowedDependencies.contains(dependencyKey(sourceName, targetName));
     }
 
+    public boolean isGroupLayers() { return groupLayers; }
     public boolean isSummary() { return summary; }
     public boolean isHideOrphans() { return hideOrphans; }
     public boolean isShortSignatures() { return shortSignatures; }

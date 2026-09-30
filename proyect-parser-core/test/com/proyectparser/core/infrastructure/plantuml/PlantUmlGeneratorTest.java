@@ -68,4 +68,22 @@ class PlantUmlGeneratorTest {
         assertTrue(render(new DiagramOptions.Builder().summary(true)).contains("\nhide members\n"));
         assertFalse(render(new DiagramOptions.Builder()).contains("hide members"));
     }
+
+    @Test
+    void agruparCapasEnvuelveLosPaquetesYEnlazaContenedores() {
+        ClassModel ui = new ClassModel("Vista", "x.cli", "CLASS", false, List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of());
+        ClassModel dom = new ClassModel("Entidad", "x.domain", "CLASS", false, List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of());
+        ClassModel suelta = new ClassModel("Util", "x.util", "CLASS", false, List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of());
+        ProjectModel proyecto = new ProjectModel("p", List.of(ui, dom, suelta), List.of());
+        String puml = new PlantUmlGenerator().render(proyecto, new DiagramOptions.Builder()
+                .layerOrder(List.of("cli", "domain")).groupLayers(true).build());
+        assertTrue(puml.contains("package \"cli\" as layer_0 {\n  package \"x.cli\" as pkg_x_cli {"), puml);
+        assertTrue(puml.contains("package \"domain\" as layer_1 {"), puml);
+        assertTrue(puml.contains("\npackage \"x.util\" as pkg_x_util {"), puml);
+        assertTrue(puml.contains("layer_0 -[hidden]down- layer_1"), puml);
+        assertFalse(puml.contains("pkg_x_cli -[hidden]"), puml);
+    }
 }

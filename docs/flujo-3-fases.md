@@ -136,7 +136,7 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
 - Herencia con extremos invertidos (la punta apunta al padre): el modelo guarda `source=hija, target=padre`, el render escribe `Padre <|-- Hija`, `Interfaz <|.. Impl`.
 - Relaciones hacia extremos ocultos por opciones/filtro se omiten; hacia nombres no modelados se conservan (PlantUML los declara implícitamente).
 - Layout para ordenar las relaciones: `skinparam nodesep 80`, `ranksep 100` y `set separator none` (paquetes planos, sin anidar `com > x > y`) (sin `linetype ortho`: apila las líneas y no se distingue su destino).
-- Con capas (`--capas`, por defecto `infrastructure.config, infrastructure.cli, interfaceadapters, application, domain, infrastructure.persistence`; config va primero por ser la raíz de composición): cada paquete toma el rango del segmento más largo que contiene (`domain` → `com.x.domain.model`); las flechas llevan `down`/`up` según el rango del elemento derecho frente al izquierdo (`Interfaz <|.down. Impl` si la impl está más abajo) y se emite `pkg_a -[hidden]down- pkg_b` entre un paquete de cada capa consecutiva. Los paquetes se declaran con alias `package "x.y" as pkg_x_y`.
+- Con capas (`--capas`, por defecto `infrastructure.config, infrastructure.cli, interfaceadapters, application, domain, infrastructure.persistence`; config va primero por ser la raíz de composición): cada paquete toma el rango del segmento más largo que contiene (`domain` → `com.x.domain.model`); las flechas llevan `down`/`up` según el rango del elemento derecho frente al izquierdo (`Interfaz <|.down. Impl` si la impl está más abajo) y se emite `pkg_a -[hidden]down- pkg_b` entre un paquete de cada capa consecutiva. Los paquetes se declaran con alias `package "x.y" as pkg_x_y`. Con `--agrupar-capas` (`DiagramOptions.groupLayers`) los paquetes de cada capa van dentro de un contenedor `package "domain" as layer_4 { ... }` y los enlaces ocultos unen contenedores (`layer_3 -[hidden]down- layer_4`); los paquetes fuera del mapa quedan sueltos.
 - Los records se emiten como `record X { }`: PlantUML de 2020 (1.2020.x) no lo soporta. Salida real verificada con PlantUML 1.2026.8.
 - Se conservan los iconos C/I/A/E de PlantUML (no se usa `strictuml` ni `hide circle`).
 - Sintaxis UML 2.5.1: atributos `-nombre: Tipo`, operaciones `+nombre(p: Tipo): Retorno`, constructores con `«create»`.
@@ -183,7 +183,7 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .build();
 ```
 
-Flags de `AppGenerador` equivalentes: `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X` (las externas se omiten por defecto en AppGenerador).
+Flags de `AppGenerador` equivalentes: `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --modulo X` (las externas se omiten por defecto en AppGenerador).
 
 ### 3.4 Escritura (`PumlFileWriter`)
 

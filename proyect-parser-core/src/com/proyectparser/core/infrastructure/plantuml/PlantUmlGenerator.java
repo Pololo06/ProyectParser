@@ -110,20 +110,47 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             for (List<ClassModel> models : byPackage.values()) {
                 models.sort(BY_NAME);
             }
-            Map<Integer, String> firstPackageByRank = new TreeMap<>();
-            for (Map.Entry<String, List<ClassModel>> entry : byPackage.entrySet()) {
-                Integer rank = opt.layerRankOf(entry.getKey());
-                if (rank != null) {
-                    firstPackageByRank.putIfAbsent(rank, entry.getKey());
+            // Packages of each layer, by rank; packages outside the layer map are unranked.
+            Map<Integer, List<String>> packagesByRank = new TreeMap<>();
+            List<String> unranked = new ArrayList<>();
+            for (String pkg : byPackage.keySet()) {
+                Integer rank = opt.layerRankOf(pkg);
+                if (rank == null) {
+                    unranked.add(pkg);
+                } else {
+                    packagesByRank.computeIfAbsent(rank, k -> new ArrayList<>()).add(pkg);
                 }
-                builder.append("package \"").append(PackageModel.displayName(entry.getKey()))
-                        .append("\" as ").append(packageAlias(entry.getKey())).append(" {\n");
-                for (ClassModel model : entry.getValue()) {
-                    appendClass(builder, model, "  ", opt);
-                }
-                builder.append("}\n\n");
             }
-            appendLayerLinks(builder, firstPackageByRank);
+            // Hidden links go between layer containers or, without them, one package per layer.
+            Map<Integer, String> linkAliasByRank = new TreeMap<>();
+            if (opt.isGroupLayers()) {
+                Map<Integer, String> layerNames = new TreeMap<>();
+                for (Map.Entry<String, Integer> layer : opt.getLayers().entrySet()) {
+                    layerNames.putIfAbsent(layer.getValue(), layer.getKey());
+                }
+                for (Map.Entry<Integer, List<String>> entry : packagesByRank.entrySet()) {
+                    String alias = "layer_" + entry.getKey();
+                    linkAliasByRank.put(entry.getKey(), alias);
+                    builder.append("package \"").append(layerNames.get(entry.getKey()))
+                            .append("\" as ").append(alias).append(" {\n");
+                    for (String pkg : entry.getValue()) {
+                        appendPackage(builder, pkg, byPackage.get(pkg), "  ", opt);
+                    }
+                    builder.append("}\n\n");
+                }
+                for (String pkg : unranked) {
+                    appendPackage(builder, pkg, byPackage.get(pkg), "", opt);
+                }
+            } else {
+                for (Map.Entry<String, List<ClassModel>> entry : byPackage.entrySet()) {
+                    Integer rank = opt.layerRankOf(entry.getKey());
+                    if (rank != null) {
+                        linkAliasByRank.putIfAbsent(rank, packageAlias(entry.getKey()));
+                    }
+                    appendPackage(builder, entry.getKey(), entry.getValue(), "", opt);
+                }
+            }
+            appendLayerLinks(builder, linkAliasByRank);
             if (!externals.isEmpty()) {
                 builder.append("package \"EXTERNAL\" {\n");
                 for (ClassModel model : externals) {
@@ -154,19 +181,29 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 ? "default" : packageName.replaceAll("[^\\p{L}\\p{N}]", "_"));
     }
 
-    /** Hidden links between one package of each consecutive layer, to fix their vertical order. */
-    private static void appendLayerLinks(StringBuilder builder, Map<Integer, String> firstPackageByRank) {
-        if (firstPackageByRank.size() < 2) {
+    /** One {@code package "x.y" as pkg_x_y { }} block with its classes. */
+    private void appendPackage(StringBuilder builder, String packageName, List<ClassModel> models,
+                               String indent, DiagramOptions opt) {
+        builder.append(indent).append("package \"").append(PackageModel.displayName(packageName))
+                .append("\" as ").append(packageAlias(packageName)).append(" {\n");
+        for (ClassModel model : models) {
+            appendClass(builder, model, indent + "  ", opt);
+        }
+        builder.append(indent).append("}\n\n");
+    }
+
+    /** Hidden links between consecutive layers (their containers or one package each), to fix their order. */
+    private static void appendLayerLinks(StringBuilder builder, Map<Integer, String> aliasByRank) {
+        if (aliasByRank.size() < 2) {
             return;
         }
         builder.append("' ---------------- LAYER ORDER ----------------\n");
         String previous = null;
-        for (String pkg : firstPackageByRank.values()) {
+        for (String alias : aliasByRank.values()) {
             if (previous != null) {
-                builder.append(packageAlias(previous)).append(" -[hidden]down- ")
-                        .append(packageAlias(pkg)).append("\n");
+                builder.append(previous).append(" -[hidden]down- ").append(alias).append("\n");
             }
-            previous = pkg;
+            previous = alias;
         }
         builder.append("\n");
     }
