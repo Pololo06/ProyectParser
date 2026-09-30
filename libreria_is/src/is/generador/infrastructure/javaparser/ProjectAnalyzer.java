@@ -2,7 +2,6 @@ package is.generador.infrastructure.javaparser;
 
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
-import is.generador.application.AnalysisResult;
 import is.generador.domain.model.ClassModel;
 import is.generador.domain.model.ProjectModel;
 import is.generador.domain.model.RelationshipModel;

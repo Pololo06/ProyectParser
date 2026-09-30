@@ -1,4 +1,4 @@
-package is.generador.application;
+package is.generador.infrastructure.javaparser;
 
 import is.generador.domain.model.ProjectModel;
 
@@ -9,7 +9,7 @@ import java.util.List;
  * old analyzer ({@code getParsedFiles/getFailedFiles/...}): all traceability
  * data travels with the result instead of living in mutable fields.
  */
-public record AnalysisResult(
+record AnalysisResult(
         ProjectModel project,
         List<String> parsedFiles,
         List<String> failedFiles,
