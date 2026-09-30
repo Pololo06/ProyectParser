@@ -23,9 +23,13 @@ import java.util.Map;
  */
 public class DiagramOptions {
 
-    /** Clean Architecture layer order used by {@code --capas} without a value (top to bottom). */
+    /**
+     * Clean Architecture layer order used by {@code --capas} without a value (top to bottom).
+     * {@code infrastructure.config} (composition root) goes first: it creates everything below.
+     */
     public static final List<String> DEFAULT_LAYERS = List.of(
-            "infrastructure.cli", "interfaceadapters", "application", "domain", "infrastructure.persistence");
+            "infrastructure.config", "infrastructure.cli", "interfaceadapters", "application", "domain",
+            "infrastructure.persistence");
 
     /** Relationship line style ({@code skinparam linetype}); {@code DEFAULT} emits nothing. */
     public enum LineType {
