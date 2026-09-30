@@ -56,7 +56,7 @@ return writer.write(outputFile, puml);                         // Fase 3 (archiv
   - lista de `ClassModel` (clase/interfaz/enum/record/annotation con sus atributos, métodos, constructores, paquete, `kind`, modificadores),
   - lista de `PackageModel` derivada (vistas por paquete, ordenadas).
 - **Reglas visibles desde fuera:**
-  - Un archivo que no parsea **no aborta** el análisis: se registra en `getFailedFiles()` / `getFailureReasons()` y se sigue con el resto (`RunStatsProvider`: `getParsedFileCount()`, `getTotalFileCount()`, `getLastAnalysisSummary()` → `"parsed X/Y, failed Z"`).
+  - Un archivo que no parsea **no aborta** el análisis: se registra en `getFailedFiles()` / `getFailureReasons()` y se sigue con el resto (el puerto `RunStatsProvider` ofrece `getParsedFiles()`, `getFailedFiles()`, `getFailureReasons()`, `getParsedFileCount()`, `getFailedFileCount()` y `getTotalJavaFileCount()`; `DiagramFacade` los expone y añade `getTotalFileCount()`, `getErrorCount()` y `getLastAnalysisSummary()` → `"parsed X/Y, failed Z"`).
   - Si la carpeta no existe, `analyze()` lanza `IOException("Folder not found: ...")`.
   - El paquete por defecto (clases sin `package`) se muestra como `"(default package)"`.
   - Si dos clases del proyecto comparten nombre simple (homónimos), su `id` pasa a ser el FQN; si no, el `id` es el nombre simple.
@@ -126,7 +126,9 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
 - Las externas (`@external`) van siempre al final, aparte:
   ```plantuml
   package "EXTERNAL" {
-    class "UUID" as UUID <<external>>
+    class UUID {
+      <<external>>
+    }
   }
   ```
 - Homónimos: `class "Foo" as com_a_Foo` y las relaciones usan el alias.
@@ -215,5 +217,5 @@ Path archivo = svc.write(Path.of("diagrama.puml"), texto);
 | 2 | `ExternalTypeRegistrar` (infra) | Cajas `@external` + `ASSOCIATION` |
 | 3 | `PlantUmlGenerator` (`DiagramRendererPort`) | Modelo → texto `@startuml...@enduml` |
 | 3 | `DiagramFilter` / `DiagramOptions` / `ProjectFilter` (`domain.policy`) | Qué se dibuja y cómo |
-| 3 | `PumlFileWriter` (`DiagramWriterPort`) | Texto → archivo `.puml` UTF-8 |
+| 3 | `PumlFileWriter` (se cablea como `DiagramWriterPort` con `PumlFileWriter::write`) | Texto → archivo `.puml` UTF-8 |
 | Todas | `DiagramService` + `CasosDeUso` | Orquesta `analyze → filter → render → write` |

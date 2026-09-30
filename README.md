@@ -12,7 +12,7 @@ A static code analysis tool and Java AST parser that inspects Java source code t
 
 * **AST Parsing:** Recursively scans Java source files using JavaParser to extract models, attributes, methods, constructors, and parameter data.
 * **Relationship Mapping:** Detects associations, dependencies, generalizations, and implementations across packages.
-* **Filter & Classification Engine:** Includes configurable pipeline components (`DiagramFilter`, `TypeClassifier`) to isolate specific types or packages before export.
+* **Filter & Classification Engine:** Includes configurable pipeline components (`DiagramFilter`, `DiagramOptions`, `ProjectFilter`) to isolate specific types or packages before export.
 * **PlantUML Export:** Automatically generates formatted `.puml` files ready for rendering with PlantUML or Graphviz.
 
 ## Architecture
