@@ -183,7 +183,7 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .build();
 ```
 
-Flags de `AppGenerador` equivalentes: `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --modulo X` (las externas se omiten por defecto en AppGenerador).
+Flags de `AppGenerador` equivalentes: `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --excluir a,b --modulo X` (las externas se omiten por defecto en AppGenerador). `--excluir=com.universidad.tools` (o `--excluir a,b`, repetible) suma paquetes a la blacklist sin pasar por el prompt. Las vistas de `docs/diagramas/` se regeneran con `docs/diagramas/regenerar.sh` (usa `PLANTUML_JAR` o `plantuml` del PATH).
 
 ### 3.4 Escritura (`PumlFileWriter`)
 

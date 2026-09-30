@@ -298,7 +298,8 @@ public class AppGenerador {
         List<String> result = new ArrayList<>();
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
-            if (arg != null && arg.trim().equalsIgnoreCase("--modulo")) {
+            if (arg != null && (arg.trim().equalsIgnoreCase("--modulo")
+                    || arg.trim().equalsIgnoreCase("--excluir"))) {
                 i++; // su valor no es posicional
             } else if (arg != null && !arg.trim().startsWith("-")) {
                 result.add(arg);
@@ -309,17 +310,51 @@ public class AppGenerador {
 
     /** Valor de {@code --modulo X} o {@code --modulo=X}; null si no se pasó. */
     private static String parseModule(String[] args) {
+        return flagValue(args, "--modulo", "Falta el nombre del módulo: --modulo Estudiante");
+    }
+
+    /**
+     * Paquetes de {@code --excluir a,b} o {@code --excluir=a,b} (repetible): se suman a la
+     * blacklist de paquetes, igual que responderlos en el prompt.
+     */
+    private static List<String> parseExcludedPackages(String[] args) {
+        List<String> packages = new ArrayList<>();
+        if (args == null) {
+            return packages;
+        }
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i] == null ? "" : args[i].trim();
+            String value = null;
+            if (arg.toLowerCase().startsWith("--excluir=")) {
+                value = arg.substring("--excluir=".length());
+            } else if (arg.equalsIgnoreCase("--excluir")) {
+                value = flagValue(new String[]{arg, i + 1 < args.length ? args[i + 1] : null}, "--excluir",
+                        "Falta el paquete a excluir: --excluir com.universidad.tools");
+            }
+            if (value != null) {
+                for (String pkg : value.split(",")) {
+                    if (!pkg.trim().isEmpty() && !packages.contains(pkg.trim())) {
+                        packages.add(pkg.trim());
+                    }
+                }
+            }
+        }
+        return packages;
+    }
+
+    /** Valor de {@code flag X} o {@code flag=X} (primera aparición); sale con error si falta. */
+    private static String flagValue(String[] args, String flag, String missingMessage) {
         if (args == null) {
             return null;
         }
         for (int i = 0; i < args.length; i++) {
             String arg = args[i] == null ? "" : args[i].trim();
-            if (arg.toLowerCase().startsWith("--modulo=")) {
-                return arg.substring("--modulo=".length()).trim();
+            if (arg.toLowerCase().startsWith(flag + "=")) {
+                return arg.substring(flag.length() + 1).trim();
             }
-            if (arg.equalsIgnoreCase("--modulo")) {
+            if (arg.equalsIgnoreCase(flag)) {
                 if (i + 1 >= args.length || args[i + 1] == null || args[i + 1].trim().startsWith("-")) {
-                    System.err.println("Falta el nombre del módulo: --modulo Estudiante");
+                    System.err.println(missingMessage);
                     printUsage();
                     System.exit(2);
                 }
@@ -332,7 +367,7 @@ public class AppGenerador {
     /**
      * Banderas de visualización por argumentos (Fase 2):
      * --no-getters (--sin-accesores) --no-attributes --no-methods --no-constructors
-     * --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --modulo X --help
+     * --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --excluir a,b --modulo X --help
      * Las externas (UUID, BigDecimal...) se omiten por defecto: ya aparecen como
      * tipos de los atributos y sus flechas cruzan todo el diagrama.
      */
@@ -356,8 +391,9 @@ public class AppGenerador {
                 options.lineType(type);
                 continue;
             }
-            if (arg.trim().toLowerCase().startsWith("--modulo")) {
-                continue; // lo lee parseModule
+            if (arg.trim().toLowerCase().startsWith("--modulo")
+                    || arg.trim().toLowerCase().startsWith("--excluir")) {
+                continue; // los leen parseModule y parseExcludedPackages
             }
             if (arg.trim().toLowerCase().startsWith("--capas=")) {
                 String value = arg.trim().substring("--capas=".length());
@@ -453,6 +489,7 @@ public class AppGenerador {
         System.out.println("  --lineas=TIPO     Estilo de líneas: ortho, polyline o spline (por defecto: el de PlantUML)");
         System.out.println("  --capas[=a,b,...] Ordena capas arriba→abajo y orienta flechas con down/up");
         System.out.println("                    (sin valor: " + String.join(",", DiagramOptions.DEFAULT_LAYERS) + ")");
+        System.out.println("  --excluir a,b     Excluye paquetes (blacklist), p. ej. --excluir=com.universidad.tools");
         System.out.println("  --modulo X        Solo el módulo X: clases cuyo nombre contiene X, sus supertipos");
         System.out.println("                    y los destinos de sus asociaciones (se suma a la whitelist)");
         System.out.println("  --help, -h        Muestra esta ayuda");
@@ -478,6 +515,7 @@ public class AppGenerador {
                 : "diagrama_filtrado.puml";
         DiagramOptions options = parseDiagramOptions(args);
         String module = parseModule(args);
+        List<String> excludedPackages = parseExcludedPackages(args);
 
         logTrace("Ruta fuente detectada automáticamente: " + srcPath);
         logOptions(options);
@@ -607,6 +645,11 @@ public class AppGenerador {
 
         List<String> blackPkgs = readSelection(scanner,
                 "> BLACKLIST paq. a excluir (Enter=ninguno): ", packageList);
+        for (String pkg : excludedPackages) {
+            if (!blackPkgs.contains(pkg)) {
+                blackPkgs.add(pkg);
+            }
+        }
         blackPkgs.forEach(p -> System.out.println("  [-] Blacklist paquete: " + p));
 
         List<String> classNames = new ArrayList<>();
