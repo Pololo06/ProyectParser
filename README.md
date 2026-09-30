@@ -79,7 +79,7 @@ Path salida = fachada.exportPlantUml("ruta/a/src", Path.of("diagrama.puml"), fil
 --sin-dependencias Omit ..> arrows (with --modulo, keeps the module's own; to DTOs only from port/mapper)
 --lineas=TYPE     Line style: ortho, polyline or spline (default: PlantUML's)
 --capas[=a,b,...] Order layers top to bottom and direct arrows down/up
---agrupar-capas   With --capas: wrap each layer's packages in a container
+--agrupar-capas   (Experimental) With --capas: wrap each layer's packages in a container
 --excluir a,b     Exclude packages (blacklist), e.g. --excluir=com.universidad.tools
 --modulo X        Only module X: its classes, their supertypes and association targets
 --help, -h        Show help

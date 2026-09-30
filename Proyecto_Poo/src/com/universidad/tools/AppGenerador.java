@@ -479,7 +479,7 @@ public class AppGenerador {
         System.out.println("  --no-external     Oculta las externas (es el valor por defecto)");
         System.out.println("  --no-jdk          Oculta solo externas del JDK (java.*)");
         System.out.println("  --flat            Sin bloques package (plano)");
-        System.out.println("  --agrupar-capas   Con --capas: envuelve los paquetes de cada capa en un contenedor");
+        System.out.println("  --agrupar-capas   (Experimental) Con --capas: envuelve los paquetes de cada capa en un contenedor");
         System.out.println("  --resumen         Vista general: solo nombres de clase (hide members)");
         System.out.println("  --sin-huerfanos   Omite clases sin relaciones visibles tras los filtros");
         System.out.println("  --firmas-cortas   Muestra (…n) (n = nº de parámetros) en métodos/constructores con más de "

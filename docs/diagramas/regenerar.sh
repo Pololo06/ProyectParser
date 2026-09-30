@@ -27,8 +27,8 @@ generar() {
     echo "Generado: docs/diagramas/$nombre.puml"
 }
 
-# Vista general: solo nombres, capas agrupadas, sin dependencias, huérfanos ni tools.
-generar vista_general --sin-dependencias --capas --agrupar-capas --resumen --sin-huerfanos \
+# Vista general: solo nombres, capas ordenadas, sin dependencias, huérfanos ni tools.
+generar vista_general --sin-dependencias --capas --resumen --sin-huerfanos \
     --excluir=com.universidad.tools
 
 # Vista por módulo: Estudiante con miembros, sin accesores y con firmas cortas.
