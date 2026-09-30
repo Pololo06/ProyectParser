@@ -332,7 +332,7 @@ public class AppGenerador {
     /**
      * Banderas de visualización por argumentos (Fase 2):
      * --no-getters (--sin-accesores) --no-attributes --no-methods --no-constructors
-     * --external --no-external --no-jdk --flat --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X --help
+     * --external --no-external --no-jdk --flat --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X --help
      * Las externas (UUID, BigDecimal...) se omiten por defecto: ya aparecen como
      * tipos de los atributos y sus flechas cruzan todo el diagrama.
      */
@@ -399,6 +399,9 @@ public class AppGenerador {
                 case "--flat":
                     options.groupByPackage(false);
                     break;
+                case "--sin-huerfanos":
+                    options.hideOrphans(true);
+                    break;
                 case "--firmas-cortas":
                     options.shortSignatures(true);
                     break;
@@ -434,6 +437,7 @@ public class AppGenerador {
         System.out.println("  --no-external     Oculta las externas (es el valor por defecto)");
         System.out.println("  --no-jdk          Oculta solo externas del JDK (java.*)");
         System.out.println("  --flat            Sin bloques package (plano)");
+        System.out.println("  --sin-huerfanos   Omite clases sin relaciones visibles tras los filtros");
         System.out.println("  --firmas-cortas   Muestra (…n) (n = nº de parámetros) en métodos/constructores con más de "
                 + DiagramOptions.SHORT_SIGNATURE_MAX_PARAMS + " parámetros");
         System.out.println("  --sin-dependencias Omite las flechas ..> (dependencias); con --modulo conserva las");

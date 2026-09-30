@@ -83,6 +83,18 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             externals.removeIf(model -> isJdkPackage(model.getPackageName()));
         }
         externals.sort(BY_NAME);
+        if (opt.isHideOrphans()) {
+            // Orphans: no visible relationship after options/filters. Dropping one never
+            // hides another relationship, so a single pass is enough.
+            Set<String> connected = new HashSet<>();
+            for (RelationshipModel relationship
+                    : visibleRelationships(project, renderedNames(internals, externals), opt)) {
+                connected.add(relationship.getSource());
+                connected.add(relationship.getTarget());
+            }
+            internals.removeIf(model -> !connected.contains(model.id()));
+            externals.removeIf(model -> !connected.contains(model.id()));
+        }
 
         if (opt.isGroupByPackage()) {
             Map<String, List<ClassModel>> byPackage = new TreeMap<>();
@@ -255,37 +267,26 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         builder.append(indent).append("}\n\n");
     }
 
-    private void appendRelationships(StringBuilder builder, ProjectModel project, Set<String> renderedNames,
-                                     DiagramOptions opt) {
+    /**
+     * Relationships that are drawn, in model order: dependencies allowed by the options and
+     * endpoints not hidden. Relationships to unmodeled names are preserved: PlantUML
+     * declares the missing endpoint implicitly.
+     */
+    static List<RelationshipModel> visibleRelationships(ProjectModel project, Set<String> renderedNames,
+                                                        DiagramOptions opt) {
+        List<RelationshipModel> visible = new ArrayList<>();
         if (project.getRelationships() == null) {
-            return;
+            return visible;
         }
-        Set<String> externalNames = new HashSet<>();
-        Set<String> knownNames = new HashSet<>();
-        Map<String, String> aliases = new HashMap<>();
-        Map<String, Integer> ranks = new HashMap<>();
         Map<String, String> simpleNames = new HashMap<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
-                knownNames.add(model.id());
                 simpleNames.put(model.id(), model.getName());
-                Integer rank = model.isExternal() ? null : opt.layerRankOf(model.getPackageName());
-                if (rank != null) {
-                    ranks.put(model.id(), rank);
-                }
-                aliases.put(model.id(), aliasOf(model));
-                if (model.isExternal() && renderedNames.contains(model.id())) {
-                    externalNames.add(model.id());
-                }
             }
         }
         // Endpoints hidden by DiagramOptions (known but not rendered).
-        // Relationships to unmodeled names are preserved: PlantUML
-        // declares the missing endpoint implicitly.
-        Set<String> hiddenNames = new HashSet<>(knownNames);
+        Set<String> hiddenNames = new HashSet<>(simpleNames.keySet());
         hiddenNames.removeAll(renderedNames);
-        List<RelationshipModel> internalRels = new ArrayList<>();
-        List<RelationshipModel> externalRels = new ArrayList<>();
         for (RelationshipModel relationship : project.getRelationships()) {
             if (RelType.DEPENDENCY.label().equals(relationship.getType())
                     && !opt.showsDependency(simpleNames.get(relationship.getSource()),
@@ -296,6 +297,31 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                     || hiddenNames.contains(relationship.getTarget())) {
                 continue;
             }
+            visible.add(relationship);
+        }
+        return visible;
+    }
+
+    private void appendRelationships(StringBuilder builder, ProjectModel project, Set<String> renderedNames,
+                                     DiagramOptions opt) {
+        Set<String> externalNames = new HashSet<>();
+        Map<String, String> aliases = new HashMap<>();
+        Map<String, Integer> ranks = new HashMap<>();
+        if (project.getClasses() != null) {
+            for (ClassModel model : project.getClasses()) {
+                Integer rank = model.isExternal() ? null : opt.layerRankOf(model.getPackageName());
+                if (rank != null) {
+                    ranks.put(model.id(), rank);
+                }
+                aliases.put(model.id(), aliasOf(model));
+                if (model.isExternal() && renderedNames.contains(model.id())) {
+                    externalNames.add(model.id());
+                }
+            }
+        }
+        List<RelationshipModel> internalRels = new ArrayList<>();
+        List<RelationshipModel> externalRels = new ArrayList<>();
+        for (RelationshipModel relationship : visibleRelationships(project, renderedNames, opt)) {
             if (externalNames.contains(relationship.getSource())
                     || externalNames.contains(relationship.getTarget())) {
                 externalRels.add(relationship);
