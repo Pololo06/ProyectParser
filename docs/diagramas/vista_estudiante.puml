@@ -1,0 +1,223 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam nodesep 80
+skinparam ranksep 100
+set separator none
+
+package "com.universidad.application.dto.estudiante" as pkg_com_universidad_application_dto_estudiante {
+  record EstudianteActualizarDto {
+    -id: UUID
+    -nuevoCorreo: String
+    -nuevoCelular: String
+    -nuevaDireccion: String
+    -nuevoEstado: Integer
+    +obtenerEstadoComoEnum(): EstadoEntidad
+  }
+
+  record EstudianteCrearDto {
+    -codigo: String
+    -nombre: String
+    -correo: String
+    -celular: String
+    -direccion: String
+  }
+
+  record EstudianteDto {
+    -id: UUID
+    -codigo: String
+    -nombre: String
+    -correo: String
+    -celular: String
+    -direccion: String
+    -estado: EstadoEntidad
+    -activo: boolean
+  }
+
+}
+
+package "com.universidad.application.mapper" as pkg_com_universidad_application_mapper {
+  class EstudianteMapeador {
+    +toDto(entidad: Estudiante): EstudianteDto
+    +toDtoList(entidades: List<Estudiante>): List<EstudianteDto>
+  }
+
+  interface Mapeador {
+    +toDto(entidad: E): R
+    +toDtoList(entidades: List<E>): List<R>
+  }
+
+}
+
+package "com.universidad.application.port" as pkg_com_universidad_application_port {
+  interface EstudianteServicioPort {
+    +registrarEstudiante(dto: EstudianteCrearDto): EstudianteDto
+    +obtenerEstudiantes(): List<EstudianteDto>
+    +contarEstudiantes(): long
+    +actualizarEstudiante(dto: EstudianteActualizarDto): EstudianteDto
+    +eliminarEstudiante(id: UUID): boolean
+  }
+
+}
+
+package "com.universidad.application.service" as pkg_com_universidad_application_service {
+  class EstudianteServicio {
+    -mapeador: EstudianteMapeador
+    -repositorio: EstudianteRepositorio
+    «create» +EstudianteServicio(mapeador: EstudianteMapeador, repositorio: EstudianteRepositorio)
+    +registrarEstudiante(dto: EstudianteCrearDto): EstudianteDto
+    +obtenerEstudiantes(): List<EstudianteDto>
+    +contarEstudiantes(): long
+    +actualizarEstudiante(dto: EstudianteActualizarDto): EstudianteDto
+    +eliminarEstudiante(id: UUID): boolean
+  }
+
+}
+
+package "com.universidad.domain.model" as pkg_com_universidad_domain_model {
+  class Estudiante {
+    -idEstudiante: UUID
+    -codigoEstudiante: String
+    -nombreEstudiante: String
+    -direccionEstudiante: String
+    -correoEstudiante: String
+    -celularEstudiante: String
+    -estadoEstudiante: EstadoEntidad
+    «create» #Estudiante()
+    «create» +Estudiante(…5)
+    «create» +Estudiante(…7)
+    +actualizarCorreo(nuevoCorreo: String): void
+    +actualizarCelular(nuevoCelular: String): void
+    +actualizarDireccion(nuevaDireccion: String): void
+    +cambiarEstado(nuevoEstado: EstadoEntidad): void
+    +estaActivo(): boolean
+  }
+
+}
+
+package "com.universidad.domain.model.enumeracion" as pkg_com_universidad_domain_model_enumeracion {
+  enum EstadoEntidad {
+    ACTIVO
+    INACTIVO
+    -code: int
+    -description: String
+    «create» ~EstadoEntidad(code: int, description: String)
+    +cambiarEstadoA(nuevoEstado: EstadoEntidad): EstadoEntidad
+  }
+
+}
+
+package "com.universidad.domain.repository" as pkg_com_universidad_domain_repository {
+  interface EstudianteRepositorio {
+  }
+
+  interface RepositorioBase {
+    +guardar(entidad: T): T
+    +actualizar(entidad: T): T
+    +buscarPorId(id: ID): Optional<T>
+    +eliminar(id: ID): boolean
+    +listarTodos(): List<T>
+    +contar(): long
+    +cerrar(): void
+  }
+
+}
+
+package "com.universidad.infrastructure.cli" as pkg_com_universidad_infrastructure_cli {
+  class EstudianteVista {
+    -ANCHO_TABLA: int {static}
+    -controlador: EstudianteControlador
+    -columnas: List<TableColumn>
+    «create» +EstudianteVista(controlador: EstudianteControlador)
+    +getModuleName(): String
+    +execute(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+    -mostrarMenu(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+    -extraerDatos(dto: EstudianteDto, formatter: ScreenFormatter): Object[]
+    -crearEstudiante(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+    -listarEstudiantes(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+    -actualizarEstudiante(console: Console, formatter: ScreenFormatter, renderer: TableRenderer): void
+    -eliminarEstudiante(console: Console): void
+    -leerEnteroOpcional(console: Console, mensaje: String): Integer
+  }
+
+}
+
+package "com.universidad.infrastructure.config.modulos" as pkg_com_universidad_infrastructure_config_modulos {
+  class ConfiguracionModuloEstudiante {
+    -repositorio: EstudianteRepositorio
+    -servicio: EstudianteServicio
+    «create» +ConfiguracionModuloEstudiante()
+    +construirVista(): SystemModule
+    +cerrarRecursos(): void
+  }
+
+  interface ModuloConfigurable {
+    +construirVista(): SystemModule
+    +cerrarRecursos(): void
+  }
+
+}
+
+package "com.universidad.infrastructure.persistence" as pkg_com_universidad_infrastructure_persistence {
+  class EstudianteRepositorioImpl {
+    «create» +EstudianteRepositorioImpl(tpaRepository: TpaRepository<Estudiante,UUID>)
+    #permiteBorradoFisico(): boolean
+  }
+
+  abstract class RepositorioBaseAbstracto {
+    #tpaRepository: TpaRepository<T,ID>
+    «create» +RepositorioBaseAbstracto(tpaRepository: TpaRepository<T,ID>)
+    #permiteBorradoFisico(): boolean
+    +cerrar(): void
+    +contar(): long
+    +listarTodos(): List<T>
+    +eliminar(id: ID): boolean
+    +buscarPorId(id: ID): Optional<T>
+    +actualizar(entidad: T): T
+    +guardar(entidad: T): T
+  }
+
+}
+
+package "com.universidad.interfaceadapters.controller" as pkg_com_universidad_interfaceadapters_controller {
+  class EstudianteControlador {
+    -servicio: EstudianteServicioPort
+    «create» +EstudianteControlador(servicio: EstudianteServicioPort)
+    +crearEstudiante(dto: EstudianteCrearDto): EstudianteDto
+    +listarEstudiantes(): List<EstudianteDto>
+    +cantidadEstudiantes(): long
+    +actualizarEstudiante(dto: EstudianteActualizarDto): EstudianteDto
+    +eliminarEstudiante(id: UUID): boolean
+  }
+
+}
+
+' ---------------- LAYER ORDER ----------------
+pkg_com_universidad_infrastructure_config_modulos -[hidden]down- pkg_com_universidad_infrastructure_cli
+pkg_com_universidad_infrastructure_cli -[hidden]down- pkg_com_universidad_interfaceadapters_controller
+pkg_com_universidad_interfaceadapters_controller -[hidden]down- pkg_com_universidad_application_dto_estudiante
+pkg_com_universidad_application_dto_estudiante -[hidden]down- pkg_com_universidad_domain_model
+pkg_com_universidad_domain_model -[hidden]down- pkg_com_universidad_infrastructure_persistence
+
+EstudianteControlador -down-> EstudianteServicioPort
+RepositorioBase <|-- EstudianteRepositorio
+Estudiante --> EstadoEntidad
+EstudianteServicioPort <|.. EstudianteServicio
+EstudianteServicio --> EstudianteMapeador
+EstudianteServicio -down-> EstudianteRepositorio
+EstudianteDto -down-> EstadoEntidad
+EstudianteServicioPort ..> EstudianteDto
+EstudianteServicioPort ..> EstudianteCrearDto
+EstudianteServicioPort ..> EstudianteActualizarDto
+Mapeador <|.. EstudianteMapeador
+EstudianteMapeador ..> EstudianteDto
+EstudianteMapeador .down.> Estudiante
+RepositorioBaseAbstracto <|-- EstudianteRepositorioImpl
+EstudianteRepositorio <|.down. EstudianteRepositorioImpl
+EstudianteRepositorioImpl .up.> Estudiante
+RepositorioBase <|.down. RepositorioBaseAbstracto
+ModuloConfigurable <|.. ConfiguracionModuloEstudiante
+ConfiguracionModuloEstudiante -down-> EstudianteRepositorio
+ConfiguracionModuloEstudiante -down-> EstudianteServicio
+EstudianteVista -down-> EstudianteControlador
+
+@enduml
