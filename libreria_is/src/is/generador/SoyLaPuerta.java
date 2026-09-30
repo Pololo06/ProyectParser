@@ -2,8 +2,7 @@ package is.generador;
 
 import is.generador.application.ClassInfo;
 import is.generador.application.ClassInfoService;
-import is.generador.application.ExportDiagramUseCase;
-import is.generador.application.GenerateDiagramUseCase;
+import is.generador.application.DiagramService;
 import is.generador.application.ProjectQueryService;
 import is.generador.domain.model.PackageModel;
 import is.generador.domain.model.ProjectModel;
@@ -14,9 +13,6 @@ import is.generador.domain.port.DiagramRendererPort;
 import is.generador.domain.port.DiagramWriterPort;
 import is.generador.domain.port.RunStatsProvider;
 import is.generador.domain.port.SourceAnalyzerPort;
-import is.generador.infrastructure.javaparser.ProjectAnalyzer;
-import is.generador.infrastructure.plantuml.PumlFileWriter;
-import is.generador.infrastructure.plantuml.PlantUmlGenerator;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,6 +29,7 @@ import java.util.Map;
  * {@code domain.model} / {@code domain.policy} / {@code domain.port} (pure, no
  * external deps) &larr; {@code application} (use cases, depends only on ports)
  * &larr; {@code infrastructure.*} (JavaParser, PlantUML, files).
+ * The production adapters are chosen in {@link CasosDeUso}, the composition root.
  * Test seam: {@link #SoyLaPuerta(SourceAnalyzerPort, DiagramRendererPort, DiagramWriterPort)}.
  */
 public class SoyLaPuerta {
@@ -77,13 +74,12 @@ public class SoyLaPuerta {
     };
 
     private final SourceAnalyzerPort analyzer;
-    private final GenerateDiagramUseCase generateUseCase;
-    private final ExportDiagramUseCase exportUseCase;
+    private final DiagramService diagramService;
     private final ClassInfoService classInfoService;
     private final ProjectQueryService queryService;
 
     public SoyLaPuerta() {
-        this(new ProjectAnalyzer(), new PlantUmlGenerator(), PumlFileWriter::write);
+        this(CasosDeUso.analizador(), CasosDeUso.renderizador(), CasosDeUso.escritor());
     }
 
     /**
@@ -93,8 +89,7 @@ public class SoyLaPuerta {
      */
     public SoyLaPuerta(SourceAnalyzerPort analyzer, DiagramRendererPort renderer, DiagramWriterPort writer) {
         this.analyzer = analyzer;
-        this.generateUseCase = new GenerateDiagramUseCase(analyzer, renderer);
-        this.exportUseCase = new ExportDiagramUseCase(generateUseCase, writer);
+        this.diagramService = new DiagramService(analyzer, renderer, writer);
         this.classInfoService = new ClassInfoService(analyzer);
         this.queryService = new ProjectQueryService(analyzer,
                 analyzer instanceof RunStatsProvider stats ? stats : SIN_ESTADISTICAS);
@@ -274,7 +269,7 @@ public class SoyLaPuerta {
     /** Generates PlantUML applying a {@code DiagramFilter} and {@code DiagramOptions}. */
     public String generatePlantUml(String folderPath, DiagramFilter filter, DiagramOptions options)
             throws IOException {
-        return generateUseCase.execute(folderPath, filter, options);
+        return diagramService.generate(folderPath, filter, options);
     }
 
     /** Generates PlantUML with filter and writes it to {@code outputFile}. */
@@ -285,6 +280,6 @@ public class SoyLaPuerta {
     /** Generates PlantUML with filter and options, writing it to {@code outputFile}. */
     public Path exportPlantUml(String folderPath, Path outputFile, DiagramFilter filter, DiagramOptions options)
             throws IOException {
-        return exportUseCase.execute(folderPath, outputFile, filter, options);
+        return diagramService.export(folderPath, outputFile, filter, options);
     }
 }
