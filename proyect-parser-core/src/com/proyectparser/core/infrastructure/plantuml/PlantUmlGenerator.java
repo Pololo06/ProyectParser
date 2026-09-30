@@ -93,13 +93,20 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             for (List<ClassModel> models : byPackage.values()) {
                 models.sort(BY_NAME);
             }
+            Map<Integer, String> firstPackageByRank = new TreeMap<>();
             for (Map.Entry<String, List<ClassModel>> entry : byPackage.entrySet()) {
-                builder.append("package \"").append(PackageModel.displayName(entry.getKey())).append("\" {\n");
+                Integer rank = opt.layerRankOf(entry.getKey());
+                if (rank != null) {
+                    firstPackageByRank.putIfAbsent(rank, entry.getKey());
+                }
+                builder.append("package \"").append(PackageModel.displayName(entry.getKey()))
+                        .append("\" as ").append(packageAlias(entry.getKey())).append(" {\n");
                 for (ClassModel model : entry.getValue()) {
                     appendClass(builder, model, "  ", opt);
                 }
                 builder.append("}\n\n");
             }
+            appendLayerLinks(builder, firstPackageByRank);
             if (!externals.isEmpty()) {
                 builder.append("package \"EXTERNAL\" {\n");
                 for (ClassModel model : externals) {
@@ -122,6 +129,29 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         appendRelationships(builder, project, renderedNames(internals, externals), opt);
         builder.append("\n@enduml\n");
         return builder.toString();
+    }
+
+    /** PlantUML alias of a package block, usable in links. */
+    private static String packageAlias(String packageName) {
+        return "pkg_" + (packageName == null || packageName.isEmpty()
+                ? "default" : packageName.replaceAll("[^\\p{L}\\p{N}]", "_"));
+    }
+
+    /** Hidden links between one package of each consecutive layer, to fix their vertical order. */
+    private static void appendLayerLinks(StringBuilder builder, Map<Integer, String> firstPackageByRank) {
+        if (firstPackageByRank.size() < 2) {
+            return;
+        }
+        builder.append("' ---------------- LAYER ORDER ----------------\n");
+        String previous = null;
+        for (String pkg : firstPackageByRank.values()) {
+            if (previous != null) {
+                builder.append(packageAlias(previous)).append(" -[hidden]down- ")
+                        .append(packageAlias(pkg)).append("\n");
+            }
+            previous = pkg;
+        }
+        builder.append("\n");
     }
 
     /** Ids of the rendered (non-hidden) classes. */
@@ -233,9 +263,14 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         Set<String> externalNames = new HashSet<>();
         Set<String> knownNames = new HashSet<>();
         Map<String, String> aliases = new HashMap<>();
+        Map<String, Integer> ranks = new HashMap<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
                 knownNames.add(model.id());
+                Integer rank = model.isExternal() ? null : opt.layerRankOf(model.getPackageName());
+                if (rank != null) {
+                    ranks.put(model.id(), rank);
+                }
                 aliases.put(model.id(), aliasOf(model));
                 if (model.isExternal() && renderedNames.contains(model.id())) {
                     externalNames.add(model.id());
@@ -265,40 +300,48 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
         }
         for (RelationshipModel relationship : internalRels) {
-            appendRelationship(builder, relationship, aliases);
+            appendRelationship(builder, relationship, aliases, ranks);
         }
         if (!externalRels.isEmpty()) {
             builder.append("' ---------------- EXTERNAL RELATIONSHIPS ----------------\n");
             for (RelationshipModel relationship : externalRels) {
-                appendRelationship(builder, relationship, aliases);
+                appendRelationship(builder, relationship, aliases, ranks);
             }
         }
     }
 
     private void appendRelationship(StringBuilder builder, RelationshipModel relationship,
-                                    Map<String, String> aliases) {
+                                    Map<String, String> aliases, Map<String, Integer> ranks) {
         // In PlantUML the triangle head points at the parent:
         // "Parent <|-- Child", "Interface <|.. Implementation".
         // Our model stores source=child, target=parent, so swap them here.
-        // Unmodeled endpoints have no alias and are written as they come.
-        String source = aliases.getOrDefault(relationship.getSource(), relationship.getSource());
-        String target = aliases.getOrDefault(relationship.getTarget(), relationship.getTarget());
         String type = relationship.getType();
-        if (RelType.EXTENDS.label().equals(type) || RelType.IMPLEMENTS.label().equals(type)) {
-                builder.append(target)
-                        .append(" ")
-                        .append(arrowFor(type))
-                        .append(" ")
-                        .append(source)
-                        .append("\n");
-            } else {
-                builder.append(source)
-                        .append(" ")
-                        .append(arrowFor(type))
-                        .append(" ")
-                        .append(target)
-                        .append("\n");
-            }
+        boolean inheritance = RelType.EXTENDS.label().equals(type) || RelType.IMPLEMENTS.label().equals(type);
+        String left = inheritance ? relationship.getTarget() : relationship.getSource();
+        String right = inheritance ? relationship.getSource() : relationship.getTarget();
+        // Unmodeled endpoints have no alias and are written as they come.
+        builder.append(aliases.getOrDefault(left, left))
+                .append(" ")
+                .append(withDirection(arrowFor(type), ranks.get(left), ranks.get(right)))
+                .append(" ")
+                .append(aliases.getOrDefault(right, right))
+                .append("\n");
+    }
+
+    /**
+     * Adds {@code down}/{@code up} to an arrow so the right element sits below/above the left one
+     * by layer rank: {@code -->} becomes {@code -down->}, {@code <|..} becomes {@code <|.down.}.
+     * Same or unknown layer: arrow unchanged.
+     */
+    static String withDirection(String arrow, Integer leftRank, Integer rightRank) {
+        if (leftRank == null || rightRank == null || leftRank.equals(rightRank)) {
+            return arrow;
+        }
+        String direction = rightRank > leftRank ? "down" : "up";
+        if (arrow.contains("--")) {
+            return arrow.replaceFirst("--", "-" + direction + "-");
+        }
+        return arrow.replaceFirst("\\.\\.", "." + direction + ".");
     }
 
     private String keywordFor(ClassModel model) {

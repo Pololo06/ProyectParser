@@ -1,5 +1,10 @@
 package com.proyectparser.core.domain.policy;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * Interruptores de visualización para el diagrama (Fase 2).
  * Inmutable: se construye con {@link Builder}. Pertenece a
@@ -17,6 +22,10 @@ package com.proyectparser.core.domain.policy;
  * </pre>
  */
 public class DiagramOptions {
+
+    /** Clean Architecture layer order used by {@code --capas} without a value (top to bottom). */
+    public static final List<String> DEFAULT_LAYERS = List.of(
+            "infrastructure.cli", "interfaceadapters", "application", "domain", "infrastructure.persistence");
 
     /** Relationship line style ({@code skinparam linetype}); {@code DEFAULT} emits nothing. */
     public enum LineType {
@@ -45,6 +54,7 @@ public class DiagramOptions {
     private final boolean groupByPackage;
     private final boolean showDependencies;
     private final LineType lineType;
+    private final Map<String, Integer> layers;
 
     private DiagramOptions(Builder builder) {
         this.showGettersSetters = builder.showGettersSetters;
@@ -56,6 +66,7 @@ public class DiagramOptions {
         this.groupByPackage = builder.groupByPackage;
         this.showDependencies = builder.showDependencies;
         this.lineType = builder.lineType;
+        this.layers = Collections.unmodifiableMap(new LinkedHashMap<>(builder.layers));
     }
 
     /** Opciones por defecto: todo visible y agrupado por paquete. */
@@ -73,6 +84,7 @@ public class DiagramOptions {
         private boolean groupByPackage = true;
         private boolean showDependencies = true;
         private LineType lineType = LineType.DEFAULT;
+        private Map<String, Integer> layers = new LinkedHashMap<>();
 
         /** Copia los valores de unas opciones existentes. */
         public Builder(DiagramOptions base) {
@@ -86,6 +98,7 @@ public class DiagramOptions {
                 this.groupByPackage = base.groupByPackage;
                 this.showDependencies = base.showDependencies;
                 this.lineType = base.lineType;
+                this.layers = new LinkedHashMap<>(base.layers);
             }
         }
 
@@ -100,6 +113,24 @@ public class DiagramOptions {
         public Builder showJdkTypes(boolean show) { this.showJdkTypes = show; return this; }
         public Builder groupByPackage(boolean group) { this.groupByPackage = group; return this; }
         /** false omits the {@code ..>} dependency arrows (usually implied by fields/interfaces). */
+        /**
+         * Layer ranks: package segment ({@code "domain"}, {@code "infrastructure.cli"}) to rank,
+         * 0 at the top. Empty disables layer-directed arrows and hidden links.
+         */
+        public Builder layers(Map<String, Integer> ranks) {
+            this.layers = ranks == null ? new LinkedHashMap<>() : new LinkedHashMap<>(ranks);
+            return this;
+        }
+        /** Layers ranked by their position in the list. */
+        public Builder layerOrder(List<String> segments) {
+            Map<String, Integer> ranks = new LinkedHashMap<>();
+            if (segments != null) {
+                for (String segment : segments) {
+                    ranks.putIfAbsent(segment.trim(), ranks.size());
+                }
+            }
+            return layers(ranks);
+        }
         public Builder lineType(LineType type) { this.lineType = type == null ? LineType.DEFAULT : type; return this; }
         public Builder showDependencies(boolean show) { this.showDependencies = show; return this; }
 
@@ -115,6 +146,26 @@ public class DiagramOptions {
     public boolean isShowExternal() { return showExternal; }
     public boolean isShowJdkTypes() { return showJdkTypes; }
     public boolean isGroupByPackage() { return groupByPackage; }
+    public Map<String, Integer> getLayers() { return layers; }
+
+    /**
+     * Rank of a package: the longest layer segment it contains as whole segments
+     * ({@code "domain"} matches {@code com.x.domain.model}); {@code null} if none.
+     */
+    public Integer layerRankOf(String packageName) {
+        if (packageName == null || layers.isEmpty()) {
+            return null;
+        }
+        String dotted = "." + packageName + ".";
+        String best = null;
+        for (String segment : layers.keySet()) {
+            if (dotted.contains("." + segment + ".") && (best == null || segment.length() > best.length())) {
+                best = segment;
+            }
+        }
+        return best == null ? null : layers.get(best);
+    }
+
     public LineType getLineType() { return lineType; }
     public boolean isShowDependencies() { return showDependencies; }
 }

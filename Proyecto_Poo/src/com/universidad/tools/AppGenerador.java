@@ -306,7 +306,7 @@ public class AppGenerador {
     /**
      * Banderas de visualización por argumentos (Fase 2):
      * --no-getters --no-attributes --no-methods --no-constructors
-     * --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --help
+     * --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --help
      * Las externas (UUID, BigDecimal...) se omiten por defecto: ya aparecen como
      * tipos de los atributos y sus flechas cruzan todo el diagrama.
      */
@@ -330,7 +330,21 @@ public class AppGenerador {
                 options.lineType(type);
                 continue;
             }
+            if (arg.trim().toLowerCase().startsWith("--capas=")) {
+                String value = arg.trim().substring("--capas=".length());
+                List<String> segments = new ArrayList<>();
+                for (String segment : value.split(",")) {
+                    if (!segment.trim().isEmpty()) {
+                        segments.add(segment.trim());
+                    }
+                }
+                options.layerOrder(segments);
+                continue;
+            }
             switch (arg.trim().toLowerCase()) {
+                case "--capas":
+                    options.layerOrder(DiagramOptions.DEFAULT_LAYERS);
+                    break;
                 case "--no-getters":
                     options.showGettersSetters(false);
                     break;
@@ -388,15 +402,17 @@ public class AppGenerador {
         System.out.println("  --flat            Sin bloques package (plano)");
         System.out.println("  --sin-dependencias Omite las flechas ..> (dependencias)");
         System.out.println("  --lineas=TIPO     Estilo de líneas: ortho, polyline o spline (por defecto: el de PlantUML)");
+        System.out.println("  --capas[=a,b,...] Ordena capas arriba→abajo y orienta flechas con down/up");
+        System.out.println("                    (sin valor: " + String.join(",", DiagramOptions.DEFAULT_LAYERS) + ")");
         System.out.println("  --help, -h        Muestra esta ayuda");
     }
 
     private static void logOptions(DiagramOptions options) {
         logTrace(String.format(
-                "Opciones: getters=%s attributes=%s methods=%s constructors=%s external=%s jdk=%s grouped=%s dependencies=%s",
+                "Opciones: getters=%s attributes=%s methods=%s constructors=%s external=%s jdk=%s grouped=%s dependencies=%s layers=%s",
                 options.isShowGettersSetters(), options.isShowAttributes(), options.isShowMethods(),
                 options.isShowConstructors(), options.isShowExternal(), options.isShowJdkTypes(),
-                options.isGroupByPackage(), options.isShowDependencies()));
+                options.isGroupByPackage(), options.isShowDependencies(), options.getLayers()));
     }
 
     public static void main(String[] args) {
