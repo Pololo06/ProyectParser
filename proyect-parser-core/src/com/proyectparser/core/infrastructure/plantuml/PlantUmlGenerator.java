@@ -227,7 +227,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                         .append(visibilityOf(constructor.getModifiers(), false))
                         .append(constructor.getName())
                         .append("(")
-                        .append(formatParameters(constructor.getParameters()))
+                        .append(formatParameters(constructor.getParameters(), opt))
                         .append(")")
                         .append(modifierSuffix(constructor.getModifiers()))
                         .append("\n");
@@ -244,7 +244,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                         .append(visibilityOf(method.getModifiers(), isInterface))
                         .append(method.getName())
                         .append("(")
-                        .append(formatParameters(method.getParameters()))
+                        .append(formatParameters(method.getParameters(), opt))
                         .append("): ")
                         .append(method.getReturnType())
                         .append(modifierSuffix(method.getModifiers()))
@@ -387,9 +387,12 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         return arrowFor(RelType.fromLabel(relationshipType));
     }
 
-    private String formatParameters(List<ParameterModel> parameters) {
+    private String formatParameters(List<ParameterModel> parameters, DiagramOptions opt) {
         if (parameters == null || parameters.isEmpty()) {
             return "";
+        }
+        if (opt.isShortSignatures() && parameters.size() > DiagramOptions.SHORT_SIGNATURE_MAX_PARAMS) {
+            return "...";
         }
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < parameters.size(); i++) {

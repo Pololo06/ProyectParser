@@ -29,6 +29,9 @@ public class DiagramOptions {
      * Clean Architecture layer order used by {@code --capas} without a value (top to bottom).
      * {@code infrastructure.config} (composition root) goes first: it creates everything below.
      */
+    /** With short signatures, members with more parameters than this show {@code (...)}. */
+    public static final int SHORT_SIGNATURE_MAX_PARAMS = 3;
+
     public static final List<String> DEFAULT_LAYERS = List.of(
             "infrastructure.config", "infrastructure.cli", "interfaceadapters", "application", "domain",
             "infrastructure.persistence");
@@ -59,6 +62,7 @@ public class DiagramOptions {
     private final boolean showJdkTypes;
     private final boolean groupByPackage;
     private final boolean showDependencies;
+    private final boolean shortSignatures;
     private final Set<String> dependencyScope;
     private final LineType lineType;
     private final Map<String, Integer> layers;
@@ -72,6 +76,7 @@ public class DiagramOptions {
         this.showJdkTypes = builder.showJdkTypes;
         this.groupByPackage = builder.groupByPackage;
         this.showDependencies = builder.showDependencies;
+        this.shortSignatures = builder.shortSignatures;
         this.dependencyScope = Collections.unmodifiableSet(new TreeSet<>(builder.dependencyScope));
         this.lineType = builder.lineType;
         this.layers = Collections.unmodifiableMap(new LinkedHashMap<>(builder.layers));
@@ -91,6 +96,7 @@ public class DiagramOptions {
         private boolean showJdkTypes = true;
         private boolean groupByPackage = true;
         private boolean showDependencies = true;
+        private boolean shortSignatures = false;
         private Set<String> dependencyScope = new TreeSet<>();
         private LineType lineType = LineType.DEFAULT;
         private Map<String, Integer> layers = new LinkedHashMap<>();
@@ -106,6 +112,7 @@ public class DiagramOptions {
                 this.showJdkTypes = base.showJdkTypes;
                 this.groupByPackage = base.groupByPackage;
                 this.showDependencies = base.showDependencies;
+                this.shortSignatures = base.shortSignatures;
                 this.dependencyScope = new TreeSet<>(base.dependencyScope);
                 this.lineType = base.lineType;
                 this.layers = new LinkedHashMap<>(base.layers);
@@ -150,6 +157,8 @@ public class DiagramOptions {
             this.dependencyScope = classNames == null ? new TreeSet<>() : new TreeSet<>(classNames);
             return this;
         }
+        /** true shows {@code (...)} for methods/constructors with more than {@link #SHORT_SIGNATURE_MAX_PARAMS} parameters. */
+        public Builder shortSignatures(boolean shorten) { this.shortSignatures = shorten; return this; }
         public Builder showDependencies(boolean show) { this.showDependencies = show; return this; }
 
         public DiagramOptions build() {
@@ -193,5 +202,6 @@ public class DiagramOptions {
                 || (dependencyScope.contains(sourceName) && dependencyScope.contains(targetName));
     }
 
+    public boolean isShortSignatures() { return shortSignatures; }
     public boolean isShowDependencies() { return showDependencies; }
 }
