@@ -306,7 +306,7 @@ public class AppGenerador {
     /**
      * Banderas de visualización por argumentos (Fase 2):
      * --no-getters --no-attributes --no-methods --no-constructors
-     * --external --no-external --no-jdk --flat --sin-dependencias --help
+     * --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --help
      * Las externas (UUID, BigDecimal...) se omiten por defecto: ya aparecen como
      * tipos de los atributos y sus flechas cruzan todo el diagrama.
      */
@@ -317,6 +317,17 @@ public class AppGenerador {
         }
         for (String arg : args) {
             if (arg == null) {
+                continue;
+            }
+            if (arg.trim().toLowerCase().startsWith("--lineas=")) {
+                String value = arg.trim().substring("--lineas=".length());
+                DiagramOptions.LineType type = DiagramOptions.LineType.fromLabel(value);
+                if (type == null) {
+                    System.err.println("Valor inválido para --lineas: " + value + " (ortho|polyline|spline)");
+                    printUsage();
+                    System.exit(2);
+                }
+                options.lineType(type);
                 continue;
             }
             switch (arg.trim().toLowerCase()) {
@@ -376,6 +387,7 @@ public class AppGenerador {
         System.out.println("  --no-jdk          Oculta solo externas del JDK (java.*)");
         System.out.println("  --flat            Sin bloques package (plano)");
         System.out.println("  --sin-dependencias Omite las flechas ..> (dependencias)");
+        System.out.println("  --lineas=TIPO     Estilo de líneas: ortho, polyline o spline (por defecto: el de PlantUML)");
         System.out.println("  --help, -h        Muestra esta ayuda");
     }
 

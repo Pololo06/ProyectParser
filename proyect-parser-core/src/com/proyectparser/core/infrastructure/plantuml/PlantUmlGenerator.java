@@ -61,6 +61,9 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         StringBuilder builder = new StringBuilder();
         builder.append("@startuml\n");
         builder.append("skinparam classAttributeIconSize 0\n");
+        if (opt.getLineType() != DiagramOptions.LineType.DEFAULT) {
+            builder.append("skinparam linetype ").append(opt.getLineType().name().toLowerCase()).append("\n");
+        }
         // Layout: more space between nodes keeps the relationship lines apart.
         builder.append("skinparam nodesep 80\n");
         builder.append("skinparam ranksep 100\n");

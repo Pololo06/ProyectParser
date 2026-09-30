@@ -18,6 +18,24 @@ package com.proyectparser.core.domain.policy;
  */
 public class DiagramOptions {
 
+    /** Relationship line style ({@code skinparam linetype}); {@code DEFAULT} emits nothing. */
+    public enum LineType {
+        DEFAULT, ORTHO, POLYLINE, SPLINE;
+
+        /** Parses "ortho|polyline|spline"; null/unknown gives {@code null}. */
+        public static LineType fromLabel(String label) {
+            if (label == null) {
+                return null;
+            }
+            for (LineType type : values()) {
+                if (type != DEFAULT && type.name().equalsIgnoreCase(label.trim())) {
+                    return type;
+                }
+            }
+            return null;
+        }
+    }
+
     private final boolean showGettersSetters;
     private final boolean showAttributes;
     private final boolean showMethods;
@@ -26,6 +44,7 @@ public class DiagramOptions {
     private final boolean showJdkTypes;
     private final boolean groupByPackage;
     private final boolean showDependencies;
+    private final LineType lineType;
 
     private DiagramOptions(Builder builder) {
         this.showGettersSetters = builder.showGettersSetters;
@@ -36,6 +55,7 @@ public class DiagramOptions {
         this.showJdkTypes = builder.showJdkTypes;
         this.groupByPackage = builder.groupByPackage;
         this.showDependencies = builder.showDependencies;
+        this.lineType = builder.lineType;
     }
 
     /** Opciones por defecto: todo visible y agrupado por paquete. */
@@ -52,6 +72,7 @@ public class DiagramOptions {
         private boolean showJdkTypes = true;
         private boolean groupByPackage = true;
         private boolean showDependencies = true;
+        private LineType lineType = LineType.DEFAULT;
 
         /** Copia los valores de unas opciones existentes. */
         public Builder(DiagramOptions base) {
@@ -64,6 +85,7 @@ public class DiagramOptions {
                 this.showJdkTypes = base.showJdkTypes;
                 this.groupByPackage = base.groupByPackage;
                 this.showDependencies = base.showDependencies;
+                this.lineType = base.lineType;
             }
         }
 
@@ -78,6 +100,7 @@ public class DiagramOptions {
         public Builder showJdkTypes(boolean show) { this.showJdkTypes = show; return this; }
         public Builder groupByPackage(boolean group) { this.groupByPackage = group; return this; }
         /** false omits the {@code ..>} dependency arrows (usually implied by fields/interfaces). */
+        public Builder lineType(LineType type) { this.lineType = type == null ? LineType.DEFAULT : type; return this; }
         public Builder showDependencies(boolean show) { this.showDependencies = show; return this; }
 
         public DiagramOptions build() {
@@ -92,5 +115,6 @@ public class DiagramOptions {
     public boolean isShowExternal() { return showExternal; }
     public boolean isShowJdkTypes() { return showJdkTypes; }
     public boolean isGroupByPackage() { return groupByPackage; }
+    public LineType getLineType() { return lineType; }
     public boolean isShowDependencies() { return showDependencies; }
 }
