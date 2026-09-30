@@ -26,10 +26,6 @@ public class ExportDiagramUseCase {
         return writer.write(outputFile, generator.execute(folderPath));
     }
 
-    public Path execute(String folderPath, Path outputFile, DiagramFilter filter) throws IOException {
-        return writer.write(outputFile, generator.execute(folderPath, filter));
-    }
-
     public Path execute(String folderPath, Path outputFile, DiagramFilter filter, DiagramOptions options)
             throws IOException {
         return writer.write(outputFile, generator.execute(folderPath, filter,

@@ -72,21 +72,6 @@ public class TypeClassifier {
         return true;
     }
 
-    public static String extractTargetType(String rawType) {
-        Set<String> refs = referencedTypeNames(rawType);
-        if (refs.isEmpty()) {
-            return "";
-        }
-        // Backward-compatible: last non-container leaf (e.g. Map<String,List<UUID>> -> UUID).
-        String last = "";
-        for (String ref : refs) {
-            if (!CONTAINERS.contains(ref)) {
-                last = ref;
-            }
-        }
-        return last.isEmpty() ? refs.stream().reduce("", (a, b) -> b) : last;
-    }
-
     /**
      * Canonical extractor: every referenced type name, including generic
      * arguments. {@code "Map<String, List<UUID>>"} -> {@code [Map, String, List, UUID]}.
@@ -101,7 +86,7 @@ public class TypeClassifier {
                 continue;
             }
             String simple = token.contains(".") ? token.substring(token.lastIndexOf('.') + 1) : token;
-            simple = simple.replace("[]", "").trim();
+            simple = simple.trim();
             if (!simple.isEmpty() && Character.isUpperCase(simple.charAt(0))) {
                 names.add(simple);
             }

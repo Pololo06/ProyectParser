@@ -39,11 +39,6 @@ public class FilteredProjectBuilder {
         return setFilter(filter);
     }
 
-    public FilteredProjectBuilder setProject(ProjectModel originalProject) {
-        this.originalProject = originalProject;
-        return this;
-    }
-
     public FilteredProjectBuilder excludePackage(String packageName) {
         if (packageName != null && !packageName.trim().isEmpty()) {
             this.excludedPackages.add(packageName.trim());
@@ -80,17 +75,6 @@ public class FilteredProjectBuilder {
     /** Clave canónica de un {@code RelationshipModel}. */
     public static String relationshipKey(RelationshipModel rel) {
         return relationshipKey(rel.getSource(), rel.getType(), rel.getTarget());
-    }
-
-    /**
-     * Veta una relación detectada (Fase 5: aceptar/rechazar).
-     * Solo elimina; nunca inventa relaciones.
-     */
-    public FilteredProjectBuilder excludeRelationship(String source, String type, String target) {
-        if (source != null && type != null && target != null) {
-            this.vetoedRelationships.add(relationshipKey(source, type, target));
-        }
-        return this;
     }
 
     /** Veta varias relaciones por su clave {@code "origen|TIPO|destino"}. */

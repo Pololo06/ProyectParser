@@ -36,16 +36,6 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         return model != null && model.isExternal();
     }
 
-    /** Renders the project grouped by package (default behavior). */
-    public String generate(ProjectModel project) {
-        return generate(project, true);
-    }
-
-    /** Renders the project flat, without package blocks (legacy behavior). */
-    public String generateFlat(ProjectModel project) {
-        return generate(project, false);
-    }
-
     @Override
     public String render(ProjectModel project, boolean groupByPackage) {
         return generate(project, groupByPackage);
@@ -141,22 +131,6 @@ public class PlantUmlGenerator implements DiagramRendererPort {
     static boolean isJdkPackage(String packageName) {
         return packageName != null
                 && (packageName.equals("java.lang") || packageName.startsWith("java."));
-    }
-
-    /** Groups classes by package name, sorted alphabetically (packages and classes). Null-safe. */
-    public Map<String, List<ClassModel>> groupByPackage(ProjectModel project) {
-        Map<String, List<ClassModel>> byPackage = new TreeMap<>();
-        if (project == null || project.getClasses() == null) {
-            return byPackage;
-        }
-        for (ClassModel model : project.getClasses()) {
-            String pkg = model.getPackageName() == null ? "" : model.getPackageName();
-            byPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add(model);
-        }
-        for (List<ClassModel> models : byPackage.values()) {
-            models.sort(Comparator.comparing(ClassModel::getName));
-        }
-        return byPackage;
     }
 
     private String packageLabel(String packageName) {

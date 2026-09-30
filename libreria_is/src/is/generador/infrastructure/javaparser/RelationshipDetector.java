@@ -33,7 +33,7 @@ class RelationshipDetector {
                     addOnce(relationships, seen, model.getName(), simple, "EXTENDS");
                 }
                 // generics inside extends clause, e.g. extends Base<Package>
-                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.splitTypeNames(parent), model.getTypeParameters())) {
+                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(parent), model.getTypeParameters())) {
                     if (classNames.contains(inner) && !inner.equals(model.getName()) && !inner.equals(simple)) {
                         addOnce(relationships, seen, model.getName(), inner, "ASSOCIATION");
                     }
@@ -44,7 +44,7 @@ class RelationshipDetector {
                 if (classNames.contains(simple)) {
                     addOnce(relationships, seen, model.getName(), simple, "IMPLEMENTS");
                 }
-                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.splitTypeNames(parent), model.getTypeParameters())) {
+                for (String inner : GenericTypeParser.visibleTypeNames(GenericTypeParser.extractReferencedNames(parent), model.getTypeParameters())) {
                     if (classNames.contains(inner) && !inner.equals(model.getName()) && !inner.equals(simple)) {
                         addOnce(relationships, seen, model.getName(), inner, "ASSOCIATION");
                     }

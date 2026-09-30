@@ -26,8 +26,4 @@ public record AnalysisResult(
     public int totalCount() {
         return parsedCount() + failedCount();
     }
-
-    public String summary() {
-        return "parsed " + parsedCount() + "/" + totalCount() + ", failed " + failedCount();
-    }
 }

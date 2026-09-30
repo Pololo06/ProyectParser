@@ -39,10 +39,6 @@ class GenericTypeParser {
         return visibleTypeNames(names, second);
     }
 
-    static Set<String> splitTypeNames(String typeString) {
-        return extractReferencedNames(typeString);
-    }
-
     private static Set<String> extractAllNames(String typeString) {        Set<String> names = new LinkedHashSet<>();
         if (typeString == null || typeString.isBlank()) {
             return names;
@@ -87,7 +83,7 @@ class GenericTypeParser {
             cleaned = cleaned.substring(dot + 1);
         }
         // strip array brackets and varargs
-        cleaned = cleaned.replace("[]", "").replace("...", "").trim();
+        cleaned = cleaned.replace("...", "").trim();
         return cleaned;
     }
 }

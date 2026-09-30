@@ -44,9 +44,6 @@ class ExternalTypeRegistrar {
         }
         Map<String, ClassModel> externals = new LinkedHashMap<>();
         for (ClassModel model : classes) {
-            if (externals.containsKey(model.getName())) {
-                continue; // skip boxes created in this same pass
-            }
             if (model.getAttributes() == null) {
                 continue;
             }
