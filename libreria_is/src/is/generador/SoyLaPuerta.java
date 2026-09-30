@@ -12,6 +12,7 @@ import is.generador.domain.policy.DiagramFilter;
 import is.generador.domain.policy.DiagramOptions;
 import is.generador.domain.port.DiagramRendererPort;
 import is.generador.domain.port.DiagramWriterPort;
+import is.generador.domain.port.RunStatsProvider;
 import is.generador.domain.port.SourceAnalyzerPort;
 import is.generador.infrastructure.javaparser.ProjectAnalyzer;
 import is.generador.infrastructure.plantuml.PumlFileWriter;
@@ -42,6 +43,39 @@ public class SoyLaPuerta {
             "../proyectoPaUsarLaLibreria/src"
     };
 
+    /** Estadísticas de un analizador que no lleva trazabilidad: todo vale 0 o vacío. */
+    private static final RunStatsProvider SIN_ESTADISTICAS = new RunStatsProvider() {
+        @Override
+        public List<String> getParsedFiles() {
+            return List.of();
+        }
+
+        @Override
+        public List<String> getFailedFiles() {
+            return List.of();
+        }
+
+        @Override
+        public List<String> getFailureReasons() {
+            return List.of();
+        }
+
+        @Override
+        public int getParsedFileCount() {
+            return 0;
+        }
+
+        @Override
+        public int getFailedFileCount() {
+            return 0;
+        }
+
+        @Override
+        public int getTotalJavaFileCount() {
+            return 0;
+        }
+    };
+
     private final SourceAnalyzerPort analyzer;
     private final GenerateDiagramUseCase generateUseCase;
     private final ExportDiagramUseCase exportUseCase;
@@ -52,13 +86,18 @@ public class SoyLaPuerta {
         this(new ProjectAnalyzer(), new PlantUmlGenerator(), PumlFileWriter::write);
     }
 
-    /** Composition seam: inject ports (production wires infrastructure, tests wire fakes). */
+    /**
+     * Composition seam: inject ports (production wires infrastructure, tests wire fakes).
+     * If {@code analyzer} also implements {@link RunStatsProvider}, its statistics of the
+     * last analysis are exposed; otherwise they are all 0 (or empty).
+     */
     public SoyLaPuerta(SourceAnalyzerPort analyzer, DiagramRendererPort renderer, DiagramWriterPort writer) {
         this.analyzer = analyzer;
         this.generateUseCase = new GenerateDiagramUseCase(analyzer, renderer);
         this.exportUseCase = new ExportDiagramUseCase(generateUseCase, writer);
         this.classInfoService = new ClassInfoService(analyzer);
-        this.queryService = new ProjectQueryService(analyzer);
+        this.queryService = new ProjectQueryService(analyzer,
+                analyzer instanceof RunStatsProvider stats ? stats : SIN_ESTADISTICAS);
     }
 
     public List<String> countClasses() throws IOException {

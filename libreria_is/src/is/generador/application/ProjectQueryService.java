@@ -16,15 +16,17 @@ import java.util.TreeMap;
 
 /**
  * Conteos, paquetes, externas y trazabilidad (paso 8 del split).
- * Lee el puerto con {@code instanceof RunStatsProvider} para las
- * estadísticas, igual que hacía la fachada.
+ * Las estadísticas de la última ejecución llegan como dependencia explícita
+ * ({@link RunStatsProvider}); quien construye el servicio decide de dónde salen.
  */
 public class ProjectQueryService {
 
     private final SourceAnalyzerPort analyzer;
+    private final RunStatsProvider stats;
 
-    public ProjectQueryService(SourceAnalyzerPort analyzer) {
+    public ProjectQueryService(SourceAnalyzerPort analyzer, RunStatsProvider stats) {
         this.analyzer = Objects.requireNonNull(analyzer, "analyzer is required");
+        this.stats = Objects.requireNonNull(stats, "stats is required");
     }
 
     /**
@@ -105,32 +107,32 @@ public class ProjectQueryService {
 
     /** Number of .java files that failed to parse in the last analysis. */
     public int getErrorCount() {
-        return analyzer instanceof RunStatsProvider stats ? stats.getFailedFileCount() : 0;
+        return stats.getFailedFileCount();
     }
 
     /** Number of .java files successfully parsed in the last analysis. */
     public int getParsedFileCount() {
-        return analyzer instanceof RunStatsProvider stats ? stats.getParsedFileCount() : 0;
+        return stats.getParsedFileCount();
     }
 
     /** Total .java files found in the last analysis. */
     public int getTotalFileCount() {
-        return analyzer instanceof RunStatsProvider stats ? stats.getTotalJavaFileCount() : 0;
+        return stats.getTotalJavaFileCount();
     }
 
     /** Paths of files that failed to parse in the last analysis. */
     public List<String> getFailedFiles() {
-        return analyzer instanceof RunStatsProvider stats ? stats.getFailedFiles() : List.of();
+        return stats.getFailedFiles();
     }
 
     /** Paths of files successfully parsed in the last analysis. */
     public List<String> getParsedFiles() {
-        return analyzer instanceof RunStatsProvider stats ? stats.getParsedFiles() : List.of();
+        return stats.getParsedFiles();
     }
 
     /** Human-readable "file -> reason" entries for failures in the last analysis. */
     public List<String> getFailureReasons() {
-        return analyzer instanceof RunStatsProvider stats ? stats.getFailureReasons() : List.of();
+        return stats.getFailureReasons();
     }
 
     /** One-line summary: "parsed X/Y, failed Z". */

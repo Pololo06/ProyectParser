@@ -21,6 +21,10 @@ import java.util.List;
  * {@link TypeExtractor} builds {@code ClassModel}s, {@link RelationshipDetector}
  * deduces relations and {@link ExternalTypeRegistrar} adds {@code @external} boxes.
  * Covers nested types at any depth, generic arguments and enum constants.
+ *
+ * <p>Stateful by design: the {@link RunStatsProvider} getters report the last
+ * {@link #analyze(String)} call that finished without throwing; a call that throws
+ * (e.g. a missing folder) keeps the previous statistics.
  */
 public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
 
