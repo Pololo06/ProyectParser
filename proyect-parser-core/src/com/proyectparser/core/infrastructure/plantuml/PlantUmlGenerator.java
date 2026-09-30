@@ -60,7 +60,9 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         DiagramOptions opt = options == null ? DiagramOptions.defaults() : options;
         StringBuilder builder = new StringBuilder();
         builder.append("@startuml\n");
-        builder.append("skinparam classAttributeIconSize 0\n\n");
+        builder.append("skinparam style strictuml\n");
+        builder.append("skinparam classAttributeIconSize 0\n");
+        builder.append("hide circle\n\n");
 
         List<ClassModel> internals = new ArrayList<>();
         List<ClassModel> externals = new ArrayList<>();
@@ -147,6 +149,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
     }
 
     private void appendClass(StringBuilder builder, ClassModel model, String indent, DiagramOptions opt) {
+        boolean isInterface = model.getKindEnum() == Kind.INTERFACE;
         builder.append(indent).append(keywordFor(model)).append(" ");
         String alias = aliasOf(model);
         if (Objects.equals(alias, model.getName())) {
@@ -172,10 +175,10 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         if (opt.isShowAttributes() && model.getAttributes() != null) {
             for (AttributeModel attribute : model.getAttributes()) {
                 builder.append(indent).append("  ")
-                        .append(visibilityOf(attribute.getModifiers()))
-                        .append(attribute.getType())
-                        .append(" ")
+                        .append(visibilityOf(attribute.getModifiers(), isInterface))
                         .append(attribute.getName())
+                        .append(": ")
+                        .append(attribute.getType())
                         .append(modifierSuffix(attribute.getModifiers()))
                         .append("\n");
             }
@@ -184,7 +187,8 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         if (opt.isShowConstructors() && model.getConstructors() != null) {
             for (ConstructorModel constructor : model.getConstructors()) {
                 builder.append(indent).append("  ")
-                        .append(visibilityOf(constructor.getModifiers()))
+                        .append("\u00abcreate\u00bb ")
+                        .append(visibilityOf(constructor.getModifiers(), false))
                         .append(constructor.getName())
                         .append("(")
                         .append(formatParameters(constructor.getParameters()))
@@ -201,13 +205,12 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                     continue;
                 }
                 builder.append(indent).append("  ")
-                        .append(visibilityOf(method.getModifiers()))
-                        .append(method.getReturnType())
-                        .append(" ")
+                        .append(visibilityOf(method.getModifiers(), isInterface))
                         .append(method.getName())
                         .append("(")
                         .append(formatParameters(method.getParameters()))
-                        .append(")")
+                        .append("): ")
+                        .append(method.getReturnType())
                         .append(modifierSuffix(method.getModifiers()))
                         .append("\n");
             }
@@ -334,7 +337,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < parameters.size(); i++) {
             ParameterModel parameter = parameters.get(i);
-            builder.append(parameter.getType()).append(" ").append(parameter.getName());
+            builder.append(parameter.getName()).append(": ").append(parameter.getType());
             if (i < parameters.size() - 1) {
                 builder.append(", ");
             }
@@ -342,9 +345,11 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         return builder.toString();
     }
 
-    private String visibilityOf(List<String> modifiers) {
+    /** Interface members without modifier are implicitly public in Java, so they render as {@code +}. */
+    private String visibilityOf(List<String> modifiers, boolean implicitPublic) {
+        String fallback = implicitPublic ? "+" : "~";
         if (modifiers == null) {
-            return "~";
+            return fallback;
         }
         if (modifiers.contains("public")) {
             return "+";
@@ -355,7 +360,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         if (modifiers.contains("protected")) {
             return "#";
         }
-        return "~";
+        return fallback;
     }
 
     /**
