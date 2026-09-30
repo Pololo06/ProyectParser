@@ -331,7 +331,7 @@ public class AppGenerador {
 
     /**
      * Banderas de visualización por argumentos (Fase 2):
-     * --no-getters --no-attributes --no-methods --no-constructors
+     * --no-getters (--sin-accesores) --no-attributes --no-methods --no-constructors
      * --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X --help
      * Las externas (UUID, BigDecimal...) se omiten por defecto: ya aparecen como
      * tipos de los atributos y sus flechas cruzan todo el diagrama.
@@ -375,6 +375,7 @@ public class AppGenerador {
                     options.layerOrder(DiagramOptions.DEFAULT_LAYERS);
                     break;
                 case "--no-getters":
+                case "--sin-accesores":
                     options.showGettersSetters(false);
                     break;
                 case "--no-attributes":
@@ -421,7 +422,8 @@ public class AppGenerador {
     private static void printUsage() {
         System.out.println("Uso: AppGenerador [ruta_src] [salida.puml] [flags]");
         System.out.println("Flags:");
-        System.out.println("  --no-getters      Oculta getters/setters con campo respaldo");
+        System.out.println("  --no-getters, --sin-accesores");
+        System.out.println("                    Oculta getters/setters con campo respaldo");
         System.out.println("  --no-attributes   Oculta atributos");
         System.out.println("  --no-methods      Oculta métodos");
         System.out.println("  --no-constructors Oculta constructores");

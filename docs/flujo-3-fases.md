@@ -180,7 +180,7 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .build();
 ```
 
-Flags de `AppGenerador` equivalentes: `--no-getters --no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X` (las externas se omiten por defecto en AppGenerador).
+Flags de `AppGenerador` equivalentes: `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --modulo X` (las externas se omiten por defecto en AppGenerador).
 
 ### 3.4 Escritura (`PumlFileWriter`)
 
