@@ -27,12 +27,13 @@ generar() {
     echo "Generado: docs/diagramas/$nombre.puml"
 }
 
-# Vista general: solo nombres, capas ordenadas, sin dependencias, huérfanos ni tools.
-generar vista_general --sin-dependencias --capas --resumen --sin-huerfanos \
-    --excluir=com.universidad.tools
+# Vista general: es el defecto de AppGenerador sin flags
+# (--sin-dependencias --capas --sin-huerfanos --resumen --excluir=com.universidad.tools).
+generar vista_general
 
-# Vista por módulo: Estudiante con miembros, sin accesores y con firmas cortas.
-generar vista_estudiante --sin-dependencias --capas --modulo=Estudiante --sin-accesores --firmas-cortas
+# Vista por módulo: el defecto con --modulo
+# (--sin-dependencias --capas --sin-accesores --firmas-cortas).
+generar vista_estudiante --modulo=Estudiante
 
 if [ -n "${PLANTUML_JAR:-}" ]; then
     PLANTUML=(java -jar "$PLANTUML_JAR")

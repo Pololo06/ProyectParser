@@ -308,6 +308,33 @@ public class AppGenerador {
         return result.toArray(new String[0]);
     }
 
+    /** true si se pasó {@code --completo}. */
+    private static boolean isFullDiagram(String[] args) {
+        if (args != null) {
+            for (String arg : args) {
+                if (arg != null && arg.trim().equalsIgnoreCase("--completo")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Punto de partida de las opciones; los demás flags se aplican encima.
+     * Sin flags: vista general. Con {@code --modulo}: vista de módulo.
+     * Con {@code --completo}: diagrama completo (todo visible salvo externas).
+     */
+    private static DiagramOptions.Builder presetFor(String[] args) {
+        if (isFullDiagram(args)) {
+            return DiagramOptions.full();
+        }
+        return parseModule(args) != null ? DiagramOptions.moduleView() : DiagramOptions.overview();
+    }
+
+    /** Paquete excluido por defecto en la vista general (herramientas, no arquitectura). */
+    private static final String TOOLS_PACKAGE = "com.universidad.tools";
+
     /** Valor de {@code --modulo X} o {@code --modulo=X}; null si no se pasó. */
     private static String parseModule(String[] args) {
         return flagValue(args, "--modulo", "Falta el nombre del módulo: --modulo Estudiante");
@@ -367,12 +394,12 @@ public class AppGenerador {
     /**
      * Banderas de visualización por argumentos (Fase 2):
      * --no-getters (--sin-accesores) --no-attributes --no-methods --no-constructors
-     * --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --excluir a,b --modulo X --help
+     * --completo --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --excluir a,b --modulo X --help
      * Las externas (UUID, BigDecimal...) se omiten por defecto: ya aparecen como
      * tipos de los atributos y sus flechas cruzan todo el diagrama.
      */
     private static DiagramOptions parseDiagramOptions(String[] args) {
-        DiagramOptions.Builder options = new DiagramOptions.Builder().showExternal(false);
+        DiagramOptions.Builder options = presetFor(args);
         if (args == null) {
             return options.build();
         }
@@ -435,6 +462,8 @@ public class AppGenerador {
                 case "--flat":
                     options.groupByPackage(false);
                     break;
+                case "--completo":
+                    break; // lo lee presetFor
                 case "--agrupar-capas":
                     options.groupLayers(true);
                     break;
@@ -469,6 +498,11 @@ public class AppGenerador {
 
     private static void printUsage() {
         System.out.println("Uso: AppGenerador [ruta_src] [salida.puml] [flags]");
+        System.out.println("Por defecto:");
+        System.out.println("  (sin flags)       Vista general: --sin-dependencias --capas --sin-huerfanos --resumen");
+        System.out.println("                    --excluir=" + TOOLS_PACKAGE);
+        System.out.println("  --modulo X        Vista de módulo: --sin-dependencias --capas --sin-accesores --firmas-cortas");
+        System.out.println("  --completo        Diagrama completo (todo visible salvo externas); anula los dos anteriores");
         System.out.println("Flags:");
         System.out.println("  --no-getters, --sin-accesores");
         System.out.println("                    Oculta getters/setters con campo respaldo");
@@ -516,6 +550,9 @@ public class AppGenerador {
         DiagramOptions options = parseDiagramOptions(args);
         String module = parseModule(args);
         List<String> excludedPackages = parseExcludedPackages(args);
+        if (!isFullDiagram(args) && module == null && !excludedPackages.contains(TOOLS_PACKAGE)) {
+            excludedPackages.add(TOOLS_PACKAGE);
+        }
 
         logTrace("Ruta fuente detectada automáticamente: " + srcPath);
         logOptions(options);
