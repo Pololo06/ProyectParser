@@ -94,6 +94,25 @@ public final class ModuleFilter {
         return names;
     }
 
+    /**
+     * Solo las clases internas nombradas por el módulo (sin supertipos ni asociaciones de
+     * contexto): las que {@code --modulo} considera propias al conservar sus {@code ..>}.
+     */
+    public static Set<String> namedClassesOf(ProjectModel project, String module) {
+        Set<String> names = new TreeSet<>();
+        if (project == null || project.getClasses() == null || module == null || module.trim().isEmpty()) {
+            return names;
+        }
+        List<String> needle = words(module.trim());
+        for (ClassModel model : project.getClasses()) {
+            if (!model.isExternal() && model.getName() != null
+                    && containsWords(words(model.getName()), needle)) {
+                names.add(model.getName());
+            }
+        }
+        return names;
+    }
+
     /** CamelCase words in lower case: {@code "UUIDCursoDto"} gives {@code [uuid, curso, dto]}. */
     static List<String> words(String name) {
         List<String> words = new ArrayList<>();

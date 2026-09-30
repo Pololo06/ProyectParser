@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Interruptores de visualización para el diagrama (Fase 2).
@@ -57,6 +59,7 @@ public class DiagramOptions {
     private final boolean showJdkTypes;
     private final boolean groupByPackage;
     private final boolean showDependencies;
+    private final Set<String> dependencyScope;
     private final LineType lineType;
     private final Map<String, Integer> layers;
 
@@ -69,6 +72,7 @@ public class DiagramOptions {
         this.showJdkTypes = builder.showJdkTypes;
         this.groupByPackage = builder.groupByPackage;
         this.showDependencies = builder.showDependencies;
+        this.dependencyScope = Collections.unmodifiableSet(new TreeSet<>(builder.dependencyScope));
         this.lineType = builder.lineType;
         this.layers = Collections.unmodifiableMap(new LinkedHashMap<>(builder.layers));
     }
@@ -87,6 +91,7 @@ public class DiagramOptions {
         private boolean showJdkTypes = true;
         private boolean groupByPackage = true;
         private boolean showDependencies = true;
+        private Set<String> dependencyScope = new TreeSet<>();
         private LineType lineType = LineType.DEFAULT;
         private Map<String, Integer> layers = new LinkedHashMap<>();
 
@@ -101,6 +106,7 @@ public class DiagramOptions {
                 this.showJdkTypes = base.showJdkTypes;
                 this.groupByPackage = base.groupByPackage;
                 this.showDependencies = base.showDependencies;
+                this.dependencyScope = new TreeSet<>(base.dependencyScope);
                 this.lineType = base.lineType;
                 this.layers = new LinkedHashMap<>(base.layers);
             }
@@ -136,6 +142,14 @@ public class DiagramOptions {
             return layers(ranks);
         }
         public Builder lineType(LineType type) { this.lineType = type == null ? LineType.DEFAULT : type; return this; }
+        /**
+         * Class names whose mutual {@code ..>} survive {@code showDependencies(false)}
+         * (e.g. the classes of a {@code --modulo}). Empty: none survive.
+         */
+        public Builder dependencyScope(Set<String> classNames) {
+            this.dependencyScope = classNames == null ? new TreeSet<>() : new TreeSet<>(classNames);
+            return this;
+        }
         public Builder showDependencies(boolean show) { this.showDependencies = show; return this; }
 
         public DiagramOptions build() {
@@ -171,5 +185,13 @@ public class DiagramOptions {
     }
 
     public LineType getLineType() { return lineType; }
+    public Set<String> getDependencyScope() { return dependencyScope; }
+
+    /** true if a dependency between these class names is rendered. */
+    public boolean showsDependency(String sourceName, String targetName) {
+        return showDependencies
+                || (dependencyScope.contains(sourceName) && dependencyScope.contains(targetName));
+    }
+
     public boolean isShowDependencies() { return showDependencies; }
 }

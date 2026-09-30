@@ -84,4 +84,22 @@ class ModuleFilterTest {
     void moduloVacioNoSeleccionaNada() {
         assertTrue(ModuleFilter.classesOf(proyecto(), " ").isEmpty());
     }
+
+    @Test
+    void namedClassesOfSoloIncluyeLasClasesNombradasPorElModulo() {
+        assertEquals(Set.of("Curso", "CursoDto", "CursoServicio", "CursoServicioPort", "ConfiguracionModuloCurso"),
+                ModuleFilter.namedClassesOf(proyecto(), "Curso"));
+    }
+
+    @Test
+    void sinDependenciasConservaSoloLasDelAmbito() {
+        DiagramOptions opciones = new DiagramOptions.Builder()
+                .showDependencies(false)
+                .dependencyScope(ModuleFilter.namedClassesOf(proyecto(), "Curso"))
+                .build();
+        assertTrue(opciones.showsDependency("CursoServicio", "CursoDto"));
+        assertFalse(opciones.showsDependency("CursoServicio", "RecursoX"));
+        assertFalse(opciones.showsDependency("Curso", "EstadoEntidad"));
+        assertTrue(new DiagramOptions.Builder().build().showsDependency("CursoServicio", "RecursoX"));
+    }
 }

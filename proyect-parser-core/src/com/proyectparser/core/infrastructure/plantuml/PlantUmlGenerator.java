@@ -264,9 +264,11 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         Set<String> knownNames = new HashSet<>();
         Map<String, String> aliases = new HashMap<>();
         Map<String, Integer> ranks = new HashMap<>();
+        Map<String, String> simpleNames = new HashMap<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
                 knownNames.add(model.id());
+                simpleNames.put(model.id(), model.getName());
                 Integer rank = model.isExternal() ? null : opt.layerRankOf(model.getPackageName());
                 if (rank != null) {
                     ranks.put(model.id(), rank);
@@ -285,7 +287,9 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         List<RelationshipModel> internalRels = new ArrayList<>();
         List<RelationshipModel> externalRels = new ArrayList<>();
         for (RelationshipModel relationship : project.getRelationships()) {
-            if (!opt.isShowDependencies() && RelType.DEPENDENCY.label().equals(relationship.getType())) {
+            if (RelType.DEPENDENCY.label().equals(relationship.getType())
+                    && !opt.showsDependency(simpleNames.get(relationship.getSource()),
+                            simpleNames.get(relationship.getTarget()))) {
                 continue;
             }
             if (hiddenNames.contains(relationship.getSource())

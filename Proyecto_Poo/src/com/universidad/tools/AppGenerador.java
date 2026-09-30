@@ -429,7 +429,8 @@ public class AppGenerador {
         System.out.println("  --no-external     Oculta las externas (es el valor por defecto)");
         System.out.println("  --no-jdk          Oculta solo externas del JDK (java.*)");
         System.out.println("  --flat            Sin bloques package (plano)");
-        System.out.println("  --sin-dependencias Omite las flechas ..> (dependencias)");
+        System.out.println("  --sin-dependencias Omite las flechas ..> (dependencias); con --modulo conserva las");
+        System.out.println("                    que van entre clases del módulo");
         System.out.println("  --lineas=TIPO     Estilo de líneas: ortho, polyline o spline (por defecto: el de PlantUML)");
         System.out.println("  --capas[=a,b,...] Ordena capas arriba→abajo y orienta flechas con down/up");
         System.out.println("                    (sin valor: " + String.join(",", DiagramOptions.DEFAULT_LAYERS) + ")");
@@ -761,6 +762,12 @@ public class AppGenerador {
         }
 
         // 8. Generación del diagrama PlantUML con las banderas elegidas
+        if (module != null && !options.isShowDependencies()) {
+            // Con --modulo, --sin-dependencias conserva las ..> internas del módulo.
+            options = new DiagramOptions.Builder(options)
+                    .dependencyScope(ModuleFilter.namedClassesOf(originalProject, module))
+                    .build();
+        }
         String pumlContent = diagramas.render(filteredModel, options);
 
         // 9. Banner gigante
