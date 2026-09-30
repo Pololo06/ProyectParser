@@ -7,6 +7,8 @@ import java.util.List;
  * Class, AbstractClass, Interface, Enum, Record, Annotation.
  */
 public class ClassModel {
+    /** Estereotipo que marca una clase como externa. */
+    public static final String EXTERNAL_STEREOTYPE = "@external";
     private String name;
     private String packageName;
     private String kind;
@@ -54,7 +56,7 @@ public class ClassModel {
     public List<String> getStereotypes() { return stereotypes; }
     /** true si la clase es externa (estereotipo {@code @external}). */
     public boolean isExternal() {
-        return stereotypes != null && stereotypes.contains("@external");
+        return stereotypes != null && stereotypes.contains(EXTERNAL_STEREOTYPE);
     }
     public List<AttributeModel> getAttributes() { return attributes; }
     public List<MethodModel> getMethods() { return methods; }

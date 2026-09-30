@@ -64,7 +64,7 @@ class ExternalTypeRegistrar {
                             .getOrDefault(model.getName(), Map.of())
                             .getOrDefault(target, TypeClassifier.resolvePackage(target));
                     List<String> stereotypes = new ArrayList<>();
-                    stereotypes.add("@external");
+                    stereotypes.add(ClassModel.EXTERNAL_STEREOTYPE);
                     externals.put(target, new ClassModel(target,
                             resolvedPkg, "Class", false,
                             stereotypes, new ArrayList<>(), new ArrayList<>(),

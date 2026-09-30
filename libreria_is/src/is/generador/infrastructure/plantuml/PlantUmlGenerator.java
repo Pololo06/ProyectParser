@@ -62,7 +62,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         List<ClassModel> externals = new ArrayList<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
-                (isExternal(model) ? externals : internals).add(model);
+                (model.isExternal() ? externals : internals).add(model);
             }
         }
         if (!opt.isShowExternal()) {
@@ -207,7 +207,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
                 knownNames.add(model.getName());
-                if (isExternal(model) && renderedNames.contains(model.getName())) {
+                if (model.isExternal() && renderedNames.contains(model.getName())) {
                     externalNames.add(model.getName());
                 }
             }
