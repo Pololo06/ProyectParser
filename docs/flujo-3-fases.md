@@ -203,9 +203,7 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .build();
 ```
 
-Defecto de `AppGenerador` (preset de `DiagramOptions`, los demás flags se aplican encima): sin flags genera la **vista general** (`DiagramOptions.overview()`: `--sin-dependencias --capas --sin-huerfanos --resumen`, más `--excluir=com.universidad.tools`); con `--modulo X`, la **vista de módulo** (`DiagramOptions.moduleView()`: `--sin-dependencias --capas --sin-accesores --firmas-cortas`); con `--completo`, el diagrama completo anterior (`DiagramOptions.full()`: todo visible salvo externas).
-
-Flags de `AppGenerador` equivalentes: `--completo` `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --excluir a,b --modulo X` (las externas se omiten por defecto en AppGenerador). `--excluir=com.universidad.tools` (o `--excluir a,b`, repetible) suma paquetes a la blacklist sin pasar por el prompt. Las vistas de `docs/diagramas/` se regeneran con `docs/diagramas/regenerar.sh` (usa `PLANTUML_JAR` o `plantuml` del PATH).
+Flags de `AppGenerador` equivalentes: `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --excluir a,b --modulo X` (las externas se omiten por defecto en AppGenerador). `--excluir=com.universidad.tools` (o `--excluir a,b`, repetible) suma paquetes a la blacklist sin pasar por el prompt. Las vistas de `docs/diagramas/` se regeneran con `docs/diagramas/regenerar.sh` (usa `PLANTUML_JAR` o `plantuml` del PATH).
 
 ### 3.4 Escritura (`PumlFileWriter`)
 

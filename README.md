@@ -63,18 +63,7 @@ Path salida = fachada.exportPlantUml("ruta/a/src", Path.of("diagrama.puml"), fil
 
 ### AppGenerador flags
 
-Defaults (behavior change: before, no flags meant the full diagram):
-
-| Invocation | Result |
-|---|---|
-| no flags | Architecture overview: `--sin-dependencias --capas --sin-huerfanos --resumen --excluir=com.universidad.tools` |
-| `--modulo X` | Module view: `--sin-dependencias --capas --sin-accesores --firmas-cortas` |
-| `--completo` | Full diagram (everything visible except externals), the previous default |
-
-Other flags apply on top of the chosen default.
-
 ```
---completo        Full diagram instead of the overview / module view
 --no-getters, --sin-accesores
                   Hide backing-field getters/setters
 --no-attributes   Hide attributes

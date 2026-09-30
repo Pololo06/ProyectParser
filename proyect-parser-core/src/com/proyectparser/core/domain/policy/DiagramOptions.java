@@ -93,38 +93,6 @@ public class DiagramOptions {
         return new Builder().build();
     }
 
-    /**
-     * Preset of the architecture overview: class names only, ordered by {@link #DEFAULT_LAYERS},
-     * without externals, dependencies or orphan classes.
-     */
-    public static Builder overview() {
-        return new Builder()
-                .showExternal(false)
-                .showDependencies(false)
-                .layerOrder(DEFAULT_LAYERS)
-                .hideOrphans(true)
-                .summary(true);
-    }
-
-    /**
-     * Preset of a module view ({@code --modulo}): members without accessors and with short
-     * signatures, ordered by {@link #DEFAULT_LAYERS}, without externals or dependencies
-     * (except the module's own, see {@link Builder#allowedDependencies}).
-     */
-    public static Builder moduleView() {
-        return new Builder()
-                .showExternal(false)
-                .showDependencies(false)
-                .layerOrder(DEFAULT_LAYERS)
-                .showGettersSetters(false)
-                .shortSignatures(true);
-    }
-
-    /** Preset of the full diagram: everything visible except externals. */
-    public static Builder full() {
-        return new Builder().showExternal(false);
-    }
-
     public static class Builder {
         private boolean showGettersSetters = true;
         private boolean showAttributes = true;
