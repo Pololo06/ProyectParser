@@ -306,7 +306,7 @@ public class AppGenerador {
     /**
      * Banderas de visualización por argumentos (Fase 2):
      * --no-getters --no-attributes --no-methods --no-constructors
-     * --external --no-external --no-jdk --flat --help
+     * --external --no-external --no-jdk --flat --sin-dependencias --help
      * Las externas (UUID, BigDecimal...) se omiten por defecto: ya aparecen como
      * tipos de los atributos y sus flechas cruzan todo el diagrama.
      */
@@ -344,6 +344,9 @@ public class AppGenerador {
                 case "--flat":
                     options.groupByPackage(false);
                     break;
+                case "--sin-dependencias":
+                    options.showDependencies(false);
+                    break;
                 case "--help":
                 case "-h":
                     printUsage();
@@ -372,15 +375,16 @@ public class AppGenerador {
         System.out.println("  --no-external     Oculta las externas (es el valor por defecto)");
         System.out.println("  --no-jdk          Oculta solo externas del JDK (java.*)");
         System.out.println("  --flat            Sin bloques package (plano)");
+        System.out.println("  --sin-dependencias Omite las flechas ..> (dependencias)");
         System.out.println("  --help, -h        Muestra esta ayuda");
     }
 
     private static void logOptions(DiagramOptions options) {
         logTrace(String.format(
-                "Opciones: getters=%s attributes=%s methods=%s constructors=%s external=%s jdk=%s grouped=%s",
+                "Opciones: getters=%s attributes=%s methods=%s constructors=%s external=%s jdk=%s grouped=%s dependencies=%s",
                 options.isShowGettersSetters(), options.isShowAttributes(), options.isShowMethods(),
                 options.isShowConstructors(), options.isShowExternal(), options.isShowJdkTypes(),
-                options.isGroupByPackage()));
+                options.isGroupByPackage(), options.isShowDependencies()));
     }
 
     public static void main(String[] args) {

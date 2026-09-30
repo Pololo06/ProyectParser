@@ -25,6 +25,7 @@ public class DiagramOptions {
     private final boolean showExternal;
     private final boolean showJdkTypes;
     private final boolean groupByPackage;
+    private final boolean showDependencies;
 
     private DiagramOptions(Builder builder) {
         this.showGettersSetters = builder.showGettersSetters;
@@ -34,6 +35,7 @@ public class DiagramOptions {
         this.showExternal = builder.showExternal;
         this.showJdkTypes = builder.showJdkTypes;
         this.groupByPackage = builder.groupByPackage;
+        this.showDependencies = builder.showDependencies;
     }
 
     /** Opciones por defecto: todo visible y agrupado por paquete. */
@@ -49,6 +51,7 @@ public class DiagramOptions {
         private boolean showExternal = true;
         private boolean showJdkTypes = true;
         private boolean groupByPackage = true;
+        private boolean showDependencies = true;
 
         /** Copia los valores de unas opciones existentes. */
         public Builder(DiagramOptions base) {
@@ -60,6 +63,7 @@ public class DiagramOptions {
                 this.showExternal = base.showExternal;
                 this.showJdkTypes = base.showJdkTypes;
                 this.groupByPackage = base.groupByPackage;
+                this.showDependencies = base.showDependencies;
             }
         }
 
@@ -73,6 +77,8 @@ public class DiagramOptions {
         public Builder showExternal(boolean show) { this.showExternal = show; return this; }
         public Builder showJdkTypes(boolean show) { this.showJdkTypes = show; return this; }
         public Builder groupByPackage(boolean group) { this.groupByPackage = group; return this; }
+        /** false omits the {@code ..>} dependency arrows (usually implied by fields/interfaces). */
+        public Builder showDependencies(boolean show) { this.showDependencies = show; return this; }
 
         public DiagramOptions build() {
             return new DiagramOptions(this);
@@ -86,4 +92,5 @@ public class DiagramOptions {
     public boolean isShowExternal() { return showExternal; }
     public boolean isShowJdkTypes() { return showJdkTypes; }
     public boolean isGroupByPackage() { return groupByPackage; }
+    public boolean isShowDependencies() { return showDependencies; }
 }

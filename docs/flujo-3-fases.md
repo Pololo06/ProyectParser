@@ -168,12 +168,13 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .showMethods(true)
     .showConstructors(true)
     .showExternal(true)   // false oculta cajas @external y sus relaciones
+    .showDependencies(true) // false omite las flechas ..> (--sin-dependencias)
     .showJdkTypes(true)   // false oculta solo externas java.* (requiere showExternal=true)
     .groupByPackage(true) // false => salida plana sin bloques package
     .build();
 ```
 
-Flags de `AppGenerador` equivalentes: `--no-getters --no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat` (las externas se omiten por defecto en AppGenerador).
+Flags de `AppGenerador` equivalentes: `--no-getters --no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --sin-dependencias` (las externas se omiten por defecto en AppGenerador).
 
 ### 3.4 Escritura (`PumlFileWriter`)
 

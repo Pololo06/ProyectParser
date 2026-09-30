@@ -116,7 +116,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
         }
 
-        appendRelationships(builder, project, renderedNames(internals, externals));
+        appendRelationships(builder, project, renderedNames(internals, externals), opt);
         builder.append("\n@enduml\n");
         return builder.toString();
     }
@@ -222,7 +222,8 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         builder.append(indent).append("}\n\n");
     }
 
-    private void appendRelationships(StringBuilder builder, ProjectModel project, Set<String> renderedNames) {
+    private void appendRelationships(StringBuilder builder, ProjectModel project, Set<String> renderedNames,
+                                     DiagramOptions opt) {
         if (project.getRelationships() == null) {
             return;
         }
@@ -246,6 +247,9 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         List<RelationshipModel> internalRels = new ArrayList<>();
         List<RelationshipModel> externalRels = new ArrayList<>();
         for (RelationshipModel relationship : project.getRelationships()) {
+            if (!opt.isShowDependencies() && RelType.DEPENDENCY.label().equals(relationship.getType())) {
+                continue;
+            }
             if (hiddenNames.contains(relationship.getSource())
                     || hiddenNames.contains(relationship.getTarget())) {
                 continue;
