@@ -8,7 +8,6 @@ import is.generador.domain.model.RelationshipModel;
 
 import java.io.File;
 import java.io.IOException;
-import is.generador.domain.policy.DiagramFilter;
 import is.generador.domain.port.RunStatsProvider;
 import is.generador.domain.port.SourceAnalyzerPort;
 
@@ -31,23 +30,7 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
 
     // Trazabilidad de la última corrida (ver RunStatsProvider).
     private AnalysisResult lastResult;
-    // Filtro blacklist/whitelist (nunca null: vacío = permisivo).
-    private DiagramFilter filter = new DiagramFilter();
-
     public ProjectAnalyzer() {
-    }
-
-    public ProjectAnalyzer(DiagramFilter filter) {
-        setFilter(filter);
-    }
-
-    public ProjectAnalyzer setFilter(DiagramFilter filter) {
-        this.filter = (filter != null) ? filter : new DiagramFilter();
-        return this;
-    }
-
-    public DiagramFilter getFilter() {
-        return filter;
     }
 
     @Override
@@ -61,7 +44,7 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
         List<RelationshipModel> relationships = new ArrayList<>();
         scanner.traverseFolder(folder, classes);
         new RelationshipDetector().detectRelationships(classes, relationships);
-        new ExternalTypeRegistrar(filter)
+        new ExternalTypeRegistrar()
                 .registerExternalTypes(classes, relationships, scanner.fileImportsByClass());
         ProjectModel project = new ProjectModel(folder.getName(), classes, relationships);
         lastResult = scanner.finish(project);

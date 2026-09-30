@@ -3,7 +3,6 @@ package is.generador.infrastructure.javaparser;
 import is.generador.domain.model.AttributeModel;
 import is.generador.domain.model.ClassModel;
 import is.generador.domain.model.RelationshipModel;
-import is.generador.domain.policy.DiagramFilter;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -16,16 +15,10 @@ import java.util.Set;
  * Registra tipos externos (paso 6 del split).
  * Crea cajas {@code @external} con su paquete JDK real y una
  * ASSOCIATION desde la clase que los usa. Internos, primitivos,
- * escalares y variables de tipo se ignoran. Opción B: la whitelist
- * es solo para clases internas; las externas solo obedecen a blacklist.
+ * escalares y variables de tipo se ignoran. El filtrado lo hace
+ * {@code FilteredProjectBuilder}.
  */
 class ExternalTypeRegistrar {
-
-    private final DiagramFilter filter;
-
-    ExternalTypeRegistrar(DiagramFilter filter) {
-        this.filter = filter != null ? filter : new DiagramFilter();
-    }
 
     /**
      * Registers external (non-project, non-primitive) attribute types as
@@ -70,11 +63,6 @@ class ExternalTypeRegistrar {
                     String resolvedPkg = fileImportsByClass
                             .getOrDefault(model.getName(), Map.of())
                             .getOrDefault(target, TypeClassifier.resolvePackage(target));
-                    // 3. La caja externa solo se crea si no está en blacklist
-                    // (opción B: la whitelist es solo para clases internas).
-                    if (filter.isBlacklisted(resolvedPkg, target)) {
-                        continue;
-                    }
                     List<String> stereotypes = new ArrayList<>();
                     stereotypes.add("@external");
                     externals.put(target, new ClassModel(target,
