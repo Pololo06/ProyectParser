@@ -90,30 +90,7 @@ class TypeExtractor {
                 implementedTypes.add(implemented.getNameAsString());
             }
 
-            for (FieldDeclaration field : declaration.getFields()) {
-                List<String> modifiers = modifierNames(field.getModifiers());
-                for (VariableDeclarator variable : field.getVariables()) {
-                    attributes.add(new AttributeModel(
-                            variable.getNameAsString(),
-                            variable.getType().asString(),
-                            modifiers));
-                }
-            }
-            for (ConstructorDeclaration constructor : declaration.getConstructors()) {
-                constructors.add(new ConstructorModel(
-                        constructor.getNameAsString(),
-                        toParameters(constructor.getParameters()),
-                        modifierNames(constructor.getModifiers()),
-                        typeParameterNames(constructor.getTypeParameters())));
-            }
-            for (MethodDeclaration method : declaration.getMethods()) {
-                methods.add(new MethodModel(
-                        method.getNameAsString(),
-                        method.getType().asString(),
-                        toParameters(method.getParameters()),
-                        modifierNames(method.getModifiers()),
-                        typeParameterNames(method.getTypeParameters())));
-            }
+            extractMembers(declaration, attributes, constructors, methods);
         } else if (type instanceof RecordDeclaration) {
             kind = "Record";
             RecordDeclaration record = (RecordDeclaration) type;
@@ -129,33 +106,7 @@ class TypeExtractor {
                         component.getType().asString(),
                         List.of("private", "final")));
             }
-            for (BodyDeclaration<?> member : record.getMembers()) {
-                if (member instanceof FieldDeclaration) {
-                    FieldDeclaration field = (FieldDeclaration) member;
-                    List<String> modifiers = modifierNames(field.getModifiers());
-                    for (VariableDeclarator variable : field.getVariables()) {
-                        attributes.add(new AttributeModel(
-                                variable.getNameAsString(),
-                                variable.getType().asString(),
-                                modifiers));
-                    }
-                } else if (member instanceof ConstructorDeclaration) {
-                    ConstructorDeclaration constructor = (ConstructorDeclaration) member;
-                    constructors.add(new ConstructorModel(
-                            constructor.getNameAsString(),
-                            toParameters(constructor.getParameters()),
-                            modifierNames(constructor.getModifiers()),
-                            typeParameterNames(constructor.getTypeParameters())));
-                } else if (member instanceof MethodDeclaration) {
-                    MethodDeclaration method = (MethodDeclaration) member;
-                    methods.add(new MethodModel(
-                            method.getNameAsString(),
-                            method.getType().asString(),
-                            toParameters(method.getParameters()),
-                            modifierNames(method.getModifiers()),
-                            typeParameterNames(method.getTypeParameters())));
-                }
-            }
+            extractMembers(record, attributes, constructors, methods);
         } else if (type instanceof EnumDeclaration) {
             kind = "Enum";
             EnumDeclaration enumDeclaration = (EnumDeclaration) type;
@@ -163,33 +114,7 @@ class TypeExtractor {
             for (EnumConstantDeclaration entry : enumDeclaration.getEntries()) {
                 enumConstants.add(entry.getNameAsString());
             }
-            for (BodyDeclaration<?> member : enumDeclaration.getMembers()) {
-                if (member instanceof FieldDeclaration) {
-                    FieldDeclaration field = (FieldDeclaration) member;
-                    List<String> modifiers = modifierNames(field.getModifiers());
-                    for (VariableDeclarator variable : field.getVariables()) {
-                        attributes.add(new AttributeModel(
-                                variable.getNameAsString(),
-                                variable.getType().asString(),
-                                modifiers));
-                    }
-                } else if (member instanceof ConstructorDeclaration) {
-                    ConstructorDeclaration constructor = (ConstructorDeclaration) member;
-                    constructors.add(new ConstructorModel(
-                            constructor.getNameAsString(),
-                            toParameters(constructor.getParameters()),
-                            modifierNames(constructor.getModifiers()),
-                            typeParameterNames(constructor.getTypeParameters())));
-                } else if (member instanceof MethodDeclaration) {
-                    MethodDeclaration method = (MethodDeclaration) member;
-                    methods.add(new MethodModel(
-                            method.getNameAsString(),
-                            method.getType().asString(),
-                            toParameters(method.getParameters()),
-                            modifierNames(method.getModifiers()),
-                            typeParameterNames(method.getTypeParameters())));
-                }
-            }
+            extractMembers(enumDeclaration, attributes, constructors, methods);
         } else if (type instanceof AnnotationDeclaration) {
             kind = "Annotation";
         }
@@ -197,6 +122,41 @@ class TypeExtractor {
         return new ClassModel(name, packageName, kind, isAbstract, stereotypes,
                 attributes, methods, constructors, extendedTypes, implementedTypes, enumConstants,
                 typeParameters);
+    }
+
+    /**
+     * Campos, constructores y métodos declarados en el cuerpo del tipo, en orden de declaración.
+     * El constructor compacto de un record no es {@link ConstructorDeclaration} y se ignora.
+     */
+    private void extractMembers(TypeDeclaration<?> type, List<AttributeModel> attributes,
+                                List<ConstructorModel> constructors, List<MethodModel> methods) {
+        for (BodyDeclaration<?> member : type.getMembers()) {
+            if (member instanceof FieldDeclaration) {
+                FieldDeclaration field = (FieldDeclaration) member;
+                List<String> modifiers = modifierNames(field.getModifiers());
+                for (VariableDeclarator variable : field.getVariables()) {
+                    attributes.add(new AttributeModel(
+                            variable.getNameAsString(),
+                            variable.getType().asString(),
+                            modifiers));
+                }
+            } else if (member instanceof ConstructorDeclaration) {
+                ConstructorDeclaration constructor = (ConstructorDeclaration) member;
+                constructors.add(new ConstructorModel(
+                        constructor.getNameAsString(),
+                        toParameters(constructor.getParameters()),
+                        modifierNames(constructor.getModifiers()),
+                        typeParameterNames(constructor.getTypeParameters())));
+            } else if (member instanceof MethodDeclaration) {
+                MethodDeclaration method = (MethodDeclaration) member;
+                methods.add(new MethodModel(
+                        method.getNameAsString(),
+                        method.getType().asString(),
+                        toParameters(method.getParameters()),
+                        modifierNames(method.getModifiers()),
+                        typeParameterNames(method.getTypeParameters())));
+            }
+        }
     }
 
     /** Names of declared type variables (e.g. {@code <T, ID>} -> [T, ID]). */
