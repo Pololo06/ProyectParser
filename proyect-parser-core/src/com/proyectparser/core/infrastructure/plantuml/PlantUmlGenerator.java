@@ -60,9 +60,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         DiagramOptions opt = options == null ? DiagramOptions.defaults() : options;
         StringBuilder builder = new StringBuilder();
         builder.append("@startuml\n");
-        builder.append("skinparam style strictuml\n");
-        builder.append("skinparam classAttributeIconSize 0\n");
-        builder.append("hide circle\n\n");
+        builder.append("skinparam classAttributeIconSize 0\n\n");
 
         List<ClassModel> internals = new ArrayList<>();
         List<ClassModel> externals = new ArrayList<>();
