@@ -146,7 +146,7 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
 
 ### 3.2 Filtro (`DiagramFilter`, inmutable con `Builder`)
 
-Diagrama por módulo: `ModuleFilter.classesOf(proyecto, "Estudiante")` devuelve las clases internas cuyo nombre contiene el módulo como palabras CamelCase completas (`Curso` coincide con `CursoDto` y `ConfiguracionModuloCurso`, no con `RecursoX`), sus supertipos transitivos y los destinos internos de sus asociaciones directas; `AppGenerador --modulo Estudiante` los suma a la whitelist de clases. Con `--sin-dependencias`, las `..>` cuyo origen y destino se llaman como el módulo (`ModuleFilter.namedClassesOf`, vía `DiagramOptions.dependencyScope`) se conservan.
+Diagrama por módulo: `ModuleFilter.classesOf(proyecto, "Estudiante")` devuelve las clases internas cuyo nombre contiene el módulo como palabras CamelCase completas (`Curso` coincide con `CursoDto` y `ConfiguracionModuloCurso`, no con `RecursoX`), sus supertipos transitivos y los destinos internos de sus asociaciones directas; `AppGenerador --modulo Estudiante` los suma a la whitelist de clases. Con `--sin-dependencias`, las `..>` cuyo origen y destino se llaman como el módulo se conservan (`ModuleFilter.dependenciesOf`, vía `DiagramOptions.allowedDependencies`); hacia DTOs, solo si el origen es el puerto o el mapeador.
 
 Precedencia: **blacklist > whitelist > permitir**. Las externas solo obedecen a blacklist.
 

@@ -63,7 +63,7 @@ public class DiagramOptions {
     private final boolean groupByPackage;
     private final boolean showDependencies;
     private final boolean shortSignatures;
-    private final Set<String> dependencyScope;
+    private final Set<String> allowedDependencies;
     private final LineType lineType;
     private final Map<String, Integer> layers;
 
@@ -77,7 +77,7 @@ public class DiagramOptions {
         this.groupByPackage = builder.groupByPackage;
         this.showDependencies = builder.showDependencies;
         this.shortSignatures = builder.shortSignatures;
-        this.dependencyScope = Collections.unmodifiableSet(new TreeSet<>(builder.dependencyScope));
+        this.allowedDependencies = Collections.unmodifiableSet(new TreeSet<>(builder.allowedDependencies));
         this.lineType = builder.lineType;
         this.layers = Collections.unmodifiableMap(new LinkedHashMap<>(builder.layers));
     }
@@ -97,7 +97,7 @@ public class DiagramOptions {
         private boolean groupByPackage = true;
         private boolean showDependencies = true;
         private boolean shortSignatures = false;
-        private Set<String> dependencyScope = new TreeSet<>();
+        private Set<String> allowedDependencies = new TreeSet<>();
         private LineType lineType = LineType.DEFAULT;
         private Map<String, Integer> layers = new LinkedHashMap<>();
 
@@ -113,7 +113,7 @@ public class DiagramOptions {
                 this.groupByPackage = base.groupByPackage;
                 this.showDependencies = base.showDependencies;
                 this.shortSignatures = base.shortSignatures;
-                this.dependencyScope = new TreeSet<>(base.dependencyScope);
+                this.allowedDependencies = new TreeSet<>(base.allowedDependencies);
                 this.lineType = base.lineType;
                 this.layers = new LinkedHashMap<>(base.layers);
             }
@@ -150,11 +150,11 @@ public class DiagramOptions {
         }
         public Builder lineType(LineType type) { this.lineType = type == null ? LineType.DEFAULT : type; return this; }
         /**
-         * Class names whose mutual {@code ..>} survive {@code showDependencies(false)}
-         * (e.g. the classes of a {@code --modulo}). Empty: none survive.
+         * {@code ..>} that survive {@code showDependencies(false)}, as {@link #dependencyKey} pairs
+         * (e.g. those chosen for a {@code --modulo}). Empty: none survive.
          */
-        public Builder dependencyScope(Set<String> classNames) {
-            this.dependencyScope = classNames == null ? new TreeSet<>() : new TreeSet<>(classNames);
+        public Builder allowedDependencies(Set<String> keys) {
+            this.allowedDependencies = keys == null ? new TreeSet<>() : new TreeSet<>(keys);
             return this;
         }
         /** true shows {@code (...)} for methods/constructors with more than {@link #SHORT_SIGNATURE_MAX_PARAMS} parameters. */
@@ -194,12 +194,16 @@ public class DiagramOptions {
     }
 
     public LineType getLineType() { return lineType; }
-    public Set<String> getDependencyScope() { return dependencyScope; }
+    public Set<String> getAllowedDependencies() { return allowedDependencies; }
+
+    /** Key of a dependency between two class names: {@code "Source->Target"}. */
+    public static String dependencyKey(String sourceName, String targetName) {
+        return sourceName + "->" + targetName;
+    }
 
     /** true if a dependency between these class names is rendered. */
     public boolean showsDependency(String sourceName, String targetName) {
-        return showDependencies
-                || (dependencyScope.contains(sourceName) && dependencyScope.contains(targetName));
+        return showDependencies || allowedDependencies.contains(dependencyKey(sourceName, targetName));
     }
 
     public boolean isShortSignatures() { return shortSignatures; }

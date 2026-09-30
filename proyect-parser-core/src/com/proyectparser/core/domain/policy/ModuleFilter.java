@@ -113,6 +113,46 @@ public final class ModuleFilter {
         return names;
     }
 
+    /**
+     * Dependencias ({@code ..>}) que la vista del módulo conserva con {@code --sin-dependencias},
+     * como claves {@link DiagramOptions#dependencyKey}: ambas puntas nombradas por el módulo y,
+     * si el destino es un DTO (paquete con segmento {@code dto}), solo desde un puerto o un
+     * mapeador (segmento {@code port} o {@code mapper}); las de controlador, servicio y vista
+     * hacia DTOs se descartan porque ya se ven a través del puerto.
+     */
+    public static Set<String> dependenciesOf(ProjectModel project, String module) {
+        Set<String> keys = new TreeSet<>();
+        Set<String> named = namedClassesOf(project, module);
+        if (named.isEmpty() || project.getRelationships() == null) {
+            return keys;
+        }
+        Map<String, ClassModel> byId = new HashMap<>();
+        for (ClassModel model : project.getClasses()) {
+            byId.put(model.id(), model);
+        }
+        for (RelationshipModel rel : project.getRelationships()) {
+            if (RelType.fromLabel(rel.getType()) != RelType.DEPENDENCY) {
+                continue;
+            }
+            ClassModel source = byId.get(rel.getSource());
+            ClassModel target = byId.get(rel.getTarget());
+            if (source == null || target == null
+                    || !named.contains(source.getName()) || !named.contains(target.getName())) {
+                continue;
+            }
+            if (hasSegment(target, "dto") && !hasSegment(source, "port") && !hasSegment(source, "mapper")) {
+                continue;
+            }
+            keys.add(DiagramOptions.dependencyKey(source.getName(), target.getName()));
+        }
+        return keys;
+    }
+
+    private static boolean hasSegment(ClassModel model, String segment) {
+        return model.getPackageName() != null
+                && ("." + model.getPackageName() + ".").contains("." + segment + ".");
+    }
+
     /** CamelCase words in lower case: {@code "UUIDCursoDto"} gives {@code [uuid, curso, dto]}. */
     static List<String> words(String name) {
         List<String> words = new ArrayList<>();

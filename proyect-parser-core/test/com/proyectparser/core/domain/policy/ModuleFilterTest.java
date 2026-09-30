@@ -35,6 +35,8 @@ class ModuleFilterTest {
                 clase("CursoDto", "x.application.dto", "RECORD"),
                 clase("CursoServicio", "x.application.service", "CLASS"),
                 clase("CursoServicioPort", "x.application.port", "INTERFACE"),
+                clase("CursoMapeador", "x.application.mapper", "CLASS"),
+                clase("CursoControlador", "x.interfaceadapters.controller", "CLASS"),
                 clase("ConfiguracionModuloCurso", "x.infrastructure.config", "CLASS"),
                 clase("ModuloConfigurable", "x.infrastructure.config", "INTERFACE"),
                 clase("EstadoEntidad", "x.domain.model", "ENUM"),
@@ -46,7 +48,12 @@ class ModuleFilterTest {
                 rel("ConfiguracionModuloCurso", "ModuloConfigurable", RelType.IMPLEMENTS),
                 rel("Curso", "EstadoEntidad", RelType.ASSOCIATION),
                 rel("Curso", "UUID", RelType.ASSOCIATION),
-                rel("CursoServicio", "RecursoX", RelType.DEPENDENCY)
+                rel("CursoServicio", "RecursoX", RelType.DEPENDENCY),
+                rel("CursoServicio", "CursoDto", RelType.DEPENDENCY),
+                rel("CursoControlador", "CursoDto", RelType.DEPENDENCY),
+                rel("CursoServicioPort", "CursoDto", RelType.DEPENDENCY),
+                rel("CursoMapeador", "CursoDto", RelType.DEPENDENCY),
+                rel("CursoMapeador", "Curso", RelType.DEPENDENCY)
         ));
     }
 
@@ -58,8 +65,8 @@ class ModuleFilterTest {
 
     @Test
     void cursoIncluyeSusClasesSupertiposYAsociacionesInternas() {
-        assertEquals(Set.of("Curso", "CursoDto", "CursoServicio", "CursoServicioPort",
-                        "ConfiguracionModuloCurso", "ModuloConfigurable", "EstadoEntidad"),
+        assertEquals(Set.of("Curso", "CursoDto", "CursoServicio", "CursoServicioPort", "CursoMapeador",
+                        "CursoControlador", "ConfiguracionModuloCurso", "ModuloConfigurable", "EstadoEntidad"),
                 ModuleFilter.classesOf(proyecto(), "Curso"));
     }
 
@@ -87,19 +94,27 @@ class ModuleFilterTest {
 
     @Test
     void namedClassesOfSoloIncluyeLasClasesNombradasPorElModulo() {
-        assertEquals(Set.of("Curso", "CursoDto", "CursoServicio", "CursoServicioPort", "ConfiguracionModuloCurso"),
+        assertEquals(Set.of("Curso", "CursoDto", "CursoServicio", "CursoServicioPort", "CursoMapeador",
+                        "CursoControlador", "ConfiguracionModuloCurso"),
                 ModuleFilter.namedClassesOf(proyecto(), "Curso"));
     }
 
     @Test
-    void sinDependenciasConservaSoloLasDelAmbito() {
+    void haciaDtosSoloSeConservanLasDelPuertoYElMapeador() {
+        assertEquals(Set.of("CursoServicioPort->CursoDto", "CursoMapeador->CursoDto", "CursoMapeador->Curso"),
+                ModuleFilter.dependenciesOf(proyecto(), "Curso"));
+    }
+
+    @Test
+    void sinDependenciasConservaSoloLasPermitidas() {
         DiagramOptions opciones = new DiagramOptions.Builder()
                 .showDependencies(false)
-                .dependencyScope(ModuleFilter.namedClassesOf(proyecto(), "Curso"))
+                .allowedDependencies(ModuleFilter.dependenciesOf(proyecto(), "Curso"))
                 .build();
-        assertTrue(opciones.showsDependency("CursoServicio", "CursoDto"));
+        assertTrue(opciones.showsDependency("CursoServicioPort", "CursoDto"));
+        assertFalse(opciones.showsDependency("CursoServicio", "CursoDto"));
+        assertFalse(opciones.showsDependency("CursoControlador", "CursoDto"));
         assertFalse(opciones.showsDependency("CursoServicio", "RecursoX"));
-        assertFalse(opciones.showsDependency("Curso", "EstadoEntidad"));
         assertTrue(new DiagramOptions.Builder().build().showsDependency("CursoServicio", "RecursoX"));
     }
 }
