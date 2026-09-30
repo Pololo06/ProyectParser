@@ -1,0 +1,286 @@
+package com.proyectparser.core;
+
+import com.proyectparser.core.application.ClassInfo;
+import com.proyectparser.core.application.ClassInfoService;
+import com.proyectparser.core.application.DiagramService;
+import com.proyectparser.core.application.ProjectQueryService;
+import com.proyectparser.core.domain.model.PackageModel;
+import com.proyectparser.core.domain.model.ProjectModel;
+import com.proyectparser.core.domain.policy.DiagramFilter;
+import com.proyectparser.core.domain.policy.DiagramOptions;
+import com.proyectparser.core.domain.policy.ProjectFilter;
+import com.proyectparser.core.domain.port.DiagramRendererPort;
+import com.proyectparser.core.domain.port.DiagramWriterPort;
+import com.proyectparser.core.domain.port.RunStatsProvider;
+import com.proyectparser.core.domain.port.SourceAnalyzerPort;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Public facade of the "proyect-parser-core" library (API layer).
+ * Thin by design: every call delegates to application services or
+ * use cases; all logic lives outside this class.
+ *
+ * <p>Clean Architecture layout:
+ * {@code domain.model} / {@code domain.policy} / {@code domain.port} (pure, no
+ * external deps) &larr; {@code application} (use cases, depends only on ports)
+ * &larr; {@code infrastructure.*} (JavaParser, PlantUML, files).
+ * The production adapters are chosen in {@link CasosDeUso}, the composition root.
+ * Test seam: {@link #DiagramFacade(SourceAnalyzerPort, DiagramRendererPort, DiagramWriterPort)}.
+ */
+public class DiagramFacade {
+
+    private static final String[] DEFAULT_PATHS = {
+            "src",
+            "proyectoPaUsarLaLibreria/src",
+            "../proyectoPaUsarLaLibreria/src"
+    };
+
+    /** Estadísticas de un analizador que no lleva trazabilidad: todo vale 0 o vacío. */
+    private static final RunStatsProvider SIN_ESTADISTICAS = new RunStatsProvider() {
+        @Override
+        public List<String> getParsedFiles() {
+            return List.of();
+        }
+
+        @Override
+        public List<String> getFailedFiles() {
+            return List.of();
+        }
+
+        @Override
+        public List<String> getFailureReasons() {
+            return List.of();
+        }
+
+        @Override
+        public int getParsedFileCount() {
+            return 0;
+        }
+
+        @Override
+        public int getFailedFileCount() {
+            return 0;
+        }
+
+        @Override
+        public int getTotalJavaFileCount() {
+            return 0;
+        }
+    };
+
+    private final SourceAnalyzerPort analyzer;
+    private final DiagramService diagramService;
+    private final ClassInfoService classInfoService;
+    private final ProjectQueryService queryService;
+
+    public DiagramFacade() {
+        this(CasosDeUso.analizador(), CasosDeUso.renderizador(), CasosDeUso.escritor());
+    }
+
+    /**
+     * Composition seam: inject ports (production wires infrastructure, tests wire fakes).
+     * If {@code analyzer} also implements {@link RunStatsProvider}, its statistics of the
+     * last analysis are exposed; otherwise they are all 0 (or empty).
+     */
+    public DiagramFacade(SourceAnalyzerPort analyzer, DiagramRendererPort renderer, DiagramWriterPort writer) {
+        this.analyzer = analyzer;
+        this.diagramService = new DiagramService(analyzer, renderer, writer);
+        this.classInfoService = new ClassInfoService(analyzer);
+        this.queryService = new ProjectQueryService(analyzer,
+                analyzer instanceof RunStatsProvider stats ? stats : SIN_ESTADISTICAS);
+    }
+
+    public List<String> countClasses() throws IOException {
+        return countClasses(resolveDefaultPath());
+    }
+
+    public List<String> countClasses(String folderPath) throws IOException {
+        return classInfoService.countClasses(folderPath);
+    }
+
+    public Map<String, List<String>> getClassProperties() throws IOException {
+        return getClassProperties(resolveDefaultPath());
+    }
+
+    public Map<String, List<String>> getClassProperties(String folderPath) throws IOException {
+        return classInfoService.getClassProperties(folderPath);
+    }
+
+    public Map<String, ClassInfo> getClassDetails() throws IOException {
+        return getClassDetails(resolveDefaultPath());
+    }
+
+    public Map<String, ClassInfo> getClassDetails(String folderPath) throws IOException {
+        return classInfoService.getClassDetails(folderPath);
+    }
+
+    public String generatePlantUml() throws IOException {
+        return generatePlantUml(resolveDefaultPath());
+    }
+
+    public String generatePlantUml(String folderPath) throws IOException {
+        return generatePlantUml(folderPath, new DiagramFilter(), DiagramOptions.defaults());
+    }
+
+    public ProjectModel analyzeProject(String folderPath) throws IOException {
+        return analyzer.analyze(folderPath);
+    }
+
+    /** Packages of the default project, mapped to their type names (sorted). */
+    public Map<String, List<String>> getPackages() throws IOException {
+        return getPackages(resolveDefaultPath());
+    }
+
+    /**
+     * Packages of the analyzed project, mapped to their type names (sorted).
+     * The default package is reported as "(default package)".
+     */
+    public Map<String, List<String>> getPackages(String folderPath) throws IOException {
+        return queryService.getPackages(folderPath);
+    }
+
+    /** Sorted names of the packages in the analyzed project. */
+    public List<String> getPackageNames(String folderPath) throws IOException {
+        return queryService.getPackageNames(folderPath);
+    }
+
+    /** Number of distinct packages in the analyzed project. */
+    public int getPackageCount(String folderPath) throws IOException {
+        return queryService.getPackageCount(folderPath);
+    }
+
+    /**
+     * Counts types by kind (Class, AbstractClass, Interface, Enum, Record,
+     * Annotation), sorted by kind name.
+     */
+    public Map<String, Integer> countByKind(String folderPath) throws IOException {
+        return queryService.countByKind(folderPath);
+    }
+
+    /** Counts types by kind over an already analyzed model. */
+    public static Map<String, Integer> countByKind(ProjectModel project) {
+        return ProjectQueryService.countByKind(project);
+    }
+
+    /** Total types in the analyzed project. */
+    public int countTotalTypes(String folderPath) throws IOException {
+        return queryService.countTotalTypes(folderPath);
+    }
+
+    /** Number of .java files that failed to parse in the last analysis. */
+    public int getErrorCount() {
+        return queryService.getErrorCount();
+    }
+
+    /** Number of .java files successfully parsed in the last analysis. */
+    public int getParsedFileCount() {
+        return queryService.getParsedFileCount();
+    }
+
+    /** Total .java files found in the last analysis. */
+    public int getTotalFileCount() {
+        return queryService.getTotalFileCount();
+    }
+
+    /** Paths of files that failed to parse in the last analysis. */
+    public List<String> getFailedFiles() {
+        return queryService.getFailedFiles();
+    }
+
+    /** Paths of files successfully parsed in the last analysis. */
+    public List<String> getParsedFiles() {
+        return queryService.getParsedFiles();
+    }
+
+    /** Human-readable "file -> reason" entries for failures in the last analysis. */
+    public List<String> getFailureReasons() {
+        return queryService.getFailureReasons();
+    }
+
+    /** One-line summary: "parsed X/Y, failed Z". */
+    public String getLastAnalysisSummary() {
+        return queryService.getLastAnalysisSummary();
+    }
+
+    private String resolveDefaultPath() {
+        // Portable override: -Dproyectparser.core.src=/path/to/src or env PROYECTPARSER_CORE_SRC.
+        String override = System.getProperty("proyectparser.core.src",
+                System.getenv("PROYECTPARSER_CORE_SRC"));
+        if (override != null && !override.isBlank() && Files.isDirectory(Path.of(override))) {
+            return override;
+        }
+        for (String candidate : DEFAULT_PATHS) {
+            if (Files.isDirectory(Path.of(candidate))) {
+                return candidate;
+            }
+        }
+        return DEFAULT_PATHS[0];
+    }
+
+    /** Analyzes via the canonical engine. */
+    public ProjectModel analyzeWithUseCase(String folderPath) throws IOException {
+        return analyzer.analyze(folderPath);
+    }
+
+    /** Generates PlantUML via the canonical engine. */
+    public String generatePlantUmlViaUseCase(String folderPath) throws IOException {
+        return generatePlantUml(folderPath);
+    }
+
+    /** Generates PlantUML and writes it to {@code outputFile}. */
+    public Path exportPlantUml(String folderPath, Path outputFile) throws IOException {
+        return exportPlantUml(folderPath, outputFile, new DiagramFilter(), DiagramOptions.defaults());
+    }
+
+    /** Package views as canonical {@code PackageModel}. */
+    public List<PackageModel> getPackageModels(String folderPath) throws IOException {
+        return queryService.getPackageModels(folderPath);
+    }
+
+    /** External classes of the default project, mapped id -&gt; package (sorted). */
+    public Map<String, String> getExternalClasses() throws IOException {
+        return getExternalClasses(resolveDefaultPath());
+    }
+
+    /**
+     * External classes (stereotype {@code @external}) of the analyzed project,
+     * mapped id -&gt; package (sorted by name). The id is the simple name, or the
+     * fqn when another class of the project shares it.
+     */
+    public Map<String, String> getExternalClasses(String folderPath) throws IOException {
+        return queryService.getExternalClasses(folderPath);
+    }
+
+    /** Analyzes applying a {@code DiagramFilter} (blacklist/whitelist) post-analysis. */
+    public ProjectModel analyzeFiltered(String folderPath, DiagramFilter filter) throws IOException {
+        ProjectModel project = analyzer.analyze(folderPath);
+        return ProjectFilter.apply(project, filter);
+    }
+
+    /** Generates PlantUML applying a {@code DiagramFilter} (blacklist/whitelist). */
+    public String generatePlantUml(String folderPath, DiagramFilter filter) throws IOException {
+        return generatePlantUml(folderPath, filter, DiagramOptions.defaults());
+    }
+
+    /** Generates PlantUML applying a {@code DiagramFilter} and {@code DiagramOptions}. */
+    public String generatePlantUml(String folderPath, DiagramFilter filter, DiagramOptions options)
+            throws IOException {
+        return diagramService.generate(folderPath, filter, options);
+    }
+
+    /** Generates PlantUML with filter and writes it to {@code outputFile}. */
+    public Path exportPlantUml(String folderPath, Path outputFile, DiagramFilter filter) throws IOException {
+        return exportPlantUml(folderPath, outputFile, filter, DiagramOptions.defaults());
+    }
+
+    /** Generates PlantUML with filter and options, writing it to {@code outputFile}. */
+    public Path exportPlantUml(String folderPath, Path outputFile, DiagramFilter filter, DiagramOptions options)
+            throws IOException {
+        return diagramService.export(folderPath, outputFile, filter, options);
+    }
+}

@@ -1,24 +1,25 @@
 package com.universidad.tools;
 
-import is.generador.CasosDeUso;
-import is.generador.application.DiagramService;
-import is.generador.domain.policy.DiagramFilter;
-import is.generador.domain.policy.DiagramOptions;
-import is.generador.domain.policy.ProjectFilter;
-import is.generador.domain.BeanAccessors;
-import is.generador.domain.model.AttributeModel;
-import is.generador.domain.model.ClassModel;
-import is.generador.domain.model.ConstructorModel;
-import is.generador.domain.model.MethodModel;
-import is.generador.domain.model.PackageModel;
-import is.generador.domain.model.ProjectModel;
-import is.generador.domain.model.RelationshipModel;
+import com.proyectparser.core.CasosDeUso;
+import com.proyectparser.core.application.DiagramService;
+import com.proyectparser.core.domain.policy.DiagramFilter;
+import com.proyectparser.core.domain.policy.DiagramOptions;
+import com.proyectparser.core.domain.policy.ProjectFilter;
+import com.proyectparser.core.domain.BeanAccessors;
+import com.proyectparser.core.domain.model.AttributeModel;
+import com.proyectparser.core.domain.model.ClassModel;
+import com.proyectparser.core.domain.model.ConstructorModel;
+import com.proyectparser.core.domain.model.MethodModel;
+import com.proyectparser.core.domain.model.PackageModel;
+import com.proyectparser.core.domain.model.ProjectModel;
+import com.proyectparser.core.domain.model.RelationshipModel;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -56,16 +57,23 @@ public class AppGenerador {
         File currentDirFile = currentWorkingDir.toFile();
         File[] subFiles = currentDirFile.listFiles();
         if (subFiles != null) {
+            List<File> candidates = new ArrayList<>();
             for (File subDir : subFiles) {
                 if (subDir.isDirectory() && !subDir.getName().startsWith(".")
                         && !subDir.getName().equals("out")
                         && !subDir.getName().equals("build")) {
                     File candidateSrc = new File(subDir, "src");
                     if (candidateSrc.exists() && candidateSrc.isDirectory()
-                            && !subDir.getName().toLowerCase().contains("libreria")) {
-                        return candidateSrc.getAbsolutePath();
+                            && !subDir.getName().toLowerCase().contains("libreria")
+                            && !subDir.getName().equals("proyect-parser-core")) {
+                        candidates.add(candidateSrc);
                     }
                 }
+            }
+            // Orden estable para que el resultado no dependa del sistema de archivos
+            candidates.sort(Comparator.comparing(File::getName));
+            if (!candidates.isEmpty()) {
+                return candidates.get(0).getAbsolutePath();
             }
         }
 
