@@ -19,11 +19,5 @@ public enum RutaPersistencia {
     public Path obtenerRuta() {
         return ruta;
     }
-
-    /** @deprecated usar {@link #obtenerRuta()}; se conserva por compatibilidad. */
-    @Deprecated
-    public Path obetenerRuta() {
-        return obtenerRuta();
-    }
 }   
 
