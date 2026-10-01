@@ -2,7 +2,7 @@
 
 > Librería: `proyect-parser-core` (antes `libreria_is`, renombrada en `refactor/clean-architecture-v2`).
 > Punto de entrada público: `com.proyectparser.core.DiagramFacade`.
-> Composición interna: `com.proyectparser.core.CasosDeUso` + `application.DiagramService`.
+> Composición interna: `com.proyectparser.core.UseCases` + `application.DiagramService`.
 
 La librería convierte **carpeta con fuentes Java → modelo → texto PlantUML → archivo `.puml`**.
 Todo el flujo pasa por 3 fases:
@@ -56,7 +56,7 @@ return writer.write(outputFile, puml);                         // Fase 3 (archiv
   - lista de `ClassModel` (clase/interfaz/enum/record/annotation con sus atributos, métodos, constructores, paquete, `kind`, modificadores),
   - lista de `PackageModel` derivada (vistas por paquete, ordenadas).
 - **Reglas visibles desde fuera:**
-  - Un archivo que no parsea **no aborta** el análisis: se registra en `getFailedFiles()` / `getFailureReasons()` y se sigue con el resto (`RunStatsProvider`: `getParsedFileCount()`, `getTotalFileCount()`, `getLastAnalysisSummary()` → `"parsed X/Y, failed Z"`).
+  - Un archivo que no parsea **no aborta** el análisis: se registra en `getFailedFiles()` / `getFailureReasons()` y se sigue con el resto (el puerto `RunStatsProvider` ofrece `getParsedFiles()`, `getFailedFiles()`, `getFailureReasons()`, `getParsedFileCount()`, `getFailedFileCount()` y `getTotalJavaFileCount()`; `DiagramFacade` los expone y añade `getTotalFileCount()`, `getErrorCount()` y `getLastAnalysisSummary()` → `"parsed X/Y, failed Z"`).
   - Si la carpeta no existe, `analyze()` lanza `IOException("Folder not found: ...")`.
   - El paquete por defecto (clases sin `package`) se muestra como `"(default package)"`.
   - Si dos clases del proyecto comparten nombre simple (homónimos), su `id` pasa a ser el FQN; si no, el `id` es el nombre simple.
@@ -118,24 +118,57 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
   ```plantuml
   package "com.universidad.modelo" {
     class Curso {
-      -String nombre
-      +int getCreditos()
+      -nombre: String
+      «create» +Curso(nombre: String)
+      +getCreditos(): int
     }
   }
   ```
 - Las externas (`@external`) van siempre al final, aparte:
   ```plantuml
   package "EXTERNAL" {
-    class "UUID" as UUID <<external>>
+    class UUID {
+      <<external>>
+    }
   }
   ```
 - Homónimos: `class "Foo" as com_a_Foo` y las relaciones usan el alias.
 - Herencia con extremos invertidos (la punta apunta al padre): el modelo guarda `source=hija, target=padre`, el render escribe `Padre <|-- Hija`, `Interfaz <|.. Impl`.
 - Relaciones hacia extremos ocultos por opciones/filtro se omiten; hacia nombres no modelados se conservan (PlantUML los declara implícitamente).
-- Visibilidad: `+` public, `-` private, `#` protected, `~` package. Sufijos: `{static}`, `{abstract}` (`final` no se renderiza).
+- Layout para ordenar las relaciones: `skinparam nodesep 80`, `ranksep 100` y `set separator none` (paquetes planos, sin anidar `com > x > y`) (sin `linetype ortho`: apila las líneas y no se distingue su destino).
+- Con capas (`--capas`, por defecto `infrastructure.config, infrastructure.cli, interfaceadapters, application, domain, infrastructure.persistence`; config va primero por ser la raíz de composición): cada paquete toma el rango del segmento más largo que contiene (`domain` → `com.x.domain.model`); las flechas llevan `down`/`up` según el rango del elemento derecho frente al izquierdo (`Interfaz <|.down. Impl` si la impl está más abajo) y se emite `pkg_a -[hidden]down- pkg_b` entre un paquete de cada capa consecutiva. Los paquetes se declaran con alias `package "x.y" as pkg_x_y`. Con `--agrupar-capas` (experimental: los enlaces entre contenedores no apilan bien las capas inferiores y el render crece) (`DiagramOptions.groupLayers`) los paquetes de cada capa van dentro de un contenedor `package "domain" as layer_4 { ... }` y los enlaces ocultos unen contenedores (`layer_3 -[hidden]down- layer_4`); los paquetes fuera del mapa quedan sueltos.
+- Los records se emiten como `record X { }`: PlantUML de 2020 (1.2020.x) no lo soporta. Salida real verificada con PlantUML 1.2026.8.
+- Se conservan los iconos C/I/A/E de PlantUML (no se usa `strictuml` ni `hide circle`).
+- Sintaxis UML 2.5.1: atributos `-nombre: Tipo`, operaciones `+nombre(p: Tipo): Retorno`, constructores con `«create»`.
+- Resumen (`--resumen`, `DiagramOptions.summary`): emite `hide members` en la cabecera; las cajas muestran solo el nombre.
+- Sin huérfanos (`--sin-huerfanos`, `DiagramOptions.hideOrphans`): se omiten las clases sin ninguna relación visible después de filtros y opciones (p. ej. `--sin-dependencias`).
+- Firmas cortas (`--firmas-cortas`, `DiagramOptions.shortSignatures`): métodos y constructores con más de 3 parámetros se pintan `nombre(…n)`, con n = cantidad de parámetros (`+Estudiante(…7)`), para distinguir sobrecargas.
+- Visibilidad: `+` public, `-` private, `#` protected, `~` package. Los miembros de interfaz sin modificador se pintan `+` (son públicos en Java). Sufijos: `{static}`, `{abstract}` (`final` no se renderiza).
 - Enums: literales primero como constantes planas. Getters/setters se detectan por campo respaldo real (`BeanAccessors`) y se pueden ocultar.
 
 ### 3.2 Filtro (`DiagramFilter`, inmutable con `Builder`)
+
+Diagrama por módulo: `ModuleFilter.classesOf(proyecto, "Estudiante")` devuelve las clases internas cuyo nombre contiene el módulo como palabras CamelCase completas (`Curso` coincide con `CursoDto` y `ConfiguracionModuloCurso`, no con `RecursoX`), sus supertipos transitivos y los destinos internos de sus asociaciones directas; `AppGenerador --modulo Estudiante` los suma a la whitelist de clases. Con `--sin-dependencias`, las `..>` del módulo se conservan salvo las redundantes por supertipo (abajo).
+
+#### Regla de redundancia por supertipo (`--modulo` + `--sin-dependencias`)
+
+`ModuleFilter.dependenciesOf(proyecto, módulo)` decide qué dependencias (`..>`) sobreviven; el generador las recibe como pares `Origen->Destino` en `DiagramOptions.allowedDependencies`:
+
+1. Solo se consideran `DEPENDENCY` (tipos usados en firmas); asociaciones y herencia no se tocan.
+2. Origen y destino deben estar **nombrados por el módulo** (`ModuleFilter.namedClassesOf`: `Estudiante`, `EstudianteDto`, `EstudianteMapeador`…). Los supertipos y asociaciones de contexto (`RepositorioBase`, `Mapeador`, `EstadoEntidad`) no cuentan.
+3. `A ..> X` es **redundante** y se omite si `A` extiende o implementa **directamente** un tipo que ya conserva `..> X`: `EstudianteServicio` implementa `EstudianteServicioPort`, que ya declara el contrato con los DTOs.
+4. Las cadenas por asociaciones **no** cuentan: `EstudianteVista --> EstudianteControlador --> EstudianteServicioPort ..> EstudianteDto` no oculta `EstudianteVista ..> EstudianteDto`, que es una dependencia real de la vista.
+
+| Dependencia | ¿Se conserva? |
+|---|---|
+| `EstudianteServicioPort ..> EstudianteDto` | sí |
+| `EstudianteMapeador ..> EstudianteDto` | sí |
+| `EstudianteMapeador ..> Estudiante` | sí |
+| `EstudianteControlador ..> EstudianteCrearDto` | sí (solo asociación hacia el puerto) |
+| `EstudianteVista ..> EstudianteDto` | sí (solo asociaciones hacia el puerto) |
+| `EstudianteServicio ..> EstudianteDto` | no (su supertipo directo `EstudianteServicioPort` ya la tiene) |
+
+Sin `--modulo`, `--sin-dependencias` omite todas las `..>`.
 
 Precedencia: **blacklist > whitelist > permitir**. Las externas solo obedecen a blacklist.
 
@@ -162,12 +195,15 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .showMethods(true)
     .showConstructors(true)
     .showExternal(true)   // false oculta cajas @external y sus relaciones
+    .showDependencies(true) // false omite las flechas ..> (--sin-dependencias)
+    .lineType(LineType.DEFAULT) // ORTHO|POLYLINE|SPLINE emite skinparam linetype (--lineas=ortho)
+    .layerOrder(DiagramOptions.DEFAULT_LAYERS) // --capas: flechas -down->/-up-> por rango y enlaces -[hidden]down- entre paquetes
     .showJdkTypes(true)   // false oculta solo externas java.* (requiere showExternal=true)
     .groupByPackage(true) // false => salida plana sin bloques package
     .build();
 ```
 
-Flags de `AppGenerador` equivalentes: `--no-getters --no-attributes --no-methods --no-constructors --no-external --no-jdk --flat`.
+Flags de `AppGenerador` equivalentes: `--no-getters` (alias `--sin-accesores`) `--no-attributes --no-methods --no-constructors --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --excluir a,b --modulo X` (las externas se omiten por defecto en AppGenerador). `--excluir=com.universidad.tools` (o `--excluir a,b`, repetible) suma paquetes a la blacklist sin pasar por el prompt. Las vistas de `docs/diagramas/` se regeneran con `docs/diagramas/regenerar.sh` (usa `PLANTUML_JAR` o `plantuml` del PATH).
 
 ### 3.4 Escritura (`PumlFileWriter`)
 
@@ -197,7 +233,7 @@ Path salida = fachada.exportPlantUml("ruta/a/src", Path.of("diagrama.puml"), fil
 Por pasos (revisar el modelo entre medias):
 
 ```java
-DiagramService svc = CasosDeUso.diagramas();
+DiagramService svc = UseCases.diagramas();
 ProjectModel proyecto = svc.analyze("ruta/a/src");
 String texto = svc.render(proyecto, opciones);
 Path archivo = svc.write(Path.of("diagrama.puml"), texto);
@@ -215,5 +251,5 @@ Path archivo = svc.write(Path.of("diagrama.puml"), texto);
 | 2 | `ExternalTypeRegistrar` (infra) | Cajas `@external` + `ASSOCIATION` |
 | 3 | `PlantUmlGenerator` (`DiagramRendererPort`) | Modelo → texto `@startuml...@enduml` |
 | 3 | `DiagramFilter` / `DiagramOptions` / `ProjectFilter` (`domain.policy`) | Qué se dibuja y cómo |
-| 3 | `PumlFileWriter` (`DiagramWriterPort`) | Texto → archivo `.puml` UTF-8 |
-| Todas | `DiagramService` + `CasosDeUso` | Orquesta `analyze → filter → render → write` |
+| 3 | `PumlFileWriter` (se cablea como `DiagramWriterPort` con `PumlFileWriter::write`) | Texto → archivo `.puml` UTF-8 |
+| Todas | `DiagramService` + `UseCases` | Orquesta `analyze → filter → render → write` |

@@ -13,9 +13,9 @@ import com.proyectparser.core.infrastructure.plantuml.PumlFileWriter;
  * (JavaParser, PlantUML, files). Consumers get ready-made use cases without
  * naming infrastructure.
  */
-public final class CasosDeUso {
+public final class UseCases {
 
-    private CasosDeUso() {
+    private UseCases() {
     }
 
     /** The use case wired with the production adapters. */

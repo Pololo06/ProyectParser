@@ -1,9 +1,10 @@
 package com.universidad.tools;
 
-import com.proyectparser.core.CasosDeUso;
+import com.proyectparser.core.UseCases;
 import com.proyectparser.core.application.DiagramService;
 import com.proyectparser.core.domain.policy.DiagramFilter;
 import com.proyectparser.core.domain.policy.DiagramOptions;
+import com.proyectparser.core.domain.policy.ModuleFilter;
 import com.proyectparser.core.domain.policy.ProjectFilter;
 import com.proyectparser.core.domain.BeanAccessors;
 import com.proyectparser.core.domain.model.AttributeModel;
@@ -295,21 +296,83 @@ public class AppGenerador {
             return new String[0];
         }
         List<String> result = new ArrayList<>();
-        for (String arg : args) {
-            if (arg != null && !arg.trim().startsWith("-")) {
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            if (arg != null && (arg.trim().equalsIgnoreCase("--modulo")
+                    || arg.trim().equalsIgnoreCase("--excluir"))) {
+                i++; // su valor no es posicional
+            } else if (arg != null && !arg.trim().startsWith("-")) {
                 result.add(arg);
             }
         }
         return result.toArray(new String[0]);
     }
 
+    /** Valor de {@code --modulo X} o {@code --modulo=X}; null si no se pasó. */
+    private static String parseModule(String[] args) {
+        return flagValue(args, "--modulo", "Falta el nombre del módulo: --modulo Estudiante");
+    }
+
+    /**
+     * Paquetes de {@code --excluir a,b} o {@code --excluir=a,b} (repetible): se suman a la
+     * blacklist de paquetes, igual que responderlos en el prompt.
+     */
+    private static List<String> parseExcludedPackages(String[] args) {
+        List<String> packages = new ArrayList<>();
+        if (args == null) {
+            return packages;
+        }
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i] == null ? "" : args[i].trim();
+            String value = null;
+            if (arg.toLowerCase().startsWith("--excluir=")) {
+                value = arg.substring("--excluir=".length());
+            } else if (arg.equalsIgnoreCase("--excluir")) {
+                value = flagValue(new String[]{arg, i + 1 < args.length ? args[i + 1] : null}, "--excluir",
+                        "Falta el paquete a excluir: --excluir com.universidad.tools");
+            }
+            if (value != null) {
+                for (String pkg : value.split(",")) {
+                    if (!pkg.trim().isEmpty() && !packages.contains(pkg.trim())) {
+                        packages.add(pkg.trim());
+                    }
+                }
+            }
+        }
+        return packages;
+    }
+
+    /** Valor de {@code flag X} o {@code flag=X} (primera aparición); sale con error si falta. */
+    private static String flagValue(String[] args, String flag, String missingMessage) {
+        if (args == null) {
+            return null;
+        }
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i] == null ? "" : args[i].trim();
+            if (arg.toLowerCase().startsWith(flag + "=")) {
+                return arg.substring(flag.length() + 1).trim();
+            }
+            if (arg.equalsIgnoreCase(flag)) {
+                if (i + 1 >= args.length || args[i + 1] == null || args[i + 1].trim().startsWith("-")) {
+                    System.err.println(missingMessage);
+                    printUsage();
+                    System.exit(2);
+                }
+                return args[i + 1].trim();
+            }
+        }
+        return null;
+    }
+
     /**
      * Banderas de visualización por argumentos (Fase 2):
-     * --no-getters --no-attributes --no-methods --no-constructors
-     * --no-external --no-jdk --flat --help
+     * --no-getters (--sin-accesores) --no-attributes --no-methods --no-constructors
+     * --external --no-external --no-jdk --flat --resumen --sin-huerfanos --firmas-cortas --sin-dependencias --lineas=ortho|polyline|spline --capas[=a,b,...] --agrupar-capas --excluir a,b --modulo X --help
+     * Las externas (UUID, BigDecimal...) se omiten por defecto: ya aparecen como
+     * tipos de los atributos y sus flechas cruzan todo el diagrama.
      */
     private static DiagramOptions parseDiagramOptions(String[] args) {
-        DiagramOptions.Builder options = new DiagramOptions.Builder();
+        DiagramOptions.Builder options = new DiagramOptions.Builder().showExternal(false);
         if (args == null) {
             return options.build();
         }
@@ -317,8 +380,38 @@ public class AppGenerador {
             if (arg == null) {
                 continue;
             }
+            if (arg.trim().toLowerCase().startsWith("--lineas=")) {
+                String value = arg.trim().substring("--lineas=".length());
+                DiagramOptions.LineType type = DiagramOptions.LineType.fromLabel(value);
+                if (type == null) {
+                    System.err.println("Valor inválido para --lineas: " + value + " (ortho|polyline|spline)");
+                    printUsage();
+                    System.exit(2);
+                }
+                options.lineType(type);
+                continue;
+            }
+            if (arg.trim().toLowerCase().startsWith("--modulo")
+                    || arg.trim().toLowerCase().startsWith("--excluir")) {
+                continue; // los leen parseModule y parseExcludedPackages
+            }
+            if (arg.trim().toLowerCase().startsWith("--capas=")) {
+                String value = arg.trim().substring("--capas=".length());
+                List<String> segments = new ArrayList<>();
+                for (String segment : value.split(",")) {
+                    if (!segment.trim().isEmpty()) {
+                        segments.add(segment.trim());
+                    }
+                }
+                options.layerOrder(segments);
+                continue;
+            }
             switch (arg.trim().toLowerCase()) {
+                case "--capas":
+                    options.layerOrder(DiagramOptions.DEFAULT_LAYERS);
+                    break;
                 case "--no-getters":
+                case "--sin-accesores":
                     options.showGettersSetters(false);
                     break;
                 case "--no-attributes":
@@ -330,6 +423,9 @@ public class AppGenerador {
                 case "--no-constructors":
                     options.showConstructors(false);
                     break;
+                case "--external":
+                    options.showExternal(true);
+                    break;
                 case "--no-external":
                     options.showExternal(false);
                     break;
@@ -338,6 +434,21 @@ public class AppGenerador {
                     break;
                 case "--flat":
                     options.groupByPackage(false);
+                    break;
+                case "--agrupar-capas":
+                    options.groupLayers(true);
+                    break;
+                case "--resumen":
+                    options.summary(true);
+                    break;
+                case "--sin-huerfanos":
+                    options.hideOrphans(true);
+                    break;
+                case "--firmas-cortas":
+                    options.shortSignatures(true);
+                    break;
+                case "--sin-dependencias":
+                    options.showDependencies(false);
                     break;
                 case "--help":
                 case "-h":
@@ -359,22 +470,37 @@ public class AppGenerador {
     private static void printUsage() {
         System.out.println("Uso: AppGenerador [ruta_src] [salida.puml] [flags]");
         System.out.println("Flags:");
-        System.out.println("  --no-getters      Oculta getters/setters con campo respaldo");
+        System.out.println("  --no-getters, --sin-accesores");
+        System.out.println("                    Oculta getters/setters con campo respaldo");
         System.out.println("  --no-attributes   Oculta atributos");
         System.out.println("  --no-methods      Oculta métodos");
         System.out.println("  --no-constructors Oculta constructores");
-        System.out.println("  --no-external     Oculta cajas @external y sus relaciones");
+        System.out.println("  --external        Muestra cajas @external y sus relaciones");
+        System.out.println("  --no-external     Oculta las externas (es el valor por defecto)");
         System.out.println("  --no-jdk          Oculta solo externas del JDK (java.*)");
         System.out.println("  --flat            Sin bloques package (plano)");
+        System.out.println("  --agrupar-capas   (Experimental) Con --capas: envuelve los paquetes de cada capa en un contenedor");
+        System.out.println("  --resumen         Vista general: solo nombres de clase (hide members)");
+        System.out.println("  --sin-huerfanos   Omite clases sin relaciones visibles tras los filtros");
+        System.out.println("  --firmas-cortas   Muestra (…n) (n = nº de parámetros) en métodos/constructores con más de "
+                + DiagramOptions.SHORT_SIGNATURE_MAX_PARAMS + " parámetros");
+        System.out.println("  --sin-dependencias Omite las flechas ..> (dependencias); con --modulo conserva las");
+        System.out.println("                    que van entre clases del módulo, salvo las que ya tiene un supertipo directo");
+        System.out.println("  --lineas=TIPO     Estilo de líneas: ortho, polyline o spline (por defecto: el de PlantUML)");
+        System.out.println("  --capas[=a,b,...] Ordena capas arriba→abajo y orienta flechas con down/up");
+        System.out.println("                    (sin valor: " + String.join(",", DiagramOptions.DEFAULT_LAYERS) + ")");
+        System.out.println("  --excluir a,b     Excluye paquetes (blacklist), p. ej. --excluir=com.universidad.tools");
+        System.out.println("  --modulo X        Solo el módulo X: clases cuyo nombre contiene X, sus supertipos");
+        System.out.println("                    y los destinos de sus asociaciones (se suma a la whitelist)");
         System.out.println("  --help, -h        Muestra esta ayuda");
     }
 
     private static void logOptions(DiagramOptions options) {
         logTrace(String.format(
-                "Opciones: getters=%s attributes=%s methods=%s constructors=%s external=%s jdk=%s grouped=%s",
+                "Opciones: getters=%s attributes=%s methods=%s constructors=%s external=%s jdk=%s grouped=%s dependencies=%s layers=%s",
                 options.isShowGettersSetters(), options.isShowAttributes(), options.isShowMethods(),
                 options.isShowConstructors(), options.isShowExternal(), options.isShowJdkTypes(),
-                options.isGroupByPackage()));
+                options.isGroupByPackage(), options.isShowDependencies(), options.getLayers()));
     }
 
     public static void main(String[] args) {
@@ -388,11 +514,13 @@ public class AppGenerador {
                 ? positional[1].trim()
                 : "diagrama_filtrado.puml";
         DiagramOptions options = parseDiagramOptions(args);
+        String module = parseModule(args);
+        List<String> excludedPackages = parseExcludedPackages(args);
 
         logTrace("Ruta fuente detectada automáticamente: " + srcPath);
         logOptions(options);
 
-        DiagramService diagramas = CasosDeUso.diagramas();
+        DiagramService diagramas = UseCases.diagramas();
         ProjectModel originalProject;
         try {
             originalProject = diagramas.analyze(srcPath);
@@ -517,6 +645,11 @@ public class AppGenerador {
 
         List<String> blackPkgs = readSelection(scanner,
                 "> BLACKLIST paq. a excluir (Enter=ninguno): ", packageList);
+        for (String pkg : excludedPackages) {
+            if (!blackPkgs.contains(pkg)) {
+                blackPkgs.add(pkg);
+            }
+        }
         blackPkgs.forEach(p -> System.out.println("  [-] Blacklist paquete: " + p));
 
         List<String> classNames = new ArrayList<>();
@@ -539,6 +672,17 @@ public class AppGenerador {
         List<String> whiteClasses = retainKnown(readSelection(scanner,
                 "> WHITELIST clases a incluir (Enter=todas, solo internas): ", internalClassNames),
                 internalClassNames, "clase interna");
+        if (module != null) {
+            Set<String> moduleClasses = ModuleFilter.classesOf(originalProject, module);
+            if (moduleClasses.isEmpty()) {
+                System.out.println("  [!] Ninguna clase coincide con el módulo: " + module);
+            }
+            for (String name : moduleClasses) {
+                if (!whiteClasses.contains(name)) {
+                    whiteClasses.add(name);
+                }
+            }
+        }
         whiteClasses.forEach(c -> System.out.println("  [+] Whitelist clase: " + c));
         System.out.println("  (nota: las externas solo obedecen a blacklist y a --no-external/--no-jdk)");
 
@@ -680,6 +824,13 @@ public class AppGenerador {
         }
 
         // 8. Generación del diagrama PlantUML con las banderas elegidas
+        if (module != null && !options.isShowDependencies()) {
+            // Con --modulo, --sin-dependencias conserva las ..> internas del módulo
+            // salvo las redundantes con un supertipo directo.
+            options = new DiagramOptions.Builder(options)
+                    .allowedDependencies(ModuleFilter.dependenciesOf(originalProject, module))
+                    .build();
+        }
         String pumlContent = diagramas.render(filteredModel, options);
 
         // 9. Banner gigante

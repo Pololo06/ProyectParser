@@ -12,7 +12,7 @@ A static code analysis tool and Java AST parser that inspects Java source code t
 
 * **AST Parsing:** Recursively scans Java source files using JavaParser to extract models, attributes, methods, constructors, and parameter data.
 * **Relationship Mapping:** Detects associations, dependencies, generalizations, and implementations across packages.
-* **Filter & Classification Engine:** Includes configurable pipeline components (`DiagramFilter`, `TypeClassifier`) to isolate specific types or packages before export.
+* **Filter & Classification Engine:** Includes configurable pipeline components (`DiagramFilter`, `DiagramOptions`, `ProjectFilter`) to isolate specific types or packages before export.
 * **PlantUML Export:** Automatically generates formatted `.puml` files ready for rendering with PlantUML or Graphviz.
 
 ## Architecture
@@ -64,12 +64,25 @@ Path salida = fachada.exportPlantUml("ruta/a/src", Path.of("diagrama.puml"), fil
 ### AppGenerador flags
 
 ```
---no-getters      Hide backing-field getters/setters
+--no-getters, --sin-accesores
+                  Hide backing-field getters/setters
 --no-attributes   Hide attributes
 --no-methods      Hide methods
 --no-constructors Hide constructors
---no-external     Hide @external boxes and their relationships
+--external        Show @external boxes and their relationships (hidden by default)
+--no-external     Hide @external boxes (default)
 --no-jdk          Hide only JDK externals (java.*)
 --flat            Flat output, no package blocks
+--resumen         Overview: class names only (hide members)
+--sin-huerfanos   Omit classes with no visible relationship after filters
+--firmas-cortas   Show (…n) for methods/constructors with more than 3 parameters
+--sin-dependencias Omit ..> arrows (with --modulo, keeps the module's own, minus those a direct supertype already has)
+--lineas=TYPE     Line style: ortho, polyline or spline (default: PlantUML's)
+--capas[=a,b,...] Order layers top to bottom and direct arrows down/up
+--agrupar-capas   (Experimental) With --capas: wrap each layer's packages in a container
+--excluir a,b     Exclude packages (blacklist), e.g. --excluir=com.universidad.tools
+--modulo X        Only module X: its classes, their supertypes and association targets
 --help, -h        Show help
 ```
+
+Views in `docs/diagramas/` are regenerated with `docs/diagramas/regenerar.sh`.
