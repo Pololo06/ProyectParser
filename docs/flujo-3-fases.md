@@ -79,7 +79,7 @@ Map<String, Integer> porKind = f.countByKind("ruta/a/src"); // Class, Interface,
 
 **Objetivo:** deducir las relaciones entre las clases del `ProjectModel`. Los extremos se guardan como `id` de clase (nombre simple, o FQN si hay homónimos).
 
-Se infieren exactamente 4 tipos (`RelType`):
+Se infieren exactamente 5 tipos (`RelType`):
 
 | Tipo (`RelType`) | Origen en el código | Flecha PlantUML | Ejemplo |
 |---|---|---|---|
@@ -87,6 +87,7 @@ Se infieren exactamente 4 tipos (`RelType`):
 | `IMPLEMENTS` | `class A implements I` | `I <\|.. A` | `Volador <\|.. Pajaro` |
 | `ASSOCIATION` | Tipo de **atributo** (campo). Incluye genéricos: `List<Paquete>`, `Map<String,List<UUID>>` generan relación hacia cada tipo interno visible. También genéricos dentro de `extends/implements` (p. ej. `extends Base<Paquete>`) | `A --> B` | `Curso --> Profesor` |
 | `DEPENDENCY` | Tipos usados **solo en firmas** de métodos/constructores (parámetros y retornos) y **no** cubiertos ya por `ASSOCIATION` | `A ..> B` | `Servicio ..> DTO` |
+| `NESTING` | Tipo **anidado** (`class A { class B {} }`), hacia su tipo contenedor directo: `source=anidado, target=contenedor` | `B +-- A` | `Database +-- Configuration` |
 
 Reglas confirmadas:
 
@@ -116,11 +117,12 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
 
 - Agrupa clases internas por paquete Java en bloques:
   ```plantuml
-  package "com.universidad.modelo" {
+  package com.universidad.modelo {
     class Curso {
-      -nombre: String
-      «create» +Curso(nombre: String)
-      +getCreditos(): int
+      -  {readOnly} nombre : String
+      #  cupo : int = 30
+      +  Curso(nombre : String) : void <<Create>>
+      +  getCreditos() : int
     }
   }
   ```
@@ -132,14 +134,21 @@ Map<String, String> externas = f.getExternalClasses("ruta/a/src"); // id -> paqu
     }
   }
   ```
+- Las relaciones nombran las clases internas con su paquete (`com.universidad.modelo.Curso --> com.universidad.modelo.Profesor`), que es como PlantUML las resuelve dentro de `package x.y { }` (anidado `com > universidad > modelo`). Las externas usan su nombre simple.
 - Homónimos: `class "Foo" as com_a_Foo` y las relaciones usan el alias.
 - Herencia con extremos invertidos (la punta apunta al padre): el modelo guarda `source=hija, target=padre`, el render escribe `Padre <|-- Hija`, `Interfaz <|.. Impl`.
+- Tipos anidados (caso borde CB-NESTED-01 de QA): cada uno se enlaza con su contenedor directo, `Anidado +-- Contenedor`, con el `+` del lado del anidado como en el diagrama de referencia. Dentro de un mismo árbol de anidamiento (un tipo de primer nivel y todos sus anidados) solo se dibujan esos `+--`: las asociaciones, dependencias y herencias entre ellos se omiten. Las relaciones con tipos de fuera del árbol se conservan (`Connectable <|.. Connection`).
 - Relaciones hacia extremos ocultos por opciones/filtro se omiten; hacia nombres no modelados se conservan (PlantUML los declara implícitamente).
-- Layout para ordenar las relaciones: `skinparam nodesep 80`, `ranksep 100` y `set separator none` (paquetes planos, sin anidar `com > x > y`) (sin `linetype ortho`: apila las líneas y no se distingue su destino).
-- Con capas (`--capas`, por defecto `infrastructure.config, infrastructure.cli, interfaceadapters, application, domain, infrastructure.persistence`; config va primero por ser la raíz de composición): cada paquete toma el rango del segmento más largo que contiene (`domain` → `com.x.domain.model`); las flechas llevan `down`/`up` según el rango del elemento derecho frente al izquierdo (`Interfaz <|.down. Impl` si la impl está más abajo) y se emite `pkg_a -[hidden]down- pkg_b` entre un paquete de cada capa consecutiva. Los paquetes se declaran con alias `package "x.y" as pkg_x_y`. Con `--agrupar-capas` (experimental: los enlaces entre contenedores no apilan bien las capas inferiores y el render crece) (`DiagramOptions.groupLayers`) los paquetes de cada capa van dentro de un contenedor `package "domain" as layer_4 { ... }` y los enlaces ocultos unen contenedores (`layer_3 -[hidden]down- layer_4`); los paquetes fuera del mapa quedan sueltos.
+- Cabecera de estilo del diagrama de referencia: Helvetica, `linetype ortho` (salvo que `--lineas` pida otro), esquinas rectas, sin sombras, bordes negros, fondo blanco y paleta pastel (verde `#D5F5E3` para `<<Interface>>`, naranja `#FFE5CC` para `<<Abstract>>`, `#D0E1FD` para `<<Record>>`, `#EAECEE` para `<<external>>`).
+- Con capas (`--capas`, por defecto `infrastructure.config, infrastructure.cli, interfaceadapters, application, domain, infrastructure.persistence`; config va primero por ser la raíz de composición): cada paquete toma el rango del segmento más largo que contiene (`domain` → `com.x.domain.model`); las flechas llevan `down`/`up` según el rango del elemento derecho frente al izquierdo (`Interfaz <|.down. Impl` si la impl está más abajo) y se emite `pkg_a -[hidden]down- pkg_b` entre un paquete de cada capa consecutiva. Con capas los paquetes se declaran con alias `package "x.y" as pkg_x_y`, se emite `set separator none` (paquetes planos) y las relaciones usan el nombre simple. Con `--agrupar-capas` (experimental: los enlaces entre contenedores no apilan bien las capas inferiores y el render crece) (`DiagramOptions.groupLayers`) los paquetes de cada capa van dentro de un contenedor `package "domain" as layer_4 { ... }` y los enlaces ocultos unen contenedores (`layer_3 -[hidden]down- layer_4`); los paquetes fuera del mapa quedan sueltos.
 - Los records se emiten como `record X { }`: PlantUML de 2020 (1.2020.x) no lo soporta. Salida real verificada con PlantUML 1.2026.8.
 - Se conservan los iconos C/I/A/E de PlantUML (no se usa `strictuml` ni `hide circle`).
-- Sintaxis UML 2.5.1: atributos `-nombre: Tipo`, operaciones `+nombre(p: Tipo): Retorno`, constructores con `«create»`.
+- Notación de miembros (la del diagrama de referencia de QA):
+  - Atributos `-  nombre : Tipo`, con `= valor` si el campo tiene inicializador de una línea; `final` → `{readOnly}`, `static` → `{static}` (juntos: `{static, readOnly}`). Los campos de interfaz son implícitamente `{static, readOnly}`.
+  - Operaciones `+  nombre(p : Tipo) : Retorno`; `{abstract}` delante si son abstractas, incluidas las de interfaz sin `default`/`static`/`private`.
+  - Constructores `+  Nombre(p : Tipo) : void <<Create>>`.
+  - Constantes de enum `+  {static, readOnly} VALOR : Enum`.
+  - Estereotipos explícitos: `interface I <<Interface>>`, `abstract class A <<Abstract>>`.
 - Resumen (`--resumen`, `DiagramOptions.summary`): emite `hide members` en la cabecera; las cajas muestran solo el nombre.
 - Sin huérfanos (`--sin-huerfanos`, `DiagramOptions.hideOrphans`): se omiten las clases sin ninguna relación visible después de filtros y opciones (p. ej. `--sin-dependencias`).
 - Firmas cortas (`--firmas-cortas`, `DiagramOptions.shortSignatures`): métodos y constructores con más de 3 parámetros se pintan `nombre(…n)`, con n = cantidad de parámetros (`+Estudiante(…7)`), para distinguir sobrecargas.
@@ -196,7 +205,7 @@ DiagramOptions opciones = new DiagramOptions.Builder()
     .showConstructors(true)
     .showExternal(true)   // false oculta cajas @external y sus relaciones
     .showDependencies(true) // false omite las flechas ..> (--sin-dependencias)
-    .lineType(LineType.DEFAULT) // ORTHO|POLYLINE|SPLINE emite skinparam linetype (--lineas=ortho)
+    .lineType(LineType.DEFAULT) // DEFAULT = ortho; POLYLINE|SPLINE cambian skinparam linetype (--lineas=spline)
     .layerOrder(DiagramOptions.DEFAULT_LAYERS) // --capas: flechas -down->/-up-> por rango y enlaces -[hidden]down- entre paquetes
     .showJdkTypes(true)   // false oculta solo externas java.* (requiere showExternal=true)
     .groupByPackage(true) // false => salida plana sin bloques package

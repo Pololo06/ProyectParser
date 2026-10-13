@@ -1,7 +1,7 @@
 package com.proyectparser.core.domain.model;
 
 /**
- * Relationship kind: EXTENDS, IMPLEMENTS, ASSOCIATION, DEPENDENCY.
+ * Relationship kind: EXTENDS, IMPLEMENTS, ASSOCIATION, DEPENDENCY, NESTING.
  * Source and target are class ids ({@link ClassModel#id()}).
  */
 public class RelationshipModel {

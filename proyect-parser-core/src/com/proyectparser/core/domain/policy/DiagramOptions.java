@@ -36,7 +36,7 @@ public class DiagramOptions {
             "infrastructure.config", "infrastructure.cli", "interfaceadapters", "application", "domain",
             "infrastructure.persistence");
 
-    /** Relationship line style ({@code skinparam linetype}); {@code DEFAULT} emits nothing. */
+    /** Relationship line style ({@code skinparam linetype}); {@code DEFAULT} is the house style, ortho. */
     public enum LineType {
         DEFAULT, ORTHO, POLYLINE, SPLINE;
 

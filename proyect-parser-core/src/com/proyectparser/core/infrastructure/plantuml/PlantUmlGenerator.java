@@ -28,12 +28,17 @@ import java.util.TreeMap;
  * Renders the internal domain model as PlantUML class diagram source.
  *
  * <p>Project classes are grouped by their Java package into PlantUML
- * {@code package "..." { }} blocks. External classes (stereotype
- * {@code @external}) are always rendered apart, in their own
- * {@code package "EXTERNAL" { }} block at the end, so both worlds never mix.</p>
+ * {@code package x.y { }} blocks and their relationships use the qualified name
+ * ({@code x.y.Foo}); layer views use flat {@code package "x.y" as pkg_x_y { }} blocks
+ * and plain names. External classes (stereotype {@code @external}) are always rendered
+ * apart, in their own {@code package "EXTERNAL" { }} block at the end, so both worlds never mix.</p>
  *
  * <p>Classes are identified by {@link ClassModel#id()}. A homonym (id different from its
  * name) is declared as {@code class "Foo" as h_a_Foo}, and its relationships use the alias.</p>
+ *
+ * <p>Members follow the notation {@code -  {readOnly} name : Type = value},
+ * {@code +  {abstract} op(p : T) : R} and {@code +  Name() : void <<Create>>} for constructors;
+ * nested types are linked to their enclosing type with {@code Nested +-- Enclosing}.</p>
  */
 public class PlantUmlGenerator implements DiagramRendererPort {
 
@@ -58,17 +63,16 @@ public class PlantUmlGenerator implements DiagramRendererPort {
     /** Renders the project applying the given {@link DiagramOptions}. */
     private String generate(ProjectModel project, DiagramOptions options) {
         DiagramOptions opt = options == null ? DiagramOptions.defaults() : options;
+        // Layer views nest packages in containers and link them by alias, which needs flat,
+        // aliased package boxes; otherwise packages are plain dotted names (com > x > y).
+        boolean layered = !opt.getLayers().isEmpty();
         StringBuilder builder = new StringBuilder();
         builder.append("@startuml\n");
-        builder.append("skinparam classAttributeIconSize 0\n");
-        if (opt.getLineType() != DiagramOptions.LineType.DEFAULT) {
-            builder.append("skinparam linetype ").append(opt.getLineType().name().toLowerCase()).append("\n");
+        appendStyle(builder, opt);
+        if (layered) {
+            // Flat package boxes: com.x.y stays one box instead of nested com > x > y.
+            builder.append("set separator none\n");
         }
-        // Layout: more space between nodes keeps the relationship lines apart.
-        builder.append("skinparam nodesep 80\n");
-        builder.append("skinparam ranksep 100\n");
-        // Flat package boxes: com.x.y stays one box instead of nested com > x > y.
-        builder.append("set separator none\n");
         if (opt.isSummary()) {
             // Overview: class boxes only; members stay in the source for other views.
             builder.append("hide members\n");
@@ -134,12 +138,12 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                     builder.append("package \"").append(layerNames.get(entry.getKey()))
                             .append("\" as ").append(alias).append(" {\n");
                     for (String pkg : entry.getValue()) {
-                        appendPackage(builder, pkg, byPackage.get(pkg), "  ", opt);
+                        appendPackage(builder, pkg, byPackage.get(pkg), "  ", opt, true);
                     }
                     builder.append("}\n\n");
                 }
                 for (String pkg : unranked) {
-                    appendPackage(builder, pkg, byPackage.get(pkg), "", opt);
+                    appendPackage(builder, pkg, byPackage.get(pkg), "", opt, true);
                 }
             } else {
                 for (Map.Entry<String, List<ClassModel>> entry : byPackage.entrySet()) {
@@ -147,7 +151,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                     if (rank != null) {
                         linkAliasByRank.putIfAbsent(rank, packageAlias(entry.getKey()));
                     }
-                    appendPackage(builder, entry.getKey(), entry.getValue(), "", opt);
+                    appendPackage(builder, entry.getKey(), entry.getValue(), "", opt, layered);
                 }
             }
             appendLayerLinks(builder, linkAliasByRank);
@@ -170,9 +174,37 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
         }
 
-        appendRelationships(builder, project, renderedNames(internals, externals), opt);
+        appendRelationships(builder, project, renderedNames(internals, externals), opt,
+                opt.isGroupByPackage() && !layered);
         builder.append("\n@enduml\n");
         return builder.toString();
+    }
+
+    /** Fonts, lines and the colour palette shared by every diagram. */
+    private static void appendStyle(StringBuilder builder, DiagramOptions opt) {
+        // DEFAULT keeps the house style: orthogonal lines.
+        DiagramOptions.LineType lineType = opt.getLineType() == DiagramOptions.LineType.DEFAULT
+                ? DiagramOptions.LineType.ORTHO : opt.getLineType();
+        builder.append("' --- Configuracion Estetica Base ---\n")
+                .append("skinparam defaultFontName Helvetica\n")
+                .append("skinparam linetype ").append(lineType.name().toLowerCase()).append("\n")
+                .append("skinparam classAttributeIconSize 0\n")
+                .append("skinparam classRoundCorner 0\n")
+                .append("skinparam shadowing false\n")
+                .append("skinparam monochrome false\n")
+                .append("skinparam classBorderColor black\n")
+                .append("skinparam backgroundColor white\n")
+                .append("skinparam classBackgroundColor white\n")
+                .append("\n")
+                .append("' --- Paleta de Colores Pastel para Java 17 ---\n")
+                .append("skinparam interfaceBackgroundColor #D5F5E3\n")
+                .append("skinparam interface<<Interface>>BackgroundColor #D5F5E3\n")
+                .append("skinparam class<<Interface>>BackgroundColor #D5F5E3\n")
+                .append("skinparam abstractBackgroundColor #FFE5CC\n")
+                .append("skinparam class<<Abstract>>BackgroundColor #FFE5CC\n")
+                .append("skinparam class<<Record>>BackgroundColor #D0E1FD\n")
+                .append("skinparam class<<external>>BackgroundColor #EAECEE\n")
+                .append("skinparam interface<<external>>BackgroundColor #EAECEE\n");
     }
 
     /** PlantUML alias of a package block, usable in links. */
@@ -181,11 +213,27 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 ? "default" : packageName.replaceAll("[^\\p{L}\\p{N}]", "_"));
     }
 
-    /** One {@code package "x.y" as pkg_x_y { }} block with its classes. */
+    /**
+     * One package block with its classes: {@code package x.y { }}, or {@code package "x.y" as pkg_x_y { }}
+     * when {@code aliased} (layer views). The default package has no plain name, so without alias its
+     * classes go at the top level.
+     */
     private void appendPackage(StringBuilder builder, String packageName, List<ClassModel> models,
-                               String indent, DiagramOptions opt) {
-        builder.append(indent).append("package \"").append(PackageModel.displayName(packageName))
-                .append("\" as ").append(packageAlias(packageName)).append(" {\n");
+                               String indent, DiagramOptions opt, boolean aliased) {
+        if (!aliased && (packageName == null || packageName.isEmpty())) {
+            for (ClassModel model : models) {
+                appendClass(builder, model, indent, opt);
+            }
+            return;
+        }
+        builder.append(indent).append("package ");
+        if (aliased) {
+            builder.append('"').append(PackageModel.displayName(packageName))
+                    .append("\" as ").append(packageAlias(packageName));
+        } else {
+            builder.append(packageName);
+        }
+        builder.append(" {\n");
         for (ClassModel model : models) {
             appendClass(builder, model, indent + "  ", opt);
         }
@@ -247,7 +295,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         } else {
             builder.append('"').append(model.getName()).append("\" as ").append(alias);
         }
-        builder.append(" {\n");
+        builder.append(typeStereotypeOf(model)).append(" {\n");
 
         if (model.getStereotypes() != null) {
             for (String stereotype : model.getStereotypes()) {
@@ -255,36 +303,30 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
         }
 
-        // enum literals first, as plain constants
+        // enum literals first: public static final fields of the enum type
         if (model.getKindEnum() == Kind.ENUM && model.getEnumConstants() != null) {
             for (String constant : model.getEnumConstants()) {
-                builder.append(indent).append("  ").append(constant).append("\n");
+                appendMember(builder, indent, "+", List.of("static", "readOnly"),
+                        constant + " : " + model.getName());
             }
         }
 
         if (opt.isShowAttributes() && model.getAttributes() != null) {
             for (AttributeModel attribute : model.getAttributes()) {
-                builder.append(indent).append("  ")
-                        .append(visibilityOf(attribute.getModifiers(), isInterface))
-                        .append(attribute.getName())
-                        .append(": ")
-                        .append(attribute.getType())
-                        .append(modifierSuffix(attribute.getModifiers()))
-                        .append("\n");
+                String declaration = attribute.getName() + " : " + attribute.getType();
+                if (attribute.getInitialValue() != null) {
+                    declaration += " = " + attribute.getInitialValue();
+                }
+                appendMember(builder, indent, visibilityOf(attribute.getModifiers(), isInterface),
+                        attributeModifiers(attribute.getModifiers(), isInterface), declaration);
             }
         }
 
         if (opt.isShowConstructors() && model.getConstructors() != null) {
             for (ConstructorModel constructor : model.getConstructors()) {
-                builder.append(indent).append("  ")
-                        .append("\u00abcreate\u00bb ")
-                        .append(visibilityOf(constructor.getModifiers(), false))
-                        .append(constructor.getName())
-                        .append("(")
-                        .append(formatParameters(constructor.getParameters(), opt))
-                        .append(")")
-                        .append(modifierSuffix(constructor.getModifiers()))
-                        .append("\n");
+                appendMember(builder, indent, visibilityOf(constructor.getModifiers(), false), List.of(),
+                        constructor.getName() + "(" + formatParameters(constructor.getParameters(), opt)
+                                + ") : void <<Create>>");
             }
         }
 
@@ -294,25 +336,46 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                         && (BeanAccessors.isGetter(method, model) || BeanAccessors.isSetter(method, model))) {
                     continue;
                 }
-                builder.append(indent).append("  ")
-                        .append(visibilityOf(method.getModifiers(), isInterface))
-                        .append(method.getName())
-                        .append("(")
-                        .append(formatParameters(method.getParameters(), opt))
-                        .append("): ")
-                        .append(method.getReturnType())
-                        .append(modifierSuffix(method.getModifiers()))
-                        .append("\n");
+                appendMember(builder, indent, visibilityOf(method.getModifiers(), isInterface),
+                        methodModifiers(method.getModifiers(), isInterface),
+                        method.getName() + "(" + formatParameters(method.getParameters(), opt) + ") : "
+                                + method.getReturnType());
             }
         }
 
         builder.append(indent).append("}\n\n");
     }
 
+    /** One member line: {@code -  {static, readOnly} name : Type}. */
+    private static void appendMember(StringBuilder builder, String indent, String visibility,
+                                     List<String> modifiers, String declaration) {
+        builder.append(indent).append("  ").append(visibility).append("  ");
+        if (!modifiers.isEmpty()) {
+            builder.append('{').append(String.join(", ", modifiers)).append("} ");
+        }
+        builder.append(declaration).append("\n");
+    }
+
+    /** Explicit kind stereotype after the class name: {@code <<Interface>>}, {@code <<Abstract>>}. */
+    private static String typeStereotypeOf(ClassModel model) {
+        Kind kind = model.getKindEnum();
+        if (kind == Kind.INTERFACE) {
+            return " <<Interface>>";
+        }
+        if ((kind == Kind.CLASS || kind == Kind.ABSTRACT_CLASS) && model.isAbstract()) {
+            return " <<Abstract>>";
+        }
+        return "";
+    }
+
     /**
      * Relationships that are drawn, in model order: dependencies allowed by the options and
      * endpoints not hidden. Relationships to unmodeled names are preserved: PlantUML
      * declares the missing endpoint implicitly.
+     *
+     * <p>Inside one nesting tree (a top-level type and the types nested in it at any depth)
+     * only the {@code NESTING} links are drawn: the containment already ties those types
+     * together, and their associations, dependencies and inheritance would only repeat it.</p>
      */
     static List<RelationshipModel> visibleRelationships(ProjectModel project, Set<String> renderedNames,
                                                         DiagramOptions opt) {
@@ -321,9 +384,13 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             return visible;
         }
         Map<String, String> simpleNames = new HashMap<>();
+        Map<String, String> nestingRoots = new HashMap<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
                 simpleNames.put(model.id(), model.getName());
+                if (!model.isExternal()) {
+                    nestingRoots.put(model.id(), nestingRootOf(model));
+                }
             }
         }
         // Endpoints hidden by DiagramOptions (known but not rendered).
@@ -339,13 +406,34 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                     || hiddenNames.contains(relationship.getTarget())) {
                 continue;
             }
+            String sourceRoot = nestingRoots.get(relationship.getSource());
+            if (!RelType.NESTING.label().equals(relationship.getType()) && sourceRoot != null
+                    && sourceRoot.equals(nestingRoots.get(relationship.getTarget()))) {
+                continue;
+            }
             visible.add(relationship);
         }
         return visible;
     }
 
+    /** Fqn of the top-level type that contains a type ({@code p.Outer} for {@code p.Outer.A.B}), or its own. */
+    private static String nestingRootOf(ClassModel model) {
+        String fqn = model.getFqn() == null ? model.getName() : model.getFqn();
+        String pkg = model.getPackageName() == null ? "" : model.getPackageName();
+        if (!pkg.isEmpty() && !fqn.startsWith(pkg + ".")) {
+            return fqn;
+        }
+        int start = pkg.isEmpty() ? 0 : pkg.length() + 1;
+        int dot = fqn.indexOf('.', start);
+        return dot < 0 ? fqn : fqn.substring(0, dot);
+    }
+
+    /**
+     * {@code qualified}: internal classes are referenced as {@code package.Name}, which resolves
+     * inside the plain {@code package x.y { }} blocks; otherwise by their alias.
+     */
     private void appendRelationships(StringBuilder builder, ProjectModel project, Set<String> renderedNames,
-                                     DiagramOptions opt) {
+                                     DiagramOptions opt, boolean qualified) {
         Set<String> externalNames = new HashSet<>();
         Map<String, String> aliases = new HashMap<>();
         Map<String, Integer> ranks = new HashMap<>();
@@ -355,7 +443,9 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 if (rank != null) {
                     ranks.put(model.id(), rank);
                 }
-                aliases.put(model.id(), aliasOf(model));
+                String pkg = model.getPackageName();
+                aliases.put(model.id(), qualified && !model.isExternal() && pkg != null && !pkg.isEmpty()
+                        ? pkg + "." + aliasOf(model) : aliasOf(model));
                 if (model.isExternal() && renderedNames.contains(model.id())) {
                     externalNames.add(model.id());
                 }
@@ -387,6 +477,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         // In PlantUML the triangle head points at the parent:
         // "Parent <|-- Child", "Interface <|.. Implementation".
         // Our model stores source=child, target=parent, so swap them here.
+        // Nesting keeps the model order, "Nested +-- Enclosing", as the reference diagrams write it.
         String type = relationship.getType();
         boolean inheritance = RelType.EXTENDS.label().equals(type) || RelType.IMPLEMENTS.label().equals(type);
         String left = inheritance ? relationship.getTarget() : relationship.getSource();
@@ -446,6 +537,8 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 return "<|..";
             case DEPENDENCY:
                 return "..>";
+            case NESTING:
+                return "+--";
             default:
                 return "-->";
         }
@@ -466,7 +559,7 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < parameters.size(); i++) {
             ParameterModel parameter = parameters.get(i);
-            builder.append(parameter.getName()).append(": ").append(parameter.getType());
+            builder.append(parameter.getName()).append(" : ").append(parameter.getType());
             if (i < parameters.size() - 1) {
                 builder.append(", ");
             }
@@ -493,21 +586,34 @@ public class PlantUmlGenerator implements DiagramRendererPort {
     }
 
     /**
-     * PlantUML suffixes for non-visibility modifiers.
-     * e.g. " {static}", " {abstract}". Final is intentionally not rendered:
-     * PlantUML has no standard {final} marker and it would only add noise.
+     * UML modifiers of a field: {@code static}, and {@code readOnly} for {@code final}.
+     * Interface fields are implicitly {@code static final}.
      */
-    private String modifierSuffix(List<String> modifiers) {
-        if (modifiers == null || modifiers.isEmpty()) {
-            return "";
+    private static List<String> attributeModifiers(List<String> modifiers, boolean inInterface) {
+        List<String> names = new ArrayList<>();
+        if (inInterface || (modifiers != null && modifiers.contains("static"))) {
+            names.add("static");
         }
-        StringBuilder suffix = new StringBuilder();
-        if (modifiers.contains("static")) {
-            suffix.append(" {static}");
+        if (inInterface || (modifiers != null && modifiers.contains("final"))) {
+            names.add("readOnly");
         }
-        if (modifiers.contains("abstract")) {
-            suffix.append(" {abstract}");
+        return names;
+    }
+
+    /**
+     * UML modifiers of a method: {@code static} and {@code abstract}. An interface method
+     * without {@code static}, {@code default} or {@code private} is implicitly abstract.
+     */
+    private static List<String> methodModifiers(List<String> modifiers, boolean inInterface) {
+        List<String> declared = modifiers == null ? List.of() : modifiers;
+        List<String> names = new ArrayList<>();
+        if (declared.contains("static")) {
+            names.add("static");
         }
-        return suffix.toString();
+        if (declared.contains("abstract") || (inInterface && !declared.contains("static")
+                && !declared.contains("default") && !declared.contains("private"))) {
+            names.add("abstract");
+        }
+        return names;
     }
 }
