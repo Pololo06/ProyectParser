@@ -15,7 +15,8 @@ import java.util.Set;
 /**
  * Deduce relaciones del modelo (paso 5 del split).
  * Solo lectura del AST ya convertido: EXTENDS, IMPLEMENTS,
- * ASSOCIATION (atributos, con genéricos) y DEPENDENCY (firmas).
+ * ASSOCIATION (atributos, con genéricos), DEPENDENCY (firmas) y NESTING
+ * (tipo anidado hacia su tipo contenedor directo).
  * Las variables de tipo declaradas nunca generan relaciones.
  * Los extremos son fqn; {@code ProjectAnalyzer} los traduce a ids al final.
  */
@@ -24,9 +25,17 @@ class RelationshipDetector {
     void detectRelationships(List<ClassModel> classes, List<RelationshipModel> relationships,
                              TypeResolver resolver) {
         Set<String> seen = new HashSet<>();
+        Set<String> fqns = new HashSet<>();
+        for (ClassModel model : classes) {
+            fqns.add(model.getFqn());
+        }
 
         for (ClassModel model : classes) {
             String self = model.getFqn();
+            String enclosing = enclosingFqn(model);
+            if (enclosing != null && fqns.contains(enclosing)) {
+                addOnce(relationships, seen, self, enclosing, RelType.NESTING);
+            }
             for (String parent : model.getExtendedTypes()) {
                 String parentFqn = resolver.internal(model, GenericTypeParser.simpleName(parent));
                 if (parentFqn != null) {
@@ -83,6 +92,20 @@ class RelationshipDetector {
                 }
             }
         }
+    }
+
+    /**
+     * Fqn of the type that directly encloses a nested type ({@code p.Outer} for
+     * {@code p.Outer.Inner}); {@code null} for a top-level or local type.
+     */
+    static String enclosingFqn(ClassModel model) {
+        String pkg = model.getPackageName() == null ? "" : model.getPackageName();
+        String topLevel = pkg.isEmpty() ? model.getName() : pkg + "." + model.getName();
+        String fqn = model.getFqn();
+        if (fqn == null || fqn.equals(topLevel) || !fqn.endsWith("." + model.getName())) {
+            return null;
+        }
+        return fqn.substring(0, fqn.length() - model.getName().length() - 1);
     }
 
     private static void addDependencies(List<RelationshipModel> relationships, Set<String> seen,

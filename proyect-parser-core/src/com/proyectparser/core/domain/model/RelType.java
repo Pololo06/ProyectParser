@@ -5,7 +5,9 @@ public enum RelType {
     EXTENDS("EXTENDS"),
     IMPLEMENTS("IMPLEMENTS"),
     ASSOCIATION("ASSOCIATION"),
-    DEPENDENCY("DEPENDENCY");
+    DEPENDENCY("DEPENDENCY"),
+    /** Nested type: source is the nested type, target its directly enclosing type. */
+    NESTING("NESTING");
 
     private final String label;
 

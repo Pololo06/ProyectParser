@@ -141,7 +141,8 @@ class TypeExtractor {
                     attributes.add(new AttributeModel(
                             variable.getNameAsString(),
                             variable.getType().asString(),
-                            modifiers));
+                            modifiers,
+                            initialValue(variable)));
                 }
             } else if (member instanceof ConstructorDeclaration) {
                 ConstructorDeclaration constructor = (ConstructorDeclaration) member;
@@ -160,6 +161,17 @@ class TypeExtractor {
                         typeParameterNames(method.getTypeParameters())));
             }
         }
+    }
+
+    /**
+     * Initializer of a field as one line ({@code 5000}, {@code "unimag"}), or {@code null}
+     * when it has none or spans several lines (lambdas, anonymous classes).
+     */
+    private static String initialValue(VariableDeclarator variable) {
+        return variable.getInitializer()
+                .map(Object::toString)
+                .filter(text -> !text.contains("\n"))
+                .orElse(null);
     }
 
     /** Names of declared type variables (e.g. {@code <T, ID>} -> [T, ID]). */
