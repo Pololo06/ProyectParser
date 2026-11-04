@@ -1,0 +1,52 @@
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: proyect-parser-api
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: ${PARSER_MAX_UPLOAD_SIZE:50MB}
+      max-request-size: ${PARSER_MAX_REQUEST_SIZE:60MB}
+      file-size-threshold: 1MB
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: ${PARSER_VERSION:1.0.0}
+
+proyectparser:
+  api:
+    version: ${PARSER_VERSION:1.0.0}
+    max-files: ${PARSER_MAX_FILES:5000}
+    max-file-bytes: ${PARSER_MAX_FILE_BYTES:2097152}
+    max-total-bytes: ${PARSER_MAX_TOTAL_BYTES:33554432}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+
+logging:
+  level:
+    root: INFO
+    com.proyectparser: INFO

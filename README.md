@@ -17,27 +17,31 @@ A static code analysis tool and Java AST parser that inspects Java source code t
 
 ## Architecture
 
-The project is divided into two primary submodules:
+The project is divided into three primary submodules:
 
 * `proyect-parser-core/`: The core parsing and export library containing AST traversal logic, internal domain models, and the diagram writer pipeline.
+* `proyect-parser-server/`: The REST web service that exposes the library over HTTP (JSON and multipart input, PlantUML output) and is ready to deploy on Railway.
 * `Proyecto_Poo/`: The reference application and domain model implementation demonstrating CLI integration, persistence, and automated diagram output.
 
 ## Docs
 
 * [Flujo de la librería en 3 fases](docs/flujo-3-fases.md) (ES): obtención de información → inferencia de relaciones → generación del `.puml`.
+* [API REST](docs/api.md) (ES): endpoints, formatos de entrada, filtros, opciones, errores, límites e integración desde otra aplicación.
+* OpenAPI 3.0: [`proyect-parser-server/src/main/resources/static/openapi.yaml`](proyect-parser-server/src/main/resources/static/openapi.yaml) (served at `/openapi.yaml`).
 
 ## Tech Stack
 
-* **Language:** Java
+* **Language:** Java 17
 * **Parser Engine:** [JavaParser](https://javaparser.org/) (`javaparser-core`)
 * **Diagram Notation:** [PlantUML](https://plantuml.com/)
+* **Web Service:** Spring Boot 3 (REST API, JSON/multipart)
 * **Build Tools:** Maven / Apache Ant
 
 ## Quick Start
 
 ### Prerequisites
 * JDK 17+ (or JDK 21)
-* Maven 3.8+ (for `proyect-parser-core`)
+* Maven 3.8+ (multi-module build)
 
 ### Library usage (filters + display options)
 
@@ -60,6 +64,46 @@ DiagramOptions opciones = new DiagramOptions.Builder()
 
 Path salida = fachada.exportPlantUml("ruta/a/src", Path.of("diagrama.puml"), filtro, opciones);
 ```
+
+### Web service (REST API)
+
+The `proyect-parser-server` module wraps the library in a Spring Boot service.
+It accepts a ZIP of `.java` sources, loose `.java` files, or a JSON array with
+`path`/`content` pairs, and returns the full model or the PlantUML diagram.
+
+Build and run from the repository root:
+
+```bash
+mvn -pl proyect-parser-server -am package
+java -jar proyect-parser-server/target/proyect-parser-server-1.0.0.jar
+```
+
+```bash
+curl http://localhost:8080/api/v1/health
+
+curl -s -X POST http://localhost:8080/api/v1/diagram/json \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectName": "demo",
+    "files": [
+      {"path": "Curso.java", "content": "public class Curso { private Profesor profesor; }"},
+      {"path": "Profesor.java", "content": "public class Profesor {}"}
+    ],
+    "options": {"showExternal": false}
+  }'
+```
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/v1/health` | Healthcheck used by Railway |
+| `GET /api/v1` | Endpoint index and active limits |
+| `POST /api/v1/analysis[/json]` | Full project model |
+| `POST /api/v1/diagram[/json]` | PlantUML as JSON |
+| `POST /api/v1/diagram/file[/json]` | Downloadable `.puml` file |
+
+Railway deployment is preconfigured with `Dockerfile`, `railway.json` and
+`/api/v1/health`. See the [REST API documentation](docs/api.md) for the complete
+contract, filters, options, error codes, limits and integration examples.
 
 ### AppGenerador flags
 

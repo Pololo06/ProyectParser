@@ -1,0 +1,767 @@
+openapi: 3.0.3
+info:
+  title: ProyectParser API
+  version: 1.0.0
+  description: |
+    REST API over the `proyect-parser-core` library. It analyzes Java source
+    files with JavaParser and returns either the full project model or a
+    PlantUML class diagram.
+
+    Input can be a ZIP archive, loose `.java` files (multipart), or a JSON array
+    with path/content pairs. The service never compiles the sources and never
+    executes uploaded code: it only parses source text into a temporary
+    workspace that is deleted after the request.
+
+    No authentication is configured. Add a reverse proxy, Railway private
+    networking, or an API gateway if the service must be restricted.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://{service}.up.railway.app
+    description: Railway deployment
+    variables:
+      service:
+        default: your-service
+
+tags:
+  - name: Service
+    description: Health and API discovery
+  - name: Analysis
+    description: Full project model
+  - name: Diagrams
+    description: PlantUML generation
+
+paths:
+  /api/v1/health:
+    get:
+      tags: [Service]
+      operationId: health
+      summary: Liveness/readiness check
+      responses:
+        '200':
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/v1:
+    get:
+      tags: [Service]
+      operationId: info
+      summary: Machine-readable API index
+      responses:
+        '200':
+          description: Endpoint list and active limits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiInfoResponse'
+
+  /openapi.yaml:
+    get:
+      tags: [Service]
+      operationId: openapi
+      summary: OpenAPI 3.0 contract
+      responses:
+        '200':
+          description: This document
+          content:
+            application/yaml:
+              schema:
+                type: string
+
+  /api/v1/analysis:
+    post:
+      tags: [Analysis]
+      operationId: analyzeMultipart
+      summary: Analyze a ZIP or loose .java files
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: ZIP archive containing .java files. Non-.java entries are ignored.
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Loose .java files (alternative or complement to the ZIP).
+                request:
+                  $ref: '#/components/schemas/DiagramRequest'
+            encoding:
+              file:
+                contentType: application/zip
+              request:
+                contentType: application/json
+      responses:
+        '200':
+          description: Full project model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/analysis/json:
+    post:
+      tags: [Analysis]
+      operationId: analyzeJson
+      summary: Analyze a JSON file list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonAnalysisRequest'
+      responses:
+        '200':
+          description: Full project model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/diagram:
+    post:
+      tags: [Diagrams]
+      operationId: diagramMultipart
+      summary: Generate PlantUML from a ZIP or loose .java files
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: ZIP archive containing .java files.
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Loose .java files.
+                request:
+                  $ref: '#/components/schemas/DiagramRequest'
+            encoding:
+              file:
+                contentType: application/zip
+              request:
+                contentType: application/json
+      responses:
+        '200':
+          description: PlantUML text and traceability data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagramResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/diagram/json:
+    post:
+      tags: [Diagrams]
+      operationId: diagramJson
+      summary: Generate PlantUML from a JSON file list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonAnalysisRequest'
+      responses:
+        '200':
+          description: PlantUML text and traceability data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagramResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/diagram/file:
+    post:
+      tags: [Diagrams]
+      operationId: diagramFileMultipart
+      summary: Generate a downloadable .puml file from a ZIP or loose .java files
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                request:
+                  $ref: '#/components/schemas/DiagramRequest'
+            encoding:
+              file:
+                contentType: application/zip
+              request:
+                contentType: application/json
+      responses:
+        '200':
+          description: PlantUML text as an attachment
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: attachment; filename="<project>.puml"
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/diagram/file/json:
+    post:
+      tags: [Diagrams]
+      operationId: diagramFileJson
+      summary: Generate a downloadable .puml file from a JSON file list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonAnalysisRequest'
+      responses:
+        '200':
+          description: PlantUML text as an attachment
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  responses:
+    BadRequest:
+      description: Invalid or empty source input, malformed JSON, or invalid options
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    TooLarge:
+      description: The multipart request or the uncompressed sources exceed the configured limits
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnsupportedMediaType:
+      description: Content type is neither application/json nor multipart/form-data
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+        service:
+          type: string
+          example: proyect-parser-api
+        version:
+          type: string
+          example: 1.0.0
+        timestamp:
+          type: string
+          format: date-time
+
+    ApiInfoResponse:
+      type: object
+      properties:
+        service:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        endpoints:
+          type: array
+          items:
+            type: object
+            properties:
+              method:
+                type: string
+              path:
+                type: string
+              contentType:
+                type: string
+              description:
+                type: string
+        limits:
+          type: object
+          properties:
+            maxFiles:
+              type: integer
+            maxFileBytes:
+              type: integer
+              format: int64
+            maxTotalBytes:
+              type: integer
+              format: int64
+
+    DiagramRequest:
+      type: object
+      description: Optional settings for a multipart call.
+      properties:
+        projectName:
+          type: string
+          description: Name reported as projectName and used for the .puml file. Sanitized to [A-Za-z0-9._-].
+          example: my-service
+        filter:
+          $ref: '#/components/schemas/FilterRequest'
+        options:
+          $ref: '#/components/schemas/OptionsRequest'
+
+    FilterRequest:
+      type: object
+      description: |
+        Blacklist/whitelist applied after analysis. Precedence:
+        blacklist > whitelist > allow. External (@external) boxes only obey
+        the blacklist.
+      properties:
+        excludePackages:
+          type: array
+          items:
+            type: string
+          example: [com.example.test]
+        excludeClasses:
+          type: array
+          items:
+            type: string
+          example: [Utilidades]
+        includePackages:
+          type: array
+          items:
+            type: string
+          description: If any include list is non-empty, only listed packages/classes pass.
+          example: [com.example.model]
+        includeClasses:
+          type: array
+          items:
+            type: string
+
+    OptionsRequest:
+      type: object
+      description: Display switches. Omitted fields keep the library default.
+      properties:
+        showGettersSetters:
+          type: boolean
+          nullable: true
+          default: true
+        showAttributes:
+          type: boolean
+          nullable: true
+          default: true
+        showMethods:
+          type: boolean
+          nullable: true
+          default: true
+        showConstructors:
+          type: boolean
+          nullable: true
+          default: true
+        showExternal:
+          type: boolean
+          nullable: true
+          default: true
+        showJdkTypes:
+          type: boolean
+          nullable: true
+          default: true
+        showDependencies:
+          type: boolean
+          nullable: true
+          default: true
+        groupByPackage:
+          type: boolean
+          nullable: true
+          default: true
+        shortSignatures:
+          type: boolean
+          nullable: true
+          default: false
+        hideOrphans:
+          type: boolean
+          nullable: true
+          default: false
+        summary:
+          type: boolean
+          nullable: true
+          default: false
+        groupLayers:
+          type: boolean
+          nullable: true
+          default: false
+        lineType:
+          type: string
+          nullable: true
+          enum: [ortho, polyline, spline]
+          description: Relationship line style (skinparam linetype).
+        layerOrder:
+          type: array
+          items:
+            type: string
+          description: Layer segments ordered top to bottom; enables layer-directed arrows and hidden links.
+          example: [domain, application, infrastructure]
+        allowedDependencies:
+          type: array
+          items:
+            type: string
+            pattern: '^[^>]+->[^>]+$'
+          description: '"Source->Target" dependencies that survive showDependencies=false.'
+
+    SourceFileRequest:
+      type: object
+      required: [path, content]
+      properties:
+        path:
+          type: string
+          description: Relative .java path used for traceability. Must not be absolute or contain '..'.
+          example: src/main/java/com/example/Curso.java
+        content:
+          type: string
+          description: Complete Java source code.
+          example: "package com.example;\npublic class Curso {}\n"
+
+    JsonAnalysisRequest:
+      type: object
+      required: [files]
+      properties:
+        projectName:
+          type: string
+          nullable: true
+          example: my-service
+        files:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SourceFileRequest'
+        filter:
+          $ref: '#/components/schemas/FilterRequest'
+        options:
+          $ref: '#/components/schemas/OptionsRequest'
+
+    Statistics:
+      type: object
+      properties:
+        totalJavaFiles:
+          type: integer
+          description: .java files found in the uploaded tree.
+        parsedJavaFiles:
+          type: integer
+        failedJavaFiles:
+          type: integer
+        classes:
+          type: integer
+          description: Internal source types after filtering (excludes @external).
+        externalClasses:
+          type: integer
+          description: External @external boxes after filtering.
+        relationships:
+          type: integer
+        packages:
+          type: integer
+          description: Internal packages after filtering.
+
+    Package:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Raw package name; empty for the default package.
+        displayName:
+          type: string
+          example: com.example.model
+        typeCount:
+          type: integer
+        types:
+          type: array
+          items:
+            type: string
+
+    Attribute:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        modifiers:
+          type: array
+          items:
+            type: string
+        initialValue:
+          type: string
+          nullable: true
+
+    Parameter:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+
+    Method:
+      type: object
+      properties:
+        name:
+          type: string
+        returnType:
+          type: string
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/Parameter'
+        modifiers:
+          type: array
+          items:
+            type: string
+        typeParameters:
+          type: array
+          items:
+            type: string
+
+    Constructor:
+      type: object
+      properties:
+        name:
+          type: string
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/Parameter'
+        modifiers:
+          type: array
+          items:
+            type: string
+        typeParameters:
+          type: array
+          items:
+            type: string
+
+    Class:
+      type: object
+      description: Parsed internal Java type (external boxes are returned in externalClasses).
+      properties:
+        id:
+          type: string
+          description: Simple name, or FQN when another class shares it. Relationship endpoints use this value.
+        name:
+          type: string
+        fqn:
+          type: string
+        packageName:
+          type: string
+        kind:
+          type: string
+          enum: [Class, AbstractClass, Interface, Enum, Record, Annotation]
+        abstractType:
+          type: boolean
+        external:
+          type: boolean
+        stereotypes:
+          type: array
+          items:
+            type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attribute'
+        methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/Method'
+        constructors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Constructor'
+        extendedTypes:
+          type: array
+          items:
+            type: string
+        implementedTypes:
+          type: array
+          items:
+            type: string
+        enumConstants:
+          type: array
+          items:
+            type: string
+        typeParameters:
+          type: array
+          items:
+            type: string
+
+    Relationship:
+      type: object
+      properties:
+        source:
+          type: string
+          description: Class id.
+        target:
+          type: string
+          description: Class id or external id.
+        type:
+          type: string
+          enum: [EXTENDS, IMPLEMENTS, ASSOCIATION, DEPENDENCY, NESTING]
+
+    AnalysisResponse:
+      type: object
+      properties:
+        projectName:
+          type: string
+        statistics:
+          $ref: '#/components/schemas/Statistics'
+        kinds:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            Class: 12
+            Interface: 3
+        packages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Package'
+        classes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Class'
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/Relationship'
+        externalClasses:
+          type: object
+          additionalProperties:
+            type: string
+          description: External id -> real package (for example UUID -> java.util).
+        failedFiles:
+          type: array
+          items:
+            type: string
+          description: Relative paths of files that could not be parsed.
+        failureReasons:
+          type: array
+          items:
+            type: string
+          description: '"relative/path.java -> reason" entries.'
+
+    DiagramResponse:
+      type: object
+      properties:
+        projectName:
+          type: string
+        fileName:
+          type: string
+          example: my-service.puml
+        plantUml:
+          type: string
+          description: Complete @startuml ... @enduml document.
+        statistics:
+          $ref: '#/components/schemas/Statistics'
+        failedFiles:
+          type: array
+          items:
+            type: string
+        failureReasons:
+          type: array
+          items:
+            type: string
+
+    Problem:
+      type: object
+      description: RFC 7807 application/problem+json.
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+          example: Invalid source input
+        status:
+          type: integer
+          example: 400
+        detail:
+          type: string
+        instance:
+          type: string
+          example: /api/v1/analysis/json
+        code:
+          type: string
+          enum:
+            - INVALID_SOURCE
+            - INVALID_ARGUMENT
+            - UPLOAD_TOO_LARGE
+            - INVALID_MULTIPART
+            - MISSING_PART
+            - MISSING_PARAMETER
+            - MALFORMED_BODY
+            - UNSUPPORTED_MEDIA_TYPE
+            - METHOD_NOT_ALLOWED
+            - NOT_FOUND
+            - INTERNAL_IO_ERROR
+            - INTERNAL_ERROR

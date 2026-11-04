@@ -1,0 +1,20 @@
+# Version control and local tooling
+.git
+.gitignore
+.idea
+*.iml
+
+# Local build outputs (regenerated inside the image)
+**/target
+**/dist
+**/*.class
+**/*.jar
+
+# Reference Ant application, not needed by the REST service
+Proyecto_Poo
+
+# Documentation and diagrams are not required at runtime
+docs
+*.md
+*.log
+.DS_Store

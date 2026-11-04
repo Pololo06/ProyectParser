@@ -16,7 +16,9 @@ Proyecto_Poo/librerias/javaparser-core.jar
 Proyecto_Poo/dist/lib/
 
 # build local de Maven
+/target/
 proyect-parser-core/target/
+proyect-parser-server/target/
 
 # herramientas de refactor y verificación (no necesarias para ejecutar el proyecto)
 verificar.sh
