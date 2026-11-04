@@ -395,7 +395,7 @@ en ese caso es el FQN. Los extremos de `relationships` usan ese mismo `id`.
 | `IMPLEMENTS` | Implementación de interfaz | `Interfaz <\|.. Impl` |
 | `ASSOCIATION` | Tipo de atributo/campo | `Origen --> Destino` |
 | `DEPENDENCY` | Tipo usado solo en firmas de métodos/constructores | `Origen ..> Destino` |
-| `NESTING` | Tipo anidado hacia su contenedor directo | `Anidado +-- Contenedor` |
+| `NESTING` | Tipo anidado hacia su contenedor directo | `Contenedor +-- Anidado` |
 
 ---
 

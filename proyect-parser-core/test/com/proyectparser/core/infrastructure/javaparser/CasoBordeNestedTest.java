@@ -142,19 +142,19 @@ class CasoBordeNestedTest {
             }
         }
         Set<String> expected = new TreeSet<>(List.of(
-                "com.unimag.ConnectionStatus +-- com.unimag.Connection",
-                "com.unimag.Service +-- com.unimag.Module",
-                "com.unimag.Cache +-- com.unimag.Repository",
-                "com.unimag.Configuration +-- com.unimag.NestedProject",
-                "com.unimag.Connection +-- com.unimag.Database",
-                "com.unimag.Environment +-- com.unimag.Configuration",
+                "com.unimag.Connection +-- com.unimag.ConnectionStatus",
+                "com.unimag.Module +-- com.unimag.Service",
+                "com.unimag.Repository +-- com.unimag.Cache",
+                "com.unimag.NestedProject +-- com.unimag.Configuration",
+                "com.unimag.Database +-- com.unimag.Connection",
+                "com.unimag.Configuration +-- com.unimag.Environment",
                 "com.unimag.Connectable <|.. com.unimag.Connection",
-                "com.unimag.Module +-- com.unimag.NestedProject",
-                "com.unimag.Database +-- com.unimag.Configuration",
-                "com.unimag.DatabaseListener +-- com.unimag.Database",
-                "com.unimag.Identifiable +-- com.unimag.NestedProject",
-                "com.unimag.AbstractConnection +-- com.unimag.NestedProject",
-                "com.unimag.Repository +-- com.unimag.Service"));
+                "com.unimag.NestedProject +-- com.unimag.Module",
+                "com.unimag.Configuration +-- com.unimag.Database",
+                "com.unimag.Database +-- com.unimag.DatabaseListener",
+                "com.unimag.NestedProject +-- com.unimag.Identifiable",
+                "com.unimag.NestedProject +-- com.unimag.AbstractConnection",
+                "com.unimag.Service +-- com.unimag.Repository"));
         assertEquals(expected, relations);
     }
 

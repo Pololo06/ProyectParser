@@ -104,8 +104,8 @@ class PlantUmlGeneratorTest {
                         new RelationshipModel("Deep", "Outer", RelType.EXTENDS.label()),
                         new RelationshipModel("Deep", "Other", RelType.IMPLEMENTS.label())));
         String puml = new PlantUmlGenerator().render(proyecto, DiagramOptions.defaults());
-        assertTrue(puml.contains("\nx.app.Inner +-- x.app.Outer\n"), puml);
-        assertTrue(puml.contains("\nx.app.Deep +-- x.app.Inner\n"), puml);
+        assertTrue(puml.contains("\nx.app.Outer +-- x.app.Inner\n"), puml);
+        assertTrue(puml.contains("\nx.app.Inner +-- x.app.Deep\n"), puml);
         assertTrue(puml.contains("\nx.app.Other <|.. x.app.Deep\n"), puml);
         assertFalse(puml.contains("x.app.Outer --> x.app.Inner"), puml);
         assertFalse(puml.contains("x.app.Outer <|-- x.app.Deep"), puml);

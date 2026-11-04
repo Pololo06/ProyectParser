@@ -30,3 +30,4 @@ proyect-parser-core_tree.txt
 *.bak-*
 docs/diagramas/*.puml
 docs/diagramas/*.png
+/output/pdf/informe-casos-generador.pdf

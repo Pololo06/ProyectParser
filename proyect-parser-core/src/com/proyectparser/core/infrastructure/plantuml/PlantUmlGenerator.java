@@ -38,7 +38,8 @@ import java.util.TreeMap;
  *
  * <p>Members follow the notation {@code -  {readOnly} name : Type = value},
  * {@code +  {abstract} op(p : T) : R} and {@code +  Name() : void <<Create>>} for constructors;
- * nested types are linked to their enclosing type with {@code Nested +-- Enclosing}.</p>
+ * nested types are linked from their enclosing type to the nested type with
+ * {@code Enclosing +-- Nested}.</p>
  */
 public class PlantUmlGenerator implements DiagramRendererPort {
 
@@ -477,11 +478,13 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         // In PlantUML the triangle head points at the parent:
         // "Parent <|-- Child", "Interface <|.. Implementation".
         // Our model stores source=child, target=parent, so swap them here.
-        // Nesting keeps the model order, "Nested +-- Enclosing", as the reference diagrams write it.
         String type = relationship.getType();
         boolean inheritance = RelType.EXTENDS.label().equals(type) || RelType.IMPLEMENTS.label().equals(type);
-        String left = inheritance ? relationship.getTarget() : relationship.getSource();
-        String right = inheritance ? relationship.getSource() : relationship.getTarget();
+        boolean nesting = RelType.NESTING.label().equals(type);
+        // Inheritance stores child -> parent but PlantUML draws parent -> child.
+        // Nesting stores nested -> enclosing and is likewise drawn enclosing -> nested.
+        String left = inheritance || nesting ? relationship.getTarget() : relationship.getSource();
+        String right = inheritance || nesting ? relationship.getSource() : relationship.getTarget();
         // Unmodeled endpoints have no alias and are written as they come.
         builder.append(aliases.getOrDefault(left, left))
                 .append(" ")
