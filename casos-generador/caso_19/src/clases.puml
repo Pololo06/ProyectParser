@@ -1,0 +1,35 @@
+@startuml
+
+package org.evilmind.relations {
+    class Case19Application {
+    +  {static} main(args : String[]) : void
+    }
+    class TaxCategory {
+    -  {readOnly} categoryId : Long
+    -  {readOnly} categoryName : String
+    -  {readOnly} defaultSurcharge : BigDecimal
+    -  {readOnly} hierarchyLevel : Short
+    -  {readOnly} parentCategory : TaxCategory
+    -  {readOnly} subCategories : List<TaxCategory>
+    +  TaxCategory(categoryId : Long, categoryName : String, defaultSurcharge : BigDecimal, hierarchyLevel : Short, parentCategory : TaxCategory, subCategories : List<TaxCategory>) : void <<Create>>
+    +  getCategoryId() : Long
+    +  getCategoryName() : String
+    +  getDefaultSurcharge() : BigDecimal
+    +  getHierarchyLevel() : Short
+    +  getParentCategory() : TaxCategory
+    +  getSubCategories() : List<TaxCategory>
+    +  isRootCategory() : Boolean
+    +  isLeafCategory() : Boolean
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.relations.TaxCategory ..> java.math.BigDecimal : <<use>>
+org.evilmind.relations.TaxCategory "1" --> "1" org.evilmind.relations.TaxCategory
+
+@enduml

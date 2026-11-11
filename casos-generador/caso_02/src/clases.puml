@@ -1,0 +1,56 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.nested {
+    class EnterpriseHierarchy {
+    -  enterpriseId : Long
+    -  enterpriseCode : String
+    -  registeredDate : OffsetDateTime
+    +  EnterpriseHierarchy(enterpriseId : Long, enterpriseCode : String, registeredDate : OffsetDateTime) : void <<Create>>
+    +  getEnterpriseId() : Long
+    +  getEnterpriseCode() : String
+    +  getRegisteredDate() : OffsetDateTime
+    }
+    class DepartmentNode {
+    -  departmentId : Long
+    -  costCenterCode : Short
+    -  operationalExpense : BigDecimal
+    -  lastAuditTime : OffsetDateTime
+    +  DepartmentNode(departmentId : Long, costCenterCode : Short, operationalExpense : BigDecimal, lastAuditTime : OffsetDateTime) : void <<Create>>
+    +  getDepartmentId() : Long
+    +  getCostCenterCode() : Short
+    +  getOperationalExpense() : BigDecimal
+    +  getLastAuditTime() : OffsetDateTime
+    }
+    class Case02Application {
+    +  {static} main(args : String[]) : void
+    }
+    class DivisionUnit {
+    -  divisionId : Long
+    -  divisionName : String
+    -  allocatedBudget : BigDecimal
+    +  DivisionUnit(divisionId : Long, divisionName : String, allocatedBudget : BigDecimal) : void <<Create>>
+    +  getDivisionId() : Long
+    +  getDivisionName() : String
+    +  getAllocatedBudget() : BigDecimal
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.nested.EnterpriseHierarchy ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.nested.DivisionUnit ..> java.math.BigDecimal : <<use>>
+org.evilmind.nested.EnterpriseHierarchy +-- org.evilmind.nested.DivisionUnit
+org.evilmind.nested.DepartmentNode ..> java.math.BigDecimal : <<use>>
+org.evilmind.nested.DepartmentNode ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.nested.DivisionUnit +-- org.evilmind.nested.DepartmentNode
+
+@enduml

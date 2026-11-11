@@ -1,0 +1,53 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.bounds {
+    class Case14Application {
+    +  {static} main(args : String[]) : void
+    }
+    class TransactionBatchSorter<T extends FinancialValuable & AuditableTransaction> {
+    -  {readOnly} batchPriority : Short
+    +  TransactionBatchSorter(batchPriority : Short) : void <<Create>>
+    +  getBatchPriority() : Short
+    +  calculateWeightedValue(item : T) : BigDecimal
+    +  resolveSequence(item : T) : Long
+    }
+    interface AuditableTransaction <<Interface>> {
+    +  {abstract} getTransactionSequence() : Long
+    +  {abstract} getExecutionTime() : OffsetDateTime
+    }
+    interface FinancialValuable <<Interface>> {
+    +  {abstract} getNetAssetValue() : BigDecimal
+    }
+    class TreasuryDisbursement <<Final>> {
+    -  {readOnly} transactionSequence : Long
+    -  {readOnly} netAssetValue : BigDecimal
+    -  {readOnly} executionTime : OffsetDateTime
+    +  TreasuryDisbursement(transactionSequence : Long, netAssetValue : BigDecimal, executionTime : OffsetDateTime) : void <<Create>>
+    +  getTransactionSequence() : Long
+    +  getNetAssetValue() : BigDecimal
+    +  getExecutionTime() : OffsetDateTime
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.bounds.AuditableTransaction ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.bounds.TransactionBatchSorter ..> java.math.BigDecimal : <<use>>
+org.evilmind.bounds.TreasuryDisbursement ..> java.math.BigDecimal : <<use>>
+org.evilmind.bounds.TransactionBatchSorter ..> org.evilmind.bounds.AuditableTransaction : <<use>>
+org.evilmind.bounds.TransactionBatchSorter ..> org.evilmind.bounds.FinancialValuable : <<use>>
+org.evilmind.bounds.TreasuryDisbursement ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.bounds.AuditableTransaction <|.. org.evilmind.bounds.TreasuryDisbursement
+org.evilmind.bounds.FinancialValuable <|.. org.evilmind.bounds.TreasuryDisbursement
+org.evilmind.bounds.FinancialValuable ..> java.math.BigDecimal : <<use>>
+
+@enduml

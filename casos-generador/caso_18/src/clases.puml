@@ -1,0 +1,54 @@
+@startuml
+
+package org.evilmind.relations {
+    class Case18Application {
+    +  {static} main(args : String[]) : void
+    }
+    class JurisdictionZone {
+    -  {readOnly} zoneCode : String
+    -  {readOnly} zoneName : String
+    -  {readOnly} countryIsoNumeric : Short
+    +  JurisdictionZone(zoneCode : String, zoneName : String, countryIsoNumeric : Short) : void <<Create>>
+    +  getZoneCode() : String
+    +  getZoneName() : String
+    +  getCountryIsoNumeric() : Short
+    }
+    class FiscalPolicy {
+    -  {readOnly} policyId : Long
+    -  {readOnly} defaultTaxRate : BigDecimal
+    -  {readOnly} effectiveFrom : OffsetDateTime
+    +  FiscalPolicy(policyId : Long, defaultTaxRate : BigDecimal, effectiveFrom : OffsetDateTime) : void <<Create>>
+    +  getPolicyId() : Long
+    +  getDefaultTaxRate() : BigDecimal
+    +  getEffectiveFrom() : OffsetDateTime
+    }
+    class NationalFiscalDirectory {
+    -  {readOnly} directoryId : Long
+    -  {readOnly} lastSynchronized : OffsetDateTime
+    -  {readOnly} zonePolicies : Map<JurisdictionZone, FiscalPolicy>
+    +  NationalFiscalDirectory(directoryId : Long, lastSynchronized : OffsetDateTime, zonePolicies : Map<JurisdictionZone, FiscalPolicy>) : void <<Create>>
+    +  getDirectoryId() : Long
+    +  getLastSynchronized() : OffsetDateTime
+    +  getZonePolicies() : Map<JurisdictionZone, FiscalPolicy>
+    +  resolvePolicy(zone : JurisdictionZone) : FiscalPolicy
+    }
+}
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.relations.FiscalPolicy ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.relations.NationalFiscalDirectory "1" o-- "*" org.evilmind.relations.JurisdictionZone
+org.evilmind.relations.NationalFiscalDirectory ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.relations.FiscalPolicy ..> java.math.BigDecimal : <<use>>
+org.evilmind.relations.NationalFiscalDirectory "1" o-- "*" org.evilmind.relations.FiscalPolicy
+
+@enduml

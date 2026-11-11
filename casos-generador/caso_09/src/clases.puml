@@ -1,0 +1,70 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.advanced {
+    class Case09Application {
+    +  {static} main(args : String[]) : void
+    }
+    class TaxAssessmentManager {
+    -  {readOnly} managerId : Long
+    -  {readOnly} authorityName : String
+    -  {readOnly} auditTimestamp : OffsetDateTime
+    -  {readOnly} jurisdictionTier : Short
+    +  TaxAssessmentManager(managerId : Long, authorityName : String, auditTimestamp : OffsetDateTime, jurisdictionTier : Short) : void <<Create>>
+    +  getManagerId() : Long
+    +  getAuthorityName() : String
+    +  getAuditTimestamp() : OffsetDateTime
+    +  getJurisdictionTier() : Short
+    +  executeAssessment(payer : TaxPayerRecord, strategy : RateStrategy) : BigDecimal
+    }
+}
+
+package org.evilmind.advanced.TaxAssessmentManager {
+    class TaxPayerRecord <<Record>> {
+    +  {readOnly} taxpayerId : Long
+    +  {readOnly} taxCode : String
+    +  {readOnly} declaredRevenue : BigDecimal
+    +  {readOnly} declaredAt : OffsetDateTime
+    +  {readOnly} complianceStatus : Short
+    +  {static, readOnly} REVENUE_LIMIT : BigDecimal = new BigDecimal("10000000.00")
+    +  isCorporate() : Boolean
+    }
+    interface TaxRuleContract <<Interface>> {
+    +  {abstract} evaluate(payer : TaxPayerRecord) : BigDecimal
+    +  {abstract} getRulePriority() : Short
+    }
+    enum RateStrategy {
+    +  {static, readOnly} STANDARD : RateStrategy
+    +  {static, readOnly} REDUCED : RateStrategy
+    +  {static, readOnly} EXEMPT : RateStrategy
+    -  {readOnly} rulePriority : Short
+    -  {readOnly} baseRate : BigDecimal
+    ~  RateStrategy(rulePriority : Short, baseRate : BigDecimal) : void <<Create>>
+    +  getBaseRate() : BigDecimal
+    +  getRulePriority() : Short
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.advanced.TaxAssessmentManager +-- org.evilmind.advanced.TaxAssessmentManager.TaxRuleContract
+org.evilmind.advanced.TaxAssessmentManager +-- org.evilmind.advanced.TaxAssessmentManager.RateStrategy
+org.evilmind.advanced.TaxAssessmentManager.RateStrategy ..> java.math.BigDecimal : <<use>>
+org.evilmind.advanced.TaxAssessmentManager.TaxPayerRecord ..> java.math.BigDecimal : <<use>>
+org.evilmind.advanced.TaxAssessmentManager ..> java.math.BigDecimal : <<use>>
+org.evilmind.advanced.TaxAssessmentManager.TaxRuleContract ..> java.math.BigDecimal : <<use>>
+org.evilmind.advanced.TaxAssessmentManager.TaxRuleContract <|.. org.evilmind.advanced.TaxAssessmentManager.RateStrategy
+org.evilmind.advanced.TaxAssessmentManager ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.advanced.TaxAssessmentManager.TaxPayerRecord ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.advanced.TaxAssessmentManager.TaxRuleContract ..> org.evilmind.advanced.TaxAssessmentManager.TaxPayerRecord : <<use>>
+org.evilmind.advanced.TaxAssessmentManager +-- org.evilmind.advanced.TaxAssessmentManager.TaxPayerRecord
+
+@enduml

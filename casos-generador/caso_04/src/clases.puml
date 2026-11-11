@@ -1,0 +1,41 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.nested {
+    class TaxExecutionService {
+    -  {readOnly} serviceId : Long
+    -  {readOnly} jurisdictionCode : String
+    -  {readOnly} flatRate : BigDecimal
+    -  {readOnly} activatedAt : OffsetDateTime
+    +  TaxExecutionService(serviceId : Long, jurisdictionCode : String, flatRate : BigDecimal, activatedAt : OffsetDateTime) : void <<Create>>
+    +  getServiceId() : Long
+    +  getJurisdictionCode() : String
+    +  getFlatRate() : BigDecimal
+    +  getActivatedAt() : OffsetDateTime
+    +  processTaxesWithInternalConstructs(rawAmount : BigDecimal, multiplier : Short) : BigDecimal
+    }
+    class LocalTaxCalculator {
+    -  {readOnly} base : BigDecimal
+    ~  LocalTaxCalculator(base : BigDecimal) : void <<Create>>
+    ~  compute() : BigDecimal
+    }
+    class Case04Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.nested.LocalTaxCalculator ..> java.math.BigDecimal : <<use>>
+org.evilmind.nested.TaxExecutionService ..> java.math.BigDecimal : <<use>>
+org.evilmind.nested.TaxExecutionService ..> java.time.OffsetDateTime : <<use>>
+
+@enduml

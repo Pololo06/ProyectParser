@@ -1,0 +1,35 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+package org.evilmind.records {
+    class FinancialAuditRecord <<Record>> {
+    +  {readOnly} auditId : Long
+    +  {readOnly} trackingToken : String
+    +  {readOnly} grossAmount : BigDecimal
+    +  {readOnly} taxAmount : BigDecimal
+    +  {readOnly} auditTimestamp : OffsetDateTime
+    +  {readOnly} riskLevelCode : Short
+    +  {static, readOnly} COMPLIANCE_VERSION : String = "ISO-20022"
+    +  calculateNetAmount() : BigDecimal
+    +  requiresManualReview() : Boolean
+    +  {static} isValidRiskCode(code : Short) : Boolean
+    }
+    class Case05Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.records.FinancialAuditRecord ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.records.FinancialAuditRecord ..> java.math.BigDecimal : <<use>>
+
+@enduml

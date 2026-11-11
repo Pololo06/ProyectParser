@@ -1,0 +1,47 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.template {
+    class HighFrequencyRiskEngine {
+    -  {readOnly} latencyThresholdMs : Short
+    +  HighFrequencyRiskEngine(engineId : Long, baseThreshold : BigDecimal, riskMatrixCube : int[][][], factorWeightGrid : BigDecimal[][], checkpointTimestamps : OffsetDateTime[], latencyThresholdMs : Short) : void <<Create>>
+    +  getLatencyThresholdMs() : Short
+    #  computeRiskScore(rawMetrics : int[][][], weights : BigDecimal[][]) : BigDecimal
+    }
+    abstract class AbstractRiskEngine <<Abstract>> {
+    #  engineId : Long
+    #  baseThreshold : BigDecimal
+    #  riskMatrixCube : int[][][]
+    #  factorWeightGrid : BigDecimal[][]
+    -  {readOnly} checkpointTimestamps : OffsetDateTime[]
+    #  AbstractRiskEngine(engineId : Long, baseThreshold : BigDecimal, riskMatrixCube : int[][][], factorWeightGrid : BigDecimal[][], checkpointTimestamps : OffsetDateTime[]) : void <<Create>>
+    +  getEngineId() : Long
+    +  getBaseThreshold() : BigDecimal
+    +  getRiskMatrixCube() : int[][][]
+    +  getFactorWeightGrid() : BigDecimal[][]
+    +  getCheckpointTimestamps() : OffsetDateTime[]
+    +  {final} executeEvaluation(inputCube : int[][][]) : BigDecimal
+    #  validateInput(inputCube : int[][][]) : Boolean
+    #  {abstract} computeRiskScore(rawMetrics : int[][][], weights : BigDecimal[][]) : BigDecimal
+    }
+    class Case12Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.template.AbstractRiskEngine <|-- org.evilmind.template.HighFrequencyRiskEngine
+org.evilmind.template.AbstractRiskEngine ..> java.math.BigDecimal : <<use>>
+org.evilmind.template.HighFrequencyRiskEngine ..> java.math.BigDecimal : <<use>>
+org.evilmind.template.AbstractRiskEngine ..> java.time.OffsetDateTime : <<use>>
+
+@enduml

@@ -1,0 +1,45 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.services {
+    class TaxCalculationService {
+    -  {readOnly} serviceIdentifier : String
+    -  {readOnly} statutoryRate : BigDecimal
+    +  TaxCalculationService(serviceIdentifier : String, statutoryRate : BigDecimal) : void <<Create>>
+    +  getServiceIdentifier() : String
+    +  getStatutoryRate() : BigDecimal
+    +  computeTaxLiability(taxpayer : FiscalTaxpayer) : BigDecimal
+    +  adjustTaxpayerIncome(originalTaxpayer : FiscalTaxpayer, adjustmentDelta : BigDecimal) : FiscalTaxpayer
+    }
+    class Case21Application {
+    +  {static} main(args : String[]) : void
+    }
+    class FiscalTaxpayer {
+    -  {readOnly} taxpayerId : Long
+    -  {readOnly} taxIdentificationCode : String
+    -  {readOnly} declaredIncome : BigDecimal
+    -  {readOnly} registrationTimestamp : OffsetDateTime
+    +  FiscalTaxpayer(taxpayerId : Long, taxIdentificationCode : String, declaredIncome : BigDecimal, registrationTimestamp : OffsetDateTime) : void <<Create>>
+    +  getTaxpayerId() : Long
+    +  getTaxIdentificationCode() : String
+    +  getDeclaredIncome() : BigDecimal
+    +  getRegistrationTimestamp() : OffsetDateTime
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.services.TaxCalculationService ..> java.math.BigDecimal : <<use>>
+org.evilmind.services.TaxCalculationService ..> org.evilmind.services.FiscalTaxpayer : <<use>>
+org.evilmind.services.FiscalTaxpayer ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.services.FiscalTaxpayer ..> java.math.BigDecimal : <<use>>
+
+@enduml

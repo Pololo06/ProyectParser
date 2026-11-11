@@ -2,6 +2,7 @@ package com.proyectparser.core.infrastructure.javaparser;
 
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Pure string-level parsing of Java type expressions (paso 1 del split).
@@ -9,6 +10,8 @@ import java.util.Set;
  * name extraction and type-variable exclusion over raw type strings.
  */
 class GenericTypeParser {
+
+    private static final Pattern WILDCARD_BOUND = Pattern.compile("\\?\\s*(extends|super)\\s+[\\w.]+");
 
     private GenericTypeParser() {
     }
@@ -31,6 +34,12 @@ class GenericTypeParser {
             return (first != null && first.contains(name)) || (second != null && second.contains(name));
         });
         return references;
+    }
+
+    static Set<String> signatureReferences(String type, List<String> first, List<String> second) {
+        // A wildcard is a use-site constraint. Keep concrete signature types and
+        // declaration-site bounds as separate sources of dependencies.
+        return visibleReferences(WILDCARD_BOUND.matcher(type).replaceAll(""), first, second);
     }
 
     static String simpleName(String typeName) {

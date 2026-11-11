@@ -1,0 +1,48 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.wildcards {
+    class TaxHoldingEntity {
+    -  {readOnly} holdingJurisdiction : Short
+    -  {readOnly} registeredDate : OffsetDateTime
+    +  TaxHoldingEntity(entityId : Long, declaredWorth : BigDecimal, holdingJurisdiction : Short, registeredDate : OffsetDateTime) : void <<Create>>
+    +  getHoldingJurisdiction() : Short
+    +  getRegisteredDate() : OffsetDateTime
+    }
+    class FiscalEntity {
+    -  {readOnly} entityId : Long
+    -  {readOnly} declaredWorth : BigDecimal
+    +  FiscalEntity(entityId : Long, declaredWorth : BigDecimal) : void <<Create>>
+    +  getEntityId() : Long
+    +  getDeclaredWorth() : BigDecimal
+    }
+    class TaxVarianceProcessor {
+    -  {readOnly} processorCode : Short
+    +  TaxVarianceProcessor(processorCode : Short) : void <<Create>>
+    +  getProcessorCode() : Short
+    +  processProducer(entityProducer : Supplier<? extends FiscalEntity>) : BigDecimal
+    +  supplyToConsumer(entityConsumer : Consumer<? super TaxHoldingEntity>, payload : TaxHoldingEntity) : Boolean
+    +  inspectUnknown(unknownSupplier : Supplier<?>) : Boolean
+    }
+    class Case16Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.wildcards.FiscalEntity <|-- org.evilmind.wildcards.TaxHoldingEntity
+org.evilmind.wildcards.TaxHoldingEntity ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.wildcards.FiscalEntity ..> java.math.BigDecimal : <<use>>
+org.evilmind.wildcards.TaxVarianceProcessor ..> java.math.BigDecimal : <<use>>
+org.evilmind.wildcards.TaxVarianceProcessor ..> org.evilmind.wildcards.TaxHoldingEntity : <<use>>
+
+@enduml

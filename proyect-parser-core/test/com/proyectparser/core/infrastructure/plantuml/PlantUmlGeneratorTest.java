@@ -138,7 +138,7 @@ class PlantUmlGeneratorTest {
         assertTrue(puml.contains("+  {abstract} ejecutar() : void\n"), puml);
         assertTrue(puml.contains("interface Puerto <<Interface>> {"), puml);
         assertTrue(puml.contains("+  {abstract} abrir() : void\n"), puml);
-        assertTrue(puml.contains("+  cerrar() : void\n"), puml);
+        assertTrue(puml.contains("+  {default} cerrar() : void\n"), puml);
         assertTrue(puml.contains("+  {static, readOnly} ON : Estado\n"), puml);
         assertTrue(puml.contains("skinparam defaultFontName Helvetica\n"), puml);
         assertTrue(puml.contains("skinparam linetype ortho\n"), puml);

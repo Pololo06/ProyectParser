@@ -1,0 +1,55 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+package org.evilmind.resilience {
+    class Case10Application {
+    +  {static} main(args : String[]) : void
+    }
+    interface FiscalContract <<Sealed>> {
+    +  {static, readOnly} DEFAULT_SURCHARGE_RATE : BigDecimal = new BigDecimal("0.015")
+    +  {abstract} calculateBaseTax(grossAmount : BigDecimal) : BigDecimal
+    +  {default} calculateTaxWithSurcharge(grossAmount : BigDecimal) : BigDecimal
+    +  {static} isStandardPeriod(timestamp : OffsetDateTime) : Boolean
+    -  applyInternalSurcharge(amount : BigDecimal) : BigDecimal
+    }
+    class StandardFiscalLedger <<Final>> {
+    +  ledgerId : Long
+    #  ledgerFolio : String
+    ~  revisionNumber : Short
+    -  accumulatedTotal : BigDecimal
+    +  StandardFiscalLedger(ledgerId : Long, ledgerFolio : String, revisionNumber : Short, accumulatedTotal : BigDecimal) : void <<Create>>
+    +  calculateBaseTax(grossAmount : BigDecimal) : BigDecimal
+    +  getLedgerId() : Long
+    #  resolveFolioHeader() : String
+    ~  retrieveRevision() : Short
+    -  inspectAccumulated() : BigDecimal
+    }
+    class CustomFiscalLedger <<Non-Sealed>> {
+    -  {readOnly} customMultiplier : BigDecimal
+    -  {readOnly} registeredDate : OffsetDateTime
+    +  CustomFiscalLedger(customMultiplier : BigDecimal, registeredDate : OffsetDateTime) : void <<Create>>
+    +  calculateBaseTax(grossAmount : BigDecimal) : BigDecimal
+    +  getCustomMultiplier() : BigDecimal
+    +  getRegisteredDate() : OffsetDateTime
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.resilience.FiscalContract <|.. org.evilmind.resilience.CustomFiscalLedger
+org.evilmind.resilience.CustomFiscalLedger ..> java.math.BigDecimal : <<use>>
+org.evilmind.resilience.FiscalContract ..> java.math.BigDecimal : <<use>>
+org.evilmind.resilience.StandardFiscalLedger ..> java.math.BigDecimal : <<use>>
+org.evilmind.resilience.FiscalContract ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.resilience.FiscalContract <|.. org.evilmind.resilience.StandardFiscalLedger
+org.evilmind.resilience.CustomFiscalLedger ..> java.time.OffsetDateTime : <<use>>
+
+@enduml

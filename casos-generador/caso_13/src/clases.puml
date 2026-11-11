@@ -1,0 +1,57 @@
+@startuml
+
+package org.evilmind.generics {
+    abstract class AbstractPayloadRepository<T extends IdentifiablePayload> <<Abstract>> {
+    #  repositoryPartition : Short
+    #  AbstractPayloadRepository(repositoryPartition : Short) : void <<Create>>
+    +  getRepositoryPartition() : Short
+    +  {abstract} findById(id : Long) : T
+    +  {abstract} persist(entity : T) : Boolean
+    +  extractAmount(entity : T) : BigDecimal
+    }
+    interface IdentifiablePayload <<Interface>> {
+    +  {abstract} getPayloadId() : Long
+    +  {abstract} getDeclaredAmount() : BigDecimal
+    +  {abstract} getEmissionDate() : OffsetDateTime
+    }
+    class TaxPaymentRepository {
+    +  TaxPaymentRepository(repositoryPartition : Short) : void <<Create>>
+    +  findById(id : Long) : TaxPaymentPayload
+    +  persist(entity : TaxPaymentPayload) : Boolean
+    }
+    class TaxPaymentPayload <<Final>> {
+    -  {readOnly} payloadId : Long
+    -  {readOnly} declaredAmount : BigDecimal
+    -  {readOnly} emissionDate : OffsetDateTime
+    +  TaxPaymentPayload(payloadId : Long, declaredAmount : BigDecimal, emissionDate : OffsetDateTime) : void <<Create>>
+    +  getPayloadId() : Long
+    +  getDeclaredAmount() : BigDecimal
+    +  getEmissionDate() : OffsetDateTime
+    }
+    class Case13Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.generics.IdentifiablePayload <|.. org.evilmind.generics.TaxPaymentPayload
+org.evilmind.generics.AbstractPayloadRepository <|-- org.evilmind.generics.TaxPaymentRepository
+org.evilmind.generics.AbstractPayloadRepository ..> org.evilmind.generics.IdentifiablePayload : <<use>>
+org.evilmind.generics.TaxPaymentRepository ..> org.evilmind.generics.TaxPaymentPayload : <<use>>
+org.evilmind.generics.AbstractPayloadRepository ..> java.math.BigDecimal : <<use>>
+org.evilmind.generics.TaxPaymentPayload ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.generics.IdentifiablePayload ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.generics.TaxPaymentPayload ..> java.math.BigDecimal : <<use>>
+org.evilmind.generics.IdentifiablePayload ..> java.math.BigDecimal : <<use>>
+
+@enduml

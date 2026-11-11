@@ -1,0 +1,50 @@
+@startuml
+
+package org.evilmind.relations {
+    class VoucherEntry {
+    -  {readOnly} entryId : Long
+    -  {readOnly} accountCode : String
+    -  {readOnly} creditAmount : BigDecimal
+    -  {readOnly} entrySequence : Short
+    +  VoucherEntry(entryId : Long, accountCode : String, creditAmount : BigDecimal, entrySequence : Short) : void <<Create>>
+    +  getEntryId() : Long
+    +  getAccountCode() : String
+    +  getCreditAmount() : BigDecimal
+    +  getEntrySequence() : Short
+    }
+    class AuditVoucher {
+    -  {readOnly} voucherId : Long
+    -  {readOnly} voucherDate : OffsetDateTime
+    -  {readOnly} totalAmount : BigDecimal
+    -  {readOnly} primaryEntry : VoucherEntry
+    -  {readOnly} voucherEntries : List<VoucherEntry>
+    +  AuditVoucher(voucherId : Long, voucherDate : OffsetDateTime, totalAmount : BigDecimal, primaryEntry : VoucherEntry, voucherEntries : List<VoucherEntry>) : void <<Create>>
+    +  verifyEntryConsistency(externalCandidate : VoucherEntry) : Boolean
+    +  getVoucherId() : Long
+    +  getVoucherDate() : OffsetDateTime
+    +  getTotalAmount() : BigDecimal
+    +  getPrimaryEntry() : VoucherEntry
+    +  getVoucherEntries() : List<VoucherEntry>
+    }
+    class Case20Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.relations.AuditVoucher ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.relations.AuditVoucher ..> java.math.BigDecimal : <<use>>
+org.evilmind.relations.AuditVoucher "1" o-- "*" org.evilmind.relations.VoucherEntry
+org.evilmind.relations.VoucherEntry ..> java.math.BigDecimal : <<use>>
+
+@enduml
