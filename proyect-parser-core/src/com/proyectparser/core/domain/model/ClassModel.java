@@ -25,6 +25,8 @@ public class ClassModel {
     private List<String> implementedTypes;
     private List<String> enumConstants;
     private List<String> typeParameters;
+    private List<String> typeParameterBounds = List.of();
+    private List<String> typeParameterDeclarations = List.of();
     private String fqn;
     private String id;
 
@@ -63,10 +65,23 @@ public class ClassModel {
         return copy;
     }
 
+    public ClassModel withTypeParameterDetails(List<String> bounds, List<String> declarations) {
+        ClassModel copy = copy();
+        copy.typeParameterBounds = List.copyOf(bounds);
+        copy.typeParameterDeclarations = List.copyOf(declarations);
+        return copy;
+    }
+
+    public List<String> getTypeParameterBounds() { return typeParameterBounds; }
+
+    public List<String> getTypeParameterDeclarations() { return typeParameterDeclarations; }
+
     private ClassModel copy() {
         ClassModel copy = new ClassModel(name, packageName, kind, isAbstract, stereotypes, attributes,
                 methods, constructors, extendedTypes, implementedTypes, enumConstants, typeParameters);
         copy.fqn = fqn;
+        copy.typeParameterBounds = typeParameterBounds;
+        copy.typeParameterDeclarations = typeParameterDeclarations;
         copy.id = id;
         return copy;
     }

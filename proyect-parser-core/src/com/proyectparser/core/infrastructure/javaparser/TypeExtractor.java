@@ -15,6 +15,8 @@ import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.AssignExpr;
+import com.github.javaparser.ast.nodeTypes.NodeWithTypeParameters;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.TypeParameter;
 import com.proyectparser.core.domain.model.AttributeModel;
@@ -75,6 +77,11 @@ class TypeExtractor {
         List<String> implementedTypes = new ArrayList<>();
         List<String> enumConstants = new ArrayList<>();
         List<String> typeParameters = new ArrayList<>();
+        List<TypeParameter> generics = type instanceof NodeWithTypeParameters<?> generic
+                ? generic.getTypeParameters() : List.of();
+        List<String> bounds = generics.stream().flatMap(parameter -> parameter.getTypeBound().stream())
+                .map(ClassOrInterfaceType::asString).toList();
+        List<String> declarations = generics.stream().map(TypeParameter::toString).toList();
 
         for (AnnotationExpr annotation : type.getAnnotations()) {
             stereotypes.add("@" + annotation.getNameAsString());
@@ -83,14 +90,22 @@ class TypeExtractor {
         if (type instanceof ClassOrInterfaceDeclaration) {
             ClassOrInterfaceDeclaration declaration = (ClassOrInterfaceDeclaration) type;
             isAbstract = declaration.isAbstract();
+            for (String modifier : modifierNames(declaration.getModifiers())) {
+                switch (modifier) {
+                    case "final" -> stereotypes.add("Final");
+                    case "sealed" -> stereotypes.add("Sealed");
+                    case "non-sealed" -> stereotypes.add("Non-Sealed");
+                    default -> { }
+                }
+            }
             kind = declaration.isInterface() ? Kind.INTERFACE.label() : (isAbstract ? Kind.ABSTRACT_CLASS.label() : Kind.CLASS.label());
             typeParameters.addAll(typeParameterNames(declaration.getTypeParameters()));
 
             for (ClassOrInterfaceType extended : declaration.getExtendedTypes()) {
-                extendedTypes.add(extended.getNameAsString());
+                extendedTypes.add(extended.asString());
             }
             for (ClassOrInterfaceType implemented : declaration.getImplementedTypes()) {
-                implementedTypes.add(implemented.getNameAsString());
+                implementedTypes.add(implemented.asString());
             }
 
             extractMembers(declaration, attributes, constructors, methods);
@@ -100,13 +115,13 @@ class TypeExtractor {
             typeParameters.addAll(typeParameterNames(record.getTypeParameters()));
             // records can also implement interfaces (RecordDeclaration is NOT a ClassOrInterfaceDeclaration)
             for (ClassOrInterfaceType implemented : record.getImplementedTypes()) {
-                implementedTypes.add(implemented.getNameAsString());
+                implementedTypes.add(implemented.asString());
             }
             // record header components are persistent state -> attributes
             for (Parameter component : record.getParameters()) {
                 attributes.add(new AttributeModel(
                         component.getNameAsString(),
-                        component.getType().asString(),
+                        parameterType(component),
                         List.of("private", "final")));
             }
             extractMembers(record, attributes, constructors, methods);
@@ -117,6 +132,9 @@ class TypeExtractor {
             for (EnumConstantDeclaration entry : enumDeclaration.getEntries()) {
                 enumConstants.add(entry.getNameAsString());
             }
+            for (ClassOrInterfaceType implemented : enumDeclaration.getImplementedTypes()) {
+                implementedTypes.add(implemented.asString());
+            }
             extractMembers(enumDeclaration, attributes, constructors, methods);
         } else if (type instanceof AnnotationDeclaration) {
             kind = Kind.ANNOTATION.label();
@@ -124,7 +142,7 @@ class TypeExtractor {
 
         return new ClassModel(name, packageName, kind, isAbstract, stereotypes,
                 attributes, methods, constructors, extendedTypes, implementedTypes, enumConstants,
-                typeParameters);
+                typeParameters).withTypeParameterDetails(bounds, declarations);
     }
 
     /**
@@ -137,12 +155,15 @@ class TypeExtractor {
             if (member instanceof FieldDeclaration) {
                 FieldDeclaration field = (FieldDeclaration) member;
                 List<String> modifiers = modifierNames(field.getModifiers());
+                if (type instanceof ClassOrInterfaceDeclaration declaration && declaration.isInterface()) {
+                    addImplicit(modifiers, "public", "static", "final");
+                }
                 for (VariableDeclarator variable : field.getVariables()) {
                     attributes.add(new AttributeModel(
                             variable.getNameAsString(),
                             variable.getType().asString(),
                             modifiers,
-                            initialValue(variable)));
+                            initialValue(variable), initializedWithNew(type, variable)));
                 }
             } else if (member instanceof ConstructorDeclaration) {
                 ConstructorDeclaration constructor = (ConstructorDeclaration) member;
@@ -153,11 +174,19 @@ class TypeExtractor {
                         typeParameterNames(constructor.getTypeParameters())));
             } else if (member instanceof MethodDeclaration) {
                 MethodDeclaration method = (MethodDeclaration) member;
+                List<String> modifiers = modifierNames(method.getModifiers());
+                if (type instanceof ClassOrInterfaceDeclaration declaration
+                        && declaration.isInterface() && !method.isPrivate()) {
+                    addImplicit(modifiers, "public");
+                    if (method.getBody().isEmpty()) {
+                        addImplicit(modifiers, "abstract");
+                    }
+                }
                 methods.add(new MethodModel(
                         method.getNameAsString(),
                         method.getType().asString(),
                         toParameters(method.getParameters()),
-                        modifierNames(method.getModifiers()),
+                        modifiers,
                         typeParameterNames(method.getTypeParameters())));
             }
         }
@@ -174,6 +203,36 @@ class TypeExtractor {
                 .orElse(null);
     }
 
+    private static void addImplicit(List<String> modifiers, String... implicit) {
+        for (String modifier : implicit) {
+            if (!modifiers.contains(modifier)) {
+                modifiers.add(modifier);
+            }
+        }
+    }
+
+    private static boolean initializedWithNew(TypeDeclaration<?> owner, VariableDeclarator field) {
+        if (field.getInitializer().filter(expression -> expression.isObjectCreationExpr()).isPresent()) {
+            return true;
+        }
+        if (!field.getParentNode().filter(FieldDeclaration.class::isInstance)
+                .map(FieldDeclaration.class::cast).map(FieldDeclaration::isFinal).orElse(false)) {
+            return false;
+        }
+        return owner.getConstructors().stream()
+                .flatMap(constructor -> constructor.getBody().getStatements().stream())
+                .filter(statement -> statement.isExpressionStmt())
+                .map(statement -> statement.asExpressionStmt().getExpression())
+                .filter(expression -> expression.isAssignExpr())
+                .map(expression -> expression.asAssignExpr())
+                .anyMatch(assignment -> assignment.getOperator() == AssignExpr.Operator.ASSIGN
+                        && assignment.getValue().isObjectCreationExpr()
+                        && assignment.getTarget().isFieldAccessExpr()
+                        && assignment.getTarget().asFieldAccessExpr().getScope().isThisExpr()
+                        && assignment.getTarget().asFieldAccessExpr().getNameAsString()
+                                .equals(field.getNameAsString()));
+    }
+
     /** Names of declared type variables (e.g. {@code <T, ID>} -> [T, ID]). */
     private static List<String> typeParameterNames(List<TypeParameter> params) {
         List<String> names = new ArrayList<>();
@@ -188,9 +247,13 @@ class TypeExtractor {
     private List<ParameterModel> toParameters(List<Parameter> parameters) {
         List<ParameterModel> result = new ArrayList<>();
         for (Parameter parameter : parameters) {
-            result.add(new ParameterModel(parameter.getNameAsString(), parameter.getType().asString()));
+            result.add(new ParameterModel(parameter.getNameAsString(), parameterType(parameter)));
         }
         return result;
+    }
+
+    private static String parameterType(Parameter parameter) {
+        return parameter.getType().asString() + (parameter.isVarArgs() ? "[]" : "");
     }
 
     private List<String> modifierNames(List<com.github.javaparser.ast.Modifier> modifiers) {

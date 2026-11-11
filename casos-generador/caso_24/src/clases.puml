@@ -1,0 +1,58 @@
+@startuml
+
+package org.evilmind.api.contracts {
+    class ExecutionRequest {
+    -  {readOnly} requestId : String
+    -  {readOnly} requestedAmount : BigDecimal
+    -  {readOnly} requestTime : OffsetDateTime
+    +  ExecutionRequest(requestId : String, requestedAmount : BigDecimal, requestTime : OffsetDateTime) : void <<Create>>
+    +  getRequestId() : String
+    +  getRequestedAmount() : BigDecimal
+    +  getRequestTime() : OffsetDateTime
+    }
+}
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.infrastructure.persistence.audit {
+    class DeepAuditStorage {
+    -  {readOnly} storagePartitionId : Long
+    -  lastFlushedTimestamp : OffsetDateTime
+    +  DeepAuditStorage(storagePartitionId : Long) : void <<Create>>
+    +  getStoragePartitionId() : Long
+    +  getLastFlushedTimestamp() : OffsetDateTime
+    +  persistLog(transactionToken : String, amount : BigDecimal) : Boolean
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+package org.evilmind {
+    class Case24Application {
+    +  {static} main(args : String[]) : void
+    }
+    class RootExecutionGateway {
+    -  {readOnly} gatewayCode : String
+    -  {readOnly} auditStorage : DeepAuditStorage
+    +  RootExecutionGateway(gatewayCode : String, auditStorage : DeepAuditStorage) : void <<Create>>
+    +  getGatewayCode() : String
+    +  getAuditStorage() : DeepAuditStorage
+    +  dispatchTransaction(request : ExecutionRequest) : Boolean
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.api.contracts.ExecutionRequest ..> java.math.BigDecimal : <<use>>
+org.evilmind.RootExecutionGateway "1" --> "1" org.evilmind.infrastructure.persistence.audit.DeepAuditStorage
+org.evilmind.infrastructure.persistence.audit.DeepAuditStorage ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.infrastructure.persistence.audit.DeepAuditStorage ..> java.math.BigDecimal : <<use>>
+org.evilmind.api.contracts.ExecutionRequest ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.RootExecutionGateway ..> org.evilmind.api.contracts.ExecutionRequest : <<use>>
+
+@enduml

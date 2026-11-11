@@ -1,0 +1,63 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.hierarchy {
+    interface AssetContract <<Interface>> {
+    +  {abstract} calculateDepreciationRate() : BigDecimal
+    }
+    interface FinancialValuable <<Interface>> {
+    +  {abstract} getAssessedValue() : BigDecimal
+    +  {abstract} getCurrencyCode() : Short
+    }
+    class CommercialRealEstate <<Final>> {
+    -  {readOnly} entityId : Long
+    -  {readOnly} createdAt : OffsetDateTime
+    -  {readOnly} assessedValue : BigDecimal
+    -  {readOnly} currencyCode : Short
+    -  {readOnly} lastModifiedAt : OffsetDateTime
+    -  {readOnly} lifecycleStatusCode : Short
+    +  CommercialRealEstate(entityId : Long, createdAt : OffsetDateTime, assessedValue : BigDecimal, currencyCode : Short, lastModifiedAt : OffsetDateTime, lifecycleStatusCode : Short) : void <<Create>>
+    +  getEntityId() : Long
+    +  getCreatedAt() : OffsetDateTime
+    +  getAssessedValue() : BigDecimal
+    +  getCurrencyCode() : Short
+    +  getLastModifiedAt() : OffsetDateTime
+    +  getLifecycleStatusCode() : Short
+    +  calculateDepreciationRate() : BigDecimal
+    }
+    interface AuditableLifecycle <<Interface>> {
+    +  {abstract} getLastModifiedAt() : OffsetDateTime
+    +  {abstract} getLifecycleStatusCode() : Short
+    }
+    interface IdentifiableEntity <<Interface>> {
+    +  {abstract} getEntityId() : Long
+    +  {abstract} getCreatedAt() : OffsetDateTime
+    }
+    class Case11Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.hierarchy.FinancialValuable <|-- org.evilmind.hierarchy.AssetContract
+org.evilmind.hierarchy.AuditableLifecycle <|-- org.evilmind.hierarchy.AssetContract
+org.evilmind.hierarchy.AssetContract <|.. org.evilmind.hierarchy.CommercialRealEstate
+org.evilmind.hierarchy.AuditableLifecycle ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.hierarchy.IdentifiableEntity <|-- org.evilmind.hierarchy.FinancialValuable
+org.evilmind.hierarchy.CommercialRealEstate ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.hierarchy.CommercialRealEstate ..> java.math.BigDecimal : <<use>>
+org.evilmind.hierarchy.IdentifiableEntity ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.hierarchy.FinancialValuable ..> java.math.BigDecimal : <<use>>
+org.evilmind.hierarchy.IdentifiableEntity <|-- org.evilmind.hierarchy.AuditableLifecycle
+org.evilmind.hierarchy.AssetContract ..> java.math.BigDecimal : <<use>>
+
+@enduml

@@ -1,0 +1,36 @@
+@startuml
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+package org.evilmind.varargs {
+    class Case22Application {
+    +  {static} main(args : String[]) : void
+    }
+    class TaxAggregationService {
+    -  {readOnly} serviceName : String
+    +  TaxAggregationService(serviceName : String) : void <<Create>>
+    +  getServiceName() : String
+    +  aggregateValues() : BigDecimal
+    +  aggregateValues(initialSeed : BigDecimal) : BigDecimal
+    +  aggregateValues(initialSeed : BigDecimal, additionalAmounts : BigDecimal[]) : BigDecimal
+    +  combineTiers(tiers : TaxRateTier[]) : BigDecimal
+    +  calculateMaxTierCode(tierCodes : int[]) : Short
+    }
+    class TaxRateTier {
+    -  {readOnly} tierLevel : Short
+    -  {readOnly} rateMultiplier : BigDecimal
+    +  TaxRateTier(tierLevel : Short, rateMultiplier : BigDecimal) : void <<Create>>
+    +  getTierLevel() : Short
+    +  getRateMultiplier() : BigDecimal
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.varargs.TaxAggregationService ..> org.evilmind.varargs.TaxRateTier : <<use>>
+org.evilmind.varargs.TaxRateTier ..> java.math.BigDecimal : <<use>>
+org.evilmind.varargs.TaxAggregationService ..> java.math.BigDecimal : <<use>>
+
+@enduml

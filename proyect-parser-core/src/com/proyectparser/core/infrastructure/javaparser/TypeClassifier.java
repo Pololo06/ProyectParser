@@ -52,6 +52,10 @@ class TypeClassifier {
         "ArrayList", "LinkedList", "HashSet", "HashMap"
     );
 
+    static boolean isContainer(String name) {
+        return CONTAINERS.contains(name);
+    }
+
     static boolean shouldIgnoreBox(String rawType) {
         if (rawType == null || rawType.isBlank()) {
             return true;

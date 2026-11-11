@@ -1,0 +1,78 @@
+@startuml
+
+' --- Configuracion Estetica Base ---
+skinparam defaultFontName Helvetica
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam classRoundCorner 0
+skinparam shadowing false
+skinparam monochrome false
+skinparam classBorderColor black
+skinparam backgroundColor white
+skinparam classBackgroundColor white
+
+' --- Paleta de Colores Pastel para Java 17 ---
+skinparam interfaceBackgroundColor #D5F5E3
+skinparam interface<<Interface>>BackgroundColor #D5F5E3
+skinparam class<<Interface>>BackgroundColor #D5F5E3
+skinparam abstractBackgroundColor #FFE5CC
+skinparam class<<Abstract>>BackgroundColor #FFE5CC
+skinparam class<<Record>>BackgroundColor #D0E1FD
+skinparam class<<external>>BackgroundColor #EAECEE
+skinparam interface<<external>>BackgroundColor #EAECEE
+
+' --- Definicion de Clasificadores (Agrupados por Paquete) ---
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.nested {
+    class FinancialAccount {
+    -  id : Long
+    -  accountNumber : String
+    -  currentBalance : BigDecimal
+    -  openingDate : OffsetDateTime
+    -  accountStatus : Short
+    +  FinancialAccount(id : Long, accountNumber : String, currentBalance : BigDecimal, openingDate : OffsetDateTime, accountStatus : Short) : void <<Create>>
+    +  getId() : Long
+    +  getCurrentBalance() : BigDecimal
+    +  getOpeningDate() : OffsetDateTime
+    +  getAccountStatus() : Short
+    +  createEntry(amount : BigDecimal, entryType : Short) : LedgerEntry
+    }
+    class Case01Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+package org.evilmind.nested.FinancialAccount {
+    class LedgerEntry {
+    -  entryId : Long
+    -  transactionAmount : BigDecimal
+    -  registeredAt : OffsetDateTime
+    -  entryTypeCode : Short
+    -  isAudited : Boolean
+    +  LedgerEntry(entryId : Long, transactionAmount : BigDecimal, registeredAt : OffsetDateTime, entryTypeCode : Short, isAudited : Boolean) : void <<Create>>
+    +  getEntryId() : Long
+    +  getTransactionAmount() : BigDecimal
+    +  getRegisteredAt() : OffsetDateTime
+    +  getEntryTypeCode() : Short
+    +  getIsAudited() : Boolean
+    +  computeProjectedBalance() : BigDecimal
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.nested.FinancialAccount.LedgerEntry ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.nested.FinancialAccount.LedgerEntry ..> java.math.BigDecimal : <<use>>
+org.evilmind.nested.FinancialAccount +-- org.evilmind.nested.FinancialAccount.LedgerEntry
+org.evilmind.nested.FinancialAccount ..> java.math.BigDecimal : <<use>>
+org.evilmind.nested.FinancialAccount ..> java.time.OffsetDateTime : <<use>>
+
+@enduml

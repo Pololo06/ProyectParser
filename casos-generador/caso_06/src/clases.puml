@@ -1,0 +1,45 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+package org.evilmind.records {
+    interface AuditablePayload <<Interface>> {
+    +  {static, readOnly} MIN_WEIGHT_THRESHOLD : BigDecimal = new BigDecimal("0.05")
+    +  {static, readOnly} SCHEMA_REVISION : Short = (short) 2
+    +  {abstract} capturedAt() : OffsetDateTime
+    +  {abstract} payloadVersion() : Short
+    +  {abstract} evaluateWeight() : BigDecimal
+    }
+    class Case06Application {
+    +  {static} main(args : String[]) : void
+    }
+    class TransactionEnvelope<K, V> <<Record>> {
+    +  {readOnly} envelopeId : Long
+    +  {readOnly} routingKey : K
+    +  {readOnly} payloadData : V
+    +  {readOnly} commissionAmount : BigDecimal
+    +  {readOnly} capturedAt : OffsetDateTime
+    +  {readOnly} payloadVersion : Short
+    +  {static, readOnly} BASE_SURCHARGE : BigDecimal = new BigDecimal("15.75")
+    +  {static, readOnly} DEFAULT_PARTITION_KEY : Short = (short) 100
+    +  evaluateWeight() : BigDecimal
+    +  extractPayload() : V
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.records.TransactionEnvelope ..> java.math.BigDecimal : <<use>>
+org.evilmind.records.AuditablePayload ..> java.math.BigDecimal : <<use>>
+org.evilmind.records.TransactionEnvelope ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.records.AuditablePayload ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.records.AuditablePayload <|.. org.evilmind.records.TransactionEnvelope
+
+@enduml

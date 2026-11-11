@@ -1,0 +1,42 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.crtp {
+    class FinancialLedgerNode {
+    -  {readOnly} ledgerLevel : Short
+    +  FinancialLedgerNode(nodeId : Long, nodeTimestamp : OffsetDateTime, cumulativeWeight : BigDecimal, ledgerLevel : Short) : void <<Create>>
+    +  getLedgerLevel() : Short
+    +  isSuperiorTo(siblingNode : FinancialLedgerNode) : Boolean
+    }
+    abstract class AbstractAuditedNode<T extends AbstractAuditedNode<T>> <<Abstract>> {
+    #  nodeId : Long
+    #  nodeTimestamp : OffsetDateTime
+    #  cumulativeWeight : BigDecimal
+    #  AbstractAuditedNode(nodeId : Long, nodeTimestamp : OffsetDateTime, cumulativeWeight : BigDecimal) : void <<Create>>
+    +  getNodeId() : Long
+    +  getNodeTimestamp() : OffsetDateTime
+    +  getCumulativeWeight() : BigDecimal
+    +  self() : T
+    +  withWeight(newWeight : BigDecimal) : T
+    +  {abstract} isSuperiorTo(siblingNode : T) : Boolean
+    }
+    class Case15Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.crtp.AbstractAuditedNode ..> java.math.BigDecimal : <<use>>
+org.evilmind.crtp.AbstractAuditedNode <|-- org.evilmind.crtp.FinancialLedgerNode
+org.evilmind.crtp.AbstractAuditedNode ..> java.time.OffsetDateTime : <<use>>
+
+@enduml

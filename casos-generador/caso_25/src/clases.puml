@@ -1,0 +1,164 @@
+@startuml
+
+' --- Configuracion Estetica Base ---
+skinparam defaultFontName Helvetica
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam classRoundCorner 0
+skinparam shadowing false
+skinparam monochrome false
+skinparam classBorderColor black
+skinparam backgroundColor white
+skinparam classBackgroundColor white
+
+' --- Paleta de Colores Pastel para Java 17 ---
+skinparam interfaceBackgroundColor #D5F5E3
+skinparam interface<<Interface>>BackgroundColor #D5F5E3
+skinparam class<<Interface>>BackgroundColor #D5F5E3
+skinparam abstractBackgroundColor #FFE5CC
+skinparam class<<Abstract>>BackgroundColor #FFE5CC
+skinparam class<<Record>>BackgroundColor #D0E1FD
+skinparam class<<external>>BackgroundColor #EAECEE
+skinparam interface<<external>>BackgroundColor #EAECEE
+
+' --- Definicion de Clasificadores (Agrupados por Paquete) ---
+package org.evilmind.domain.enums {
+    enum InvoiceStatus {
+    +  {static, readOnly} DRAFT : InvoiceStatus
+    +  {static, readOnly} ISSUED : InvoiceStatus
+    +  {static, readOnly} PAID : InvoiceStatus
+    }
+}
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.service {
+    interface InvoiceService <<Interface>> {
+    +  {abstract} computeTaxes(invoice : FiscalInvoice) : BigDecimal
+    +  {abstract} registerInvoice(invoice : FiscalInvoice) : Boolean
+    }
+    class InvoiceServiceImpl {
+    -  {readOnly} invoiceRepository : InvoiceRepository
+    +  InvoiceServiceImpl(invoiceRepository : InvoiceRepository) : void <<Create>>
+    +  computeTaxes(invoice : FiscalInvoice) : BigDecimal
+    +  registerInvoice(invoice : FiscalInvoice) : Boolean
+    }
+}
+
+package org.evilmind.repository {
+    class InMemoryInvoiceRepository {
+    ~  operationCounter : Long = 0L
+    +  findById(id : Long) : FiscalInvoice
+    +  save(invoice : FiscalInvoice) : Boolean
+    }
+    interface InvoiceRepository <<Interface>> {
+    +  {abstract} findById(id : Long) : FiscalInvoice
+    +  {abstract} save(invoice : FiscalInvoice) : Boolean
+    }
+}
+
+package org.evilmind.controller {
+    class InvoiceResponseDto <<Record>> {
+    +  {readOnly} invoiceNumber : String
+    +  {readOnly} totalWithTaxes : BigDecimal
+    +  {readOnly} issuedDate : OffsetDateTime
+    }
+    class InvoiceController {
+    -  {readOnly} invoiceService : InvoiceService
+    +  InvoiceController(invoiceService : InvoiceService) : void <<Create>>
+    +  processInvoiceEntry(rawInvoice : FiscalInvoice) : InvoiceResponseDto
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+package org.evilmind.domain {
+    class TaxpayerProfile {
+    -  {readOnly} taxpayerId : Long
+    -  {readOnly} legalName : String
+    -  {readOnly} countryCode : Short
+    +  TaxpayerProfile(taxpayerId : Long, legalName : String, countryCode : Short) : void <<Create>>
+    +  getTaxpayerId() : Long
+    +  getLegalName() : String
+    +  getCountryCode() : Short
+    }
+    class FiscalInvoice {
+    -  {readOnly} invoiceNumber : String
+    -  {readOnly} netTotal : BigDecimal
+    -  {readOnly} issuer : TaxpayerProfile
+    -  {readOnly} items : List<InvoiceItem>
+    -  {readOnly} securityDigest : InvoiceSecurityDigest
+    +  FiscalInvoice(entityId : Long, createdAt : OffsetDateTime, revisionVersion : Short, invoiceNumber : String, netTotal : BigDecimal, issuer : TaxpayerProfile, items : List<InvoiceItem>, signature : String) : void <<Create>>
+    +  getInvoiceNumber() : String
+    +  getNetTotal() : BigDecimal
+    +  getIssuer() : TaxpayerProfile
+    +  getItems() : List<InvoiceItem>
+    +  getSecurityDigest() : InvoiceSecurityDigest
+    }
+    class InvoiceSecurityDigest {
+    -  {readOnly} digitalSignature : String
+    -  {readOnly} signedAt : OffsetDateTime
+    +  InvoiceSecurityDigest(digitalSignature : String, signedAt : OffsetDateTime) : void <<Create>>
+    +  getDigitalSignature() : String
+    +  getSignedAt() : OffsetDateTime
+    }
+    abstract class AbstractAuditableEntity <<Abstract>> {
+    #  entityId : Long
+    #  createdAt : OffsetDateTime
+    ~  revisionVersion : Short
+    -  lastModifiedAt : OffsetDateTime
+    #  AbstractAuditableEntity(entityId : Long, createdAt : OffsetDateTime, revisionVersion : Short) : void <<Create>>
+    +  getEntityId() : Long
+    +  getCreatedAt() : OffsetDateTime
+    ~  getRevisionVersion() : Short
+    }
+    class InvoiceItem {
+    -  {readOnly} itemId : Long
+    -  {readOnly} description : String
+    -  {readOnly} unitPrice : BigDecimal
+    -  {readOnly} quantity : Short
+    +  InvoiceItem(itemId : Long, description : String, unitPrice : BigDecimal, quantity : Short) : void <<Create>>
+    +  getItemId() : Long
+    +  getDescription() : String
+    +  getUnitPrice() : BigDecimal
+    +  getQuantity() : Short
+    }
+}
+
+package org.evilmind {
+    class Case25Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.domain.InvoiceItem ..> java.math.BigDecimal : <<use>>
+org.evilmind.controller.InvoiceResponseDto ..> java.math.BigDecimal : <<use>>
+org.evilmind.service.InvoiceService <|.. org.evilmind.service.InvoiceServiceImpl
+org.evilmind.service.InvoiceService ..> org.evilmind.domain.FiscalInvoice : <<use>>
+org.evilmind.service.InvoiceServiceImpl ..> org.evilmind.domain.FiscalInvoice : <<use>>
+org.evilmind.domain.FiscalInvoice "1" o-- "*" org.evilmind.domain.InvoiceItem
+org.evilmind.domain.AbstractAuditableEntity <|-- org.evilmind.domain.FiscalInvoice
+org.evilmind.controller.InvoiceController ..> org.evilmind.domain.FiscalInvoice : <<use>>
+org.evilmind.domain.FiscalInvoice "1" --> "1" org.evilmind.domain.TaxpayerProfile
+org.evilmind.service.InvoiceService ..> java.math.BigDecimal : <<use>>
+org.evilmind.controller.InvoiceController ..> org.evilmind.controller.InvoiceResponseDto : <<use>>
+org.evilmind.repository.InMemoryInvoiceRepository ..> org.evilmind.domain.FiscalInvoice : <<use>>
+org.evilmind.repository.InvoiceRepository ..> org.evilmind.domain.FiscalInvoice : <<use>>
+org.evilmind.service.InvoiceServiceImpl "1" --> "1" org.evilmind.repository.InvoiceRepository
+org.evilmind.controller.InvoiceResponseDto ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.domain.AbstractAuditableEntity ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.service.InvoiceServiceImpl ..> java.math.BigDecimal : <<use>>
+org.evilmind.domain.InvoiceSecurityDigest ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.controller.InvoiceController "1" --> "1" org.evilmind.service.InvoiceService
+org.evilmind.domain.FiscalInvoice "1" *-- "1" org.evilmind.domain.InvoiceSecurityDigest
+org.evilmind.domain.FiscalInvoice ..> java.math.BigDecimal : <<use>>
+org.evilmind.repository.InvoiceRepository <|.. org.evilmind.repository.InMemoryInvoiceRepository
+
+@enduml

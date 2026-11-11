@@ -1,0 +1,32 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+package org.evilmind.records {
+    class Case07Application {
+    +  {static} main(args : String[]) : void
+    }
+    class SettlementBatchRecord <<Record>> {
+    +  {readOnly} batchId : Long
+    +  {readOnly} batchReference : String
+    +  {readOnly} totalBatchAmount : BigDecimal
+    +  {readOnly} processingCutoff : OffsetDateTime
+    +  {readOnly} priorityLevel : Short
+    +  SettlementBatchRecord(batchId : Long, batchReference : String, totalBatchAmount : BigDecimal) : void <<Create>>
+    +  isHighPriority() : Boolean
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.records.SettlementBatchRecord ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.records.SettlementBatchRecord ..> java.math.BigDecimal : <<use>>
+
+@enduml

@@ -1,0 +1,48 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.nested {
+    class InvoiceSnapshot <<Record>> {
+    +  {readOnly} invoiceId : Long
+    +  {readOnly} chargedAmount : BigDecimal
+    +  {readOnly} issuedAt : OffsetDateTime
+    +  {readOnly} taxRatePercentage : Short
+    +  isHighValue() : Boolean
+    }
+    class BillingPlan {
+    -  {readOnly} planId : Long
+    -  {readOnly} planName : String
+    -  {readOnly} monthlyFee : BigDecimal
+    -  {readOnly} billingCycleDays : Short
+    +  BillingPlan(planId : Long, planName : String, monthlyFee : BigDecimal, billingCycleDays : Short) : void <<Create>>
+    +  getPlanId() : Long
+    +  getPlanName() : String
+    +  getMonthlyFee() : BigDecimal
+    +  getBillingCycleDays() : Short
+    }
+    class Case03Application {
+    +  {static} main(args : String[]) : void
+    }
+    interface PaymentDiscountPolicy <<Interface>> {
+    +  {abstract} calculateEffectiveAmount(baseAmount : BigDecimal, discountRatePercentage : Short) : BigDecimal
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.nested.BillingPlan +-- org.evilmind.nested.PaymentDiscountPolicy
+org.evilmind.nested.InvoiceSnapshot ..> java.math.BigDecimal : <<use>>
+org.evilmind.nested.BillingPlan ..> java.math.BigDecimal : <<use>>
+org.evilmind.nested.PaymentDiscountPolicy ..> java.math.BigDecimal : <<use>>
+org.evilmind.nested.InvoiceSnapshot ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.nested.BillingPlan +-- org.evilmind.nested.InvoiceSnapshot
+
+@enduml

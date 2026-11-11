@@ -149,6 +149,8 @@ class CasoBordeNestedTest {
                 "com.unimag.Database +-- com.unimag.Connection",
                 "com.unimag.Configuration +-- com.unimag.Environment",
                 "com.unimag.Connectable <|.. com.unimag.Connection",
+                "com.unimag.AbstractConnection <|-- com.unimag.Connection",
+                "com.unimag.Identifiable <|.. com.unimag.Module",
                 "com.unimag.NestedProject +-- com.unimag.Module",
                 "com.unimag.Configuration +-- com.unimag.Database",
                 "com.unimag.Database +-- com.unimag.DatabaseListener",

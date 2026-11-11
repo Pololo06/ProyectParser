@@ -64,7 +64,8 @@ public final class ModuleFilter {
                 RelType type = RelType.fromLabel(rel.getType());
                 if (type == RelType.EXTENDS || type == RelType.IMPLEMENTS) {
                     supertypes.computeIfAbsent(rel.getSource(), k -> new HashSet<>()).add(rel.getTarget());
-                } else if (type == RelType.ASSOCIATION) {
+                } else if (type == RelType.ASSOCIATION || type == RelType.AGGREGATION
+                        || type == RelType.COMPOSITION) {
                     associations.computeIfAbsent(rel.getSource(), k -> new HashSet<>()).add(rel.getTarget());
                 }
             }

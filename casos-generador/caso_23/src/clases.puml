@@ -1,0 +1,39 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package org.evilmind.statics {
+    class Case23Application {
+    +  {static} main(args : String[]) : void
+    }
+    class TaxCurrencyRegistry {
+    +  {static, readOnly} DEFAULT_BASE_ISO : String = "USD"
+    #  {static} globalRegistryCounter : Long = 0L
+    -  {static, readOnly} MIN_EXCHANGE_TOLERANCE : BigDecimal = new BigDecimal("0.0001")
+    -  {readOnly} currencyIsoCode : String
+    -  {readOnly} currentExchangeRate : BigDecimal
+    -  {readOnly} registeredTimestamp : OffsetDateTime
+    -  TaxCurrencyRegistry(currencyIsoCode : String, currentExchangeRate : BigDecimal) : void <<Create>>
+    +  {static} ofBaseDefault() : TaxCurrencyRegistry
+    +  {static} ofCustomRate(isoCode : String, rate : BigDecimal) : TaxCurrencyRegistry
+    +  {static} getGlobalRegistryCounter() : Long
+    +  getCurrencyIsoCode() : String
+    +  getCurrentExchangeRate() : BigDecimal
+    +  getRegisteredTimestamp() : OffsetDateTime
+    +  isDepreciatedComparedTo(benchmarkRate : BigDecimal) : Boolean
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.statics.TaxCurrencyRegistry ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.statics.TaxCurrencyRegistry ..> java.math.BigDecimal : <<use>>
+
+@enduml

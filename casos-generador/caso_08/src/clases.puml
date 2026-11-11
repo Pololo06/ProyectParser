@@ -1,0 +1,38 @@
+@startuml
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+package org.evilmind.enums {
+    enum TaxPayerType {
+    +  {static, readOnly} INDIVIDUAL : TaxPayerType
+    +  {static, readOnly} CORPORATE : TaxPayerType
+    +  {static, readOnly} NON_PROFIT : TaxPayerType
+    -  {readOnly} typeCode : Short
+    -  {readOnly} baseRetentionRate : BigDecimal
+    -  {readOnly} description : String
+    -  {readOnly} catalogEpoch : OffsetDateTime
+    ~  TaxPayerType(typeCode : Short, baseRetentionRate : BigDecimal, description : String) : void <<Create>>
+    +  getTypeCode() : Short
+    +  getBaseRetentionRate() : BigDecimal
+    +  getDescription() : String
+    +  getCatalogEpoch() : OffsetDateTime
+    +  hasTaxExemption() : Boolean
+    }
+    class Case08Application {
+    +  {static} main(args : String[]) : void
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.enums.TaxPayerType ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.enums.TaxPayerType ..> java.math.BigDecimal : <<use>>
+
+@enduml

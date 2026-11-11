@@ -291,10 +291,13 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         boolean isInterface = model.getKindEnum() == Kind.INTERFACE;
         builder.append(indent).append(keywordFor(model)).append(" ");
         String alias = aliasOf(model);
-        if (Objects.equals(alias, model.getName())) {
+        List<String> parameters = model.getTypeParameterDeclarations();
+        String display = parameters.isEmpty() ? model.getName()
+                : model.getName() + "<" + String.join(", ", parameters) + ">";
+        if (Objects.equals(alias, display)) {
             builder.append(alias);
         } else {
-            builder.append('"').append(model.getName()).append("\" as ").append(alias);
+            builder.append('"').append(display).append("\" as ").append(alias);
         }
         builder.append(typeStereotypeOf(model)).append(" {\n");
 
@@ -318,7 +321,9 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 if (attribute.getInitialValue() != null) {
                     declaration += " = " + attribute.getInitialValue();
                 }
-                appendMember(builder, indent, visibilityOf(attribute.getModifiers(), isInterface),
+                boolean component = model.getKindEnum() == Kind.RECORD
+                        && attribute.getModifiers() != null && !attribute.getModifiers().contains("static");
+                appendMember(builder, indent, component ? "+" : visibilityOf(attribute.getModifiers(), isInterface),
                         attributeModifiers(attribute.getModifiers(), isInterface), declaration);
             }
         }
@@ -374,9 +379,8 @@ public class PlantUmlGenerator implements DiagramRendererPort {
      * endpoints not hidden. Relationships to unmodeled names are preserved: PlantUML
      * declares the missing endpoint implicitly.
      *
-     * <p>Inside one nesting tree (a top-level type and the types nested in it at any depth)
-     * only the {@code NESTING} links are drawn: the containment already ties those types
-     * together, and their associations, dependencies and inheritance would only repeat it.</p>
+     * <p>Containment links suffice between a type and one of its enclosing types.
+     * Relations between distinct branches of a nesting tree are shown independently.</p>
      */
     static List<RelationshipModel> visibleRelationships(ProjectModel project, Set<String> renderedNames,
                                                         DiagramOptions opt) {
@@ -385,12 +389,12 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             return visible;
         }
         Map<String, String> simpleNames = new HashMap<>();
-        Map<String, String> nestingRoots = new HashMap<>();
+        Map<String, String> internalFqns = new HashMap<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
                 simpleNames.put(model.id(), model.getName());
                 if (!model.isExternal()) {
-                    nestingRoots.put(model.id(), nestingRootOf(model));
+                    internalFqns.put(model.id(), model.getFqn());
                 }
             }
         }
@@ -407,26 +411,15 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                     || hiddenNames.contains(relationship.getTarget())) {
                 continue;
             }
-            String sourceRoot = nestingRoots.get(relationship.getSource());
-            if (!RelType.NESTING.label().equals(relationship.getType()) && sourceRoot != null
-                    && sourceRoot.equals(nestingRoots.get(relationship.getTarget()))) {
+            String sourceFqn = internalFqns.get(relationship.getSource());
+            String targetFqn = internalFqns.get(relationship.getTarget());
+            if (relationship.getTypeEnum() != RelType.NESTING && sourceFqn != null && targetFqn != null
+                    && (sourceFqn.startsWith(targetFqn + ".") || targetFqn.startsWith(sourceFqn + "."))) {
                 continue;
             }
             visible.add(relationship);
         }
         return visible;
-    }
-
-    /** Fqn of the top-level type that contains a type ({@code p.Outer} for {@code p.Outer.A.B}), or its own. */
-    private static String nestingRootOf(ClassModel model) {
-        String fqn = model.getFqn() == null ? model.getName() : model.getFqn();
-        String pkg = model.getPackageName() == null ? "" : model.getPackageName();
-        if (!pkg.isEmpty() && !fqn.startsWith(pkg + ".")) {
-            return fqn;
-        }
-        int start = pkg.isEmpty() ? 0 : pkg.length() + 1;
-        int dot = fqn.indexOf('.', start);
-        return dot < 0 ? fqn : fqn.substring(0, dot);
     }
 
     /**
@@ -486,12 +479,18 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         String left = inheritance || nesting ? relationship.getTarget() : relationship.getSource();
         String right = inheritance || nesting ? relationship.getSource() : relationship.getTarget();
         // Unmodeled endpoints have no alias and are written as they come.
+        RelType kind = relationship.getTypeEnum();
+        boolean hasMultiplicity = kind == RelType.ASSOCIATION || kind == RelType.AGGREGATION
+                || kind == RelType.COMPOSITION;
         builder.append(aliases.getOrDefault(left, left))
-                .append(" ")
-                .append(withDirection(arrowFor(type), ranks.get(left), ranks.get(right)))
-                .append(" ")
-                .append(aliases.getOrDefault(right, right))
-                .append("\n");
+                .append(hasMultiplicity ? " \"1\" " : " ")
+                .append(withDirection(arrowFor(kind), ranks.get(left), ranks.get(right)))
+                .append(!hasMultiplicity ? " " : kind == RelType.AGGREGATION ? " \"*\" " : " \"1\" ")
+                .append(aliases.getOrDefault(right, right));
+        if (kind == RelType.DEPENDENCY) {
+            builder.append(" : <<use>>");
+        }
+        builder.append("\n");
     }
 
     /**
@@ -542,13 +541,13 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 return "..>";
             case NESTING:
                 return "+--";
+            case AGGREGATION:
+                return "o--";
+            case COMPOSITION:
+                return "*--";
             default:
                 return "-->";
         }
-    }
-
-    private String arrowFor(String relationshipType) {
-        return arrowFor(RelType.fromLabel(relationshipType));
     }
 
     private String formatParameters(List<ParameterModel> parameters, DiagramOptions opt) {
@@ -616,6 +615,12 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         if (declared.contains("abstract") || (inInterface && !declared.contains("static")
                 && !declared.contains("default") && !declared.contains("private"))) {
             names.add("abstract");
+        }
+        if (declared.contains("default")) {
+            names.add("default");
+        }
+        if (declared.contains("final")) {
+            names.add("final");
         }
         return names;
     }

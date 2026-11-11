@@ -1,0 +1,59 @@
+@startuml
+
+package org.evilmind.relations {
+    class Case17Application {
+    +  {static} main(args : String[]) : void
+    }
+    class InvoiceItem {
+    -  {readOnly} itemId : Long
+    -  {readOnly} itemDescription : String
+    -  {readOnly} unitPrice : BigDecimal
+    -  {readOnly} quantity : Short
+    +  InvoiceItem(itemId : Long, itemDescription : String, unitPrice : BigDecimal, quantity : Short) : void <<Create>>
+    +  getItemId() : Long
+    +  getItemDescription() : String
+    +  getUnitPrice() : BigDecimal
+    +  getQuantity() : Short
+    +  computeLineTotal() : BigDecimal
+    }
+    class TaxTag {
+    -  {readOnly} tagCode : Short
+    -  {readOnly} tagName : String
+    +  TaxTag(tagCode : Short, tagName : String) : void <<Create>>
+    +  getTagCode() : Short
+    +  getTagName() : String
+    }
+    class CommercialInvoice {
+    -  {readOnly} invoiceId : Long
+    -  {readOnly} invoiceNumber : String
+    -  {readOnly} issueDate : OffsetDateTime
+    -  {readOnly} lineItems : List<InvoiceItem>
+    -  {readOnly} applicableTags : Set<TaxTag>
+    +  CommercialInvoice(invoiceId : Long, invoiceNumber : String, issueDate : OffsetDateTime, lineItems : List<InvoiceItem>, applicableTags : Set<TaxTag>) : void <<Create>>
+    +  getInvoiceId() : Long
+    +  getInvoiceNumber() : String
+    +  getIssueDate() : OffsetDateTime
+    +  getLineItems() : List<InvoiceItem>
+    +  getApplicableTags() : Set<TaxTag>
+    +  calculateInvoiceTotal() : BigDecimal
+    }
+}
+
+package java.time {
+    class OffsetDateTime <<external>> {
+    }
+}
+
+package java.math {
+    class BigDecimal <<external>> {
+    }
+}
+
+' --- Grafo de relaciones ---
+org.evilmind.relations.CommercialInvoice "1" o-- "*" org.evilmind.relations.InvoiceItem
+org.evilmind.relations.CommercialInvoice ..> java.math.BigDecimal : <<use>>
+org.evilmind.relations.CommercialInvoice ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.relations.CommercialInvoice "1" o-- "*" org.evilmind.relations.TaxTag
+org.evilmind.relations.InvoiceItem ..> java.math.BigDecimal : <<use>>
+
+@enduml

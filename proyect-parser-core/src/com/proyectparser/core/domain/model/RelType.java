@@ -7,7 +7,9 @@ public enum RelType {
     ASSOCIATION("ASSOCIATION"),
     DEPENDENCY("DEPENDENCY"),
     /** Nested type: source is the nested type, target its directly enclosing type. */
-    NESTING("NESTING");
+    NESTING("NESTING"),
+    AGGREGATION("AGGREGATION"),
+    COMPOSITION("COMPOSITION");
 
     private final String label;
 
