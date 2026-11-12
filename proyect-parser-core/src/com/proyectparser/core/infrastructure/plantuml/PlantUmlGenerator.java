@@ -106,6 +106,12 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             externals.removeIf(model -> !connected.contains(model.id()));
         }
 
+        // One allocation for every generated PlantUML identifier: classes keep their
+        // simple name when they have one; derived aliases and package/layer aliases avoid
+        // each other, so a_b.Foo and a.b.Foo can no longer collapse.
+        AliasPool aliasPool = new AliasPool();
+        Map<String, String> classAliases = classAliases(internals, externals, aliasPool);
+
         if (opt.isGroupByPackage()) {
             Map<String, List<ClassModel>> byPackage = new TreeMap<>();
             for (ClassModel model : internals) {
@@ -115,6 +121,8 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             for (List<ClassModel> models : byPackage.values()) {
                 models.sort(BY_NAME);
             }
+            Map<String, String> packageAliases = layered
+                    ? packageAliases(byPackage.keySet(), aliasPool) : Map.of();
             // Packages of each layer, by rank; packages outside the layer map are unranked.
             Map<Integer, List<String>> packagesByRank = new TreeMap<>();
             List<String> unranked = new ArrayList<>();
@@ -128,55 +136,58 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
             // Hidden links go between layer containers or, without them, one package per layer.
             Map<Integer, String> linkAliasByRank = new TreeMap<>();
-            if (opt.isGroupLayers()) {
+            if (opt.isGroupLayers() && layered) {
                 Map<Integer, String> layerNames = new TreeMap<>();
                 for (Map.Entry<String, Integer> layer : opt.getLayers().entrySet()) {
                     layerNames.putIfAbsent(layer.getValue(), layer.getKey());
                 }
                 for (Map.Entry<Integer, List<String>> entry : packagesByRank.entrySet()) {
-                    String alias = "layer_" + entry.getKey();
-                    linkAliasByRank.put(entry.getKey(), alias);
+                    String alias = linkAliasByRank.computeIfAbsent(entry.getKey(),
+                            rank -> aliasPool.allocate("layer_" + rank));
                     builder.append("package \"").append(layerNames.get(entry.getKey()))
                             .append("\" as ").append(alias).append(" {\n");
                     for (String pkg : entry.getValue()) {
-                        appendPackage(builder, pkg, byPackage.get(pkg), "  ", opt, true);
+                        appendPackage(builder, pkg, byPackage.get(pkg), "  ", opt, true,
+                                packageAliases, classAliases);
                     }
                     builder.append("}\n\n");
                 }
                 for (String pkg : unranked) {
-                    appendPackage(builder, pkg, byPackage.get(pkg), "", opt, true);
+                    appendPackage(builder, pkg, byPackage.get(pkg), "", opt, true,
+                            packageAliases, classAliases);
                 }
             } else {
                 for (Map.Entry<String, List<ClassModel>> entry : byPackage.entrySet()) {
                     Integer rank = opt.layerRankOf(entry.getKey());
                     if (rank != null) {
-                        linkAliasByRank.putIfAbsent(rank, packageAlias(entry.getKey()));
+                        linkAliasByRank.putIfAbsent(rank, packageAliases.get(entry.getKey()));
                     }
-                    appendPackage(builder, entry.getKey(), entry.getValue(), "", opt, layered);
+                    appendPackage(builder, entry.getKey(), entry.getValue(), "", opt, layered,
+                            packageAliases, classAliases);
                 }
             }
             appendLayerLinks(builder, linkAliasByRank);
             if (!externals.isEmpty()) {
                 builder.append("package \"EXTERNAL\" {\n");
                 for (ClassModel model : externals) {
-                    appendClass(builder, model, "  ", opt);
+                    appendClass(builder, model, "  ", opt, classAliases);
                 }
                 builder.append("}\n\n");
             }
         } else {
             for (ClassModel model : internals) {
-                appendClass(builder, model, "", opt);
+                appendClass(builder, model, "", opt, classAliases);
             }
             if (!externals.isEmpty()) {
                 builder.append("' ---------------- EXTERNAL ----------------\n");
                 for (ClassModel model : externals) {
-                    appendClass(builder, model, "", opt);
+                    appendClass(builder, model, "", opt, classAliases);
                 }
             }
         }
 
         appendRelationships(builder, project, renderedNames(internals, externals), opt,
-                opt.isGroupByPackage() && !layered);
+                opt.isGroupByPackage() && !layered, classAliases);
         builder.append("\n@enduml\n");
         return builder.toString();
     }
@@ -208,10 +219,64 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 .append("skinparam interface<<external>>BackgroundColor #EAECEE\n");
     }
 
-    /** PlantUML alias of a package block, usable in links. */
-    private static String packageAlias(String packageName) {
-        return "pkg_" + (packageName == null || packageName.isEmpty()
-                ? "default" : packageName.replaceAll("[^\\p{L}\\p{N}]", "_"));
+    private static final class AliasPool {
+        private final Set<String> used = new HashSet<>();
+
+        void reserve(String alias) {
+            if (alias != null && !alias.isEmpty()) {
+                used.add(alias);
+            }
+        }
+
+        String allocate(String preferred) {
+            String base = preferred == null || preferred.isEmpty() ? "alias" : preferred;
+            String candidate = base;
+            int suffix = 2;
+            while (!used.add(candidate)) {
+                candidate = base + "_" + suffix++;
+            }
+            return candidate;
+        }
+    }
+
+    private static String sanitizeAlias(String value) {
+        return value == null ? "alias" : value.replaceAll("[^\\p{L}\\p{N}]", "_");
+    }
+
+    /**
+     * Alias of every rendered class. Simple names are reserved first, so a generated
+     * homonym alias can never steal a real class name; derived aliases are then unique
+     * and deterministic (fqn order). Without conflicts the old names are kept.
+     */
+    private static Map<String, String> classAliases(List<ClassModel> internals, List<ClassModel> externals,
+                                                    AliasPool pool) {
+        List<ClassModel> models = new ArrayList<>(internals);
+        models.addAll(externals);
+        for (ClassModel model : models) {
+            if (Objects.equals(model.id(), model.getName())) {
+                pool.reserve(model.getName());
+            }
+        }
+        Map<String, String> aliases = new HashMap<>();
+        models.stream()
+                .filter(model -> !Objects.equals(model.id(), model.getName()))
+                .sorted(Comparator.comparing(ClassModel::getFqn).thenComparing(ClassModel::id))
+                .forEach(model -> aliases.put(model.id(), pool.allocate(sanitizeAlias(model.id()))));
+        for (ClassModel model : models) {
+            aliases.putIfAbsent(model.id(), model.getName());
+        }
+        return aliases;
+    }
+
+    /** Aliases for package boxes used by layer views; never collide with classes or each other. */
+    private static Map<String, String> packageAliases(Set<String> packageNames, AliasPool pool) {
+        Map<String, String> aliases = new HashMap<>();
+        for (String packageName : packageNames) {
+            String base = "pkg_" + (packageName == null || packageName.isEmpty()
+                    ? "default" : sanitizeAlias(packageName));
+            aliases.put(packageName, pool.allocate(base));
+        }
+        return aliases;
     }
 
     /**
@@ -220,23 +285,24 @@ public class PlantUmlGenerator implements DiagramRendererPort {
      * classes go at the top level.
      */
     private void appendPackage(StringBuilder builder, String packageName, List<ClassModel> models,
-                               String indent, DiagramOptions opt, boolean aliased) {
+                               String indent, DiagramOptions opt, boolean aliased,
+                               Map<String, String> packageAliases, Map<String, String> classAliases) {
         if (!aliased && (packageName == null || packageName.isEmpty())) {
             for (ClassModel model : models) {
-                appendClass(builder, model, indent, opt);
+                appendClass(builder, model, indent, opt, classAliases);
             }
             return;
         }
         builder.append(indent).append("package ");
         if (aliased) {
             builder.append('"').append(PackageModel.displayName(packageName))
-                    .append("\" as ").append(packageAlias(packageName));
+                    .append("\" as ").append(packageAliases.get(packageName));
         } else {
             builder.append(packageName);
         }
         builder.append(" {\n");
         for (ClassModel model : models) {
-            appendClass(builder, model, indent + "  ", opt);
+            appendClass(builder, model, indent + "  ", opt, classAliases);
         }
         builder.append(indent).append("}\n\n");
     }
@@ -273,24 +339,17 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         return names;
     }
 
-    /** PlantUML name of a class: its name, or for a homonym its id with non-alphanumerics as {@code _}. */
-    private static String aliasOf(ClassModel model) {
-        if (Objects.equals(model.id(), model.getName())) {
-            return model.getName();
-        }
-        return model.id().replaceAll("[^\\p{L}\\p{N}]", "_");
-    }
-
     /** true for JDK packages ({@code java.*}), kept apart from third-party externals. */
     static boolean isJdkPackage(String packageName) {
         return packageName != null
                 && (packageName.equals("java.lang") || packageName.startsWith("java."));
     }
 
-    private void appendClass(StringBuilder builder, ClassModel model, String indent, DiagramOptions opt) {
+    private void appendClass(StringBuilder builder, ClassModel model, String indent, DiagramOptions opt,
+                             Map<String, String> classAliases) {
         boolean isInterface = model.getKindEnum() == Kind.INTERFACE;
         builder.append(indent).append(keywordFor(model)).append(" ");
-        String alias = aliasOf(model);
+        String alias = classAliases.getOrDefault(model.id(), model.getName());
         List<String> parameters = model.getTypeParameterDeclarations();
         String display = parameters.isEmpty() ? model.getName()
                 : model.getName() + "<" + String.join(", ", parameters) + ">";
@@ -427,19 +486,24 @@ public class PlantUmlGenerator implements DiagramRendererPort {
      * inside the plain {@code package x.y { }} blocks; otherwise by their alias.
      */
     private void appendRelationships(StringBuilder builder, ProjectModel project, Set<String> renderedNames,
-                                     DiagramOptions opt, boolean qualified) {
+                                     DiagramOptions opt, boolean qualified,
+                                     Map<String, String> classAliases) {
         Set<String> externalNames = new HashSet<>();
         Map<String, String> aliases = new HashMap<>();
         Map<String, Integer> ranks = new HashMap<>();
         if (project.getClasses() != null) {
             for (ClassModel model : project.getClasses()) {
+                String alias = classAliases.get(model.id());
+                if (alias == null) {
+                    continue;
+                }
                 Integer rank = model.isExternal() ? null : opt.layerRankOf(model.getPackageName());
                 if (rank != null) {
                     ranks.put(model.id(), rank);
                 }
                 String pkg = model.getPackageName();
                 aliases.put(model.id(), qualified && !model.isExternal() && pkg != null && !pkg.isEmpty()
-                        ? pkg + "." + aliasOf(model) : aliasOf(model));
+                        ? pkg + "." + alias : alias);
                 if (model.isExternal() && renderedNames.contains(model.id())) {
                     externalNames.add(model.id());
                 }

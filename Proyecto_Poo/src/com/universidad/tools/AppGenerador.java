@@ -14,6 +14,7 @@ import com.proyectparser.core.domain.model.MethodModel;
 import com.proyectparser.core.domain.model.PackageModel;
 import com.proyectparser.core.domain.model.ProjectModel;
 import com.proyectparser.core.domain.model.RelationshipModel;
+import com.proyectparser.core.domain.port.RunStatsProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +35,7 @@ public class AppGenerador {
     /**
      * Resuelve automáticamente la ruta del directorio "src".
      * Prioridad:
-     * 1. Parámetro explícito en args[0] (si existe y es carpeta).
+     * 1. Parámetro explícito en args[0]: debe existir; una ruta inválida es un error.
      * 2. Carpeta "src" en el directorio de trabajo actual.
      * 3. Inspección en subcarpetas del proyecto (evitando librerías o builds).
      */
@@ -44,6 +45,9 @@ public class AppGenerador {
             if (custom.exists() && custom.isDirectory()) {
                 return custom.getAbsolutePath();
             }
+            System.err.println("La ruta fuente no existe o no es una carpeta: " + args[0].trim());
+            printUsage();
+            System.exit(1);
         }
 
         Path currentWorkingDir = Paths.get("").toAbsolutePath();
@@ -326,7 +330,10 @@ public class AppGenerador {
             String arg = args[i] == null ? "" : args[i].trim();
             String value = null;
             if (arg.toLowerCase().startsWith("--excluir=")) {
-                value = arg.substring("--excluir=".length());
+                value = arg.substring("--excluir=".length()).trim();
+                if (value.isEmpty()) {
+                    missingFlag("Falta el paquete a excluir: --excluir com.universidad.tools");
+                }
             } else if (arg.equalsIgnoreCase("--excluir")) {
                 value = flagValue(new String[]{arg, i + 1 < args.length ? args[i + 1] : null}, "--excluir",
                         "Falta el paquete a excluir: --excluir com.universidad.tools");
@@ -342,6 +349,15 @@ public class AppGenerador {
         return packages;
     }
 
+    /** true solo para el flag exacto o su forma {@code flag=valor}; nunca para prefijos como {@code --modulox}. */
+    private static boolean isExactFlag(String arg, String flag) {
+        if (arg == null) {
+            return false;
+        }
+        String value = arg.trim();
+        return value.equalsIgnoreCase(flag) || value.toLowerCase().startsWith(flag + "=");
+    }
+
     /** Valor de {@code flag X} o {@code flag=X} (primera aparición); sale con error si falta. */
     private static String flagValue(String[] args, String flag, String missingMessage) {
         if (args == null) {
@@ -350,17 +366,24 @@ public class AppGenerador {
         for (int i = 0; i < args.length; i++) {
             String arg = args[i] == null ? "" : args[i].trim();
             if (arg.toLowerCase().startsWith(flag + "=")) {
-                return arg.substring(flag.length() + 1).trim();
+                String value = arg.substring(flag.length() + 1).trim();
+                return value.isEmpty() ? missingFlag(missingMessage) : value;
             }
             if (arg.equalsIgnoreCase(flag)) {
-                if (i + 1 >= args.length || args[i + 1] == null || args[i + 1].trim().startsWith("-")) {
-                    System.err.println(missingMessage);
-                    printUsage();
-                    System.exit(2);
+                if (i + 1 >= args.length || args[i + 1] == null || args[i + 1].trim().isEmpty()
+                        || args[i + 1].trim().startsWith("-")) {
+                    return missingFlag(missingMessage);
                 }
                 return args[i + 1].trim();
             }
         }
+        return null;
+    }
+
+    private static String missingFlag(String message) {
+        System.err.println(message);
+        printUsage();
+        System.exit(2);
         return null;
     }
 
@@ -391,8 +414,7 @@ public class AppGenerador {
                 options.lineType(type);
                 continue;
             }
-            if (arg.trim().toLowerCase().startsWith("--modulo")
-                    || arg.trim().toLowerCase().startsWith("--excluir")) {
+            if (isExactFlag(arg, "--modulo") || isExactFlag(arg, "--excluir")) {
                 continue; // los leen parseModule y parseExcludedPackages
             }
             if (arg.trim().toLowerCase().startsWith("--capas=")) {
@@ -509,6 +531,11 @@ public class AppGenerador {
         // 1. Detección automatizada de ruta fuente y archivo de salida
         // (los flags --* no cuentan como posicionales).
         String[] positional = positionals(args);
+        if (positional.length > 0 && (positional[0] == null || positional[0].trim().isEmpty())) {
+            System.err.println("La ruta fuente no puede estar vacía.");
+            printUsage();
+            System.exit(2);
+        }
         String srcPath = resolveSourcePath(positional);
         String outputPathStr = (positional.length > 1 && positional[1] != null && !positional[1].trim().isEmpty())
                 ? positional[1].trim()
@@ -528,7 +555,44 @@ public class AppGenerador {
             errorCount++;
             logTrace("Error crítico al analizar código fuente: " + e.getMessage());
             System.err.println("No se pudo analizar el código fuente en: " + srcPath);
+            System.exit(1);
             return;
+        }
+
+        RunStatsProvider stats = diagramas.getRunStats().orElse(null);
+        if (stats != null) {
+            int total = stats.getTotalJavaFileCount();
+            int parsed = stats.getParsedFileCount();
+            int failed = stats.getFailedFileCount();
+            logTrace("Archivos Java: " + parsed + "/" + total + " analizados, " + failed + " fallidos");
+            if (total == 0) {
+                System.err.println("No se encontraron archivos .java en: " + srcPath);
+                System.exit(1);
+            }
+            if (failed > 0) {
+                errorCount++;
+                System.err.println("[!] Advertencia: " + failed + " de " + total
+                        + " archivo(s) Java no se pudieron analizar; el diagrama será parcial.");
+                for (String reason : stats.getFailureReasons()) {
+                    System.err.println("    " + reason);
+                }
+                if (parsed == 0) {
+                    System.err.println("No hay fuentes válidas; no se genera el diagrama.");
+                    System.exit(1);
+                }
+            }
+        }
+
+        // Un --modulo explícito debe seleccionar al menos una clase: una whitelist vacía
+        // dejaría pasar todo el proyecto y ocultaría el error.
+        Set<String> moduleClasses = new TreeSet<>();
+        if (module != null) {
+            moduleClasses.addAll(ModuleFilter.classesOf(originalProject, module));
+            if (moduleClasses.isEmpty()) {
+                System.err.println("Ninguna clase coincide con el módulo: " + module);
+                printUsage();
+                System.exit(2);
+            }
         }
 
         // 2. Extraer listas para menú inicial
@@ -609,7 +673,7 @@ public class AppGenerador {
             System.out.println("\n--- TIPO: " + entry.getKey().toUpperCase() + " ---");
             for (ClassModel c : entry.getValue()) {
                 orderedInternalClasses.add(c);
-                System.out.printf("  [%d] %s [%s]%n", (++clsIdx), c.getName(), c.getKind());
+                System.out.printf("  [%d] %s [%s]%n", (++clsIdx), c.id(), c.getKind());
             }
         }
         // Actualizamos internalClasses con el nuevo orden agrupado
@@ -627,7 +691,7 @@ public class AppGenerador {
         System.out.println("--------------------------------------------------");
         for (ClassModel c : externalClasses) {
             System.out.printf("  [%d] %s (paquete: %s)%n",
-                    (++clsIdx), c.getName(), c.getPackageName());
+                    (++clsIdx), c.id(), c.getPackageName());
         }
         if (externalClasses.isEmpty()) {
             System.out.println("  (ninguna)");
@@ -654,7 +718,7 @@ public class AppGenerador {
 
         List<String> classNames = new ArrayList<>();
         for (ClassModel c : classList) {
-            classNames.add(c.getName());
+            classNames.add(c.id());
         }
         List<String> blackClasses = readSelection(scanner,
                 "> BLACKLIST clases a excluir (Enter=ninguna): ", classNames);
@@ -667,20 +731,14 @@ public class AppGenerador {
 
         List<String> internalClassNames = new ArrayList<>();
         for (ClassModel c : internalClasses) {
-            internalClassNames.add(c.getName());
+            internalClassNames.add(c.id());
         }
         List<String> whiteClasses = retainKnown(readSelection(scanner,
                 "> WHITELIST clases a incluir (Enter=todas, solo internas): ", internalClassNames),
                 internalClassNames, "clase interna");
-        if (module != null) {
-            Set<String> moduleClasses = ModuleFilter.classesOf(originalProject, module);
-            if (moduleClasses.isEmpty()) {
-                System.out.println("  [!] Ninguna clase coincide con el módulo: " + module);
-            }
-            for (String name : moduleClasses) {
-                if (!whiteClasses.contains(name)) {
-                    whiteClasses.add(name);
-                }
+        for (String name : moduleClasses) {
+            if (!whiteClasses.contains(name)) {
+                whiteClasses.add(name);
             }
         }
         whiteClasses.forEach(c -> System.out.println("  [+] Whitelist clase: " + c));
@@ -847,9 +905,9 @@ public class AppGenerador {
         // 10. Exportar a archivo
         Path outputPath = Paths.get(outputPathStr);
         try {
-            diagramas.write(outputPath, pumlContent);
-            logTrace("Diagrama exportado con éxito en: " + outputPath.toAbsolutePath());
-            System.out.println("[✓] Diagrama guardado en: " + outputPath.toAbsolutePath());
+            Path writtenPath = diagramas.write(outputPath, pumlContent);
+            logTrace("Diagrama exportado con éxito en: " + writtenPath.toAbsolutePath());
+            System.out.println("[✓] Diagrama guardado en: " + writtenPath.toAbsolutePath());
         } catch (IOException e) {
             errorCount++;
             logTrace("Error al escribir archivo .puml: " + e.getMessage());
@@ -858,5 +916,6 @@ public class AppGenerador {
 
         logTrace("Sesión completada. Total de errores: " + errorCount);
         scanner.close();
+        System.exit(errorCount == 0 ? 0 : 1);
     }
 }

@@ -23,6 +23,9 @@ class ImportResolver {
     static Map<String, String> extractFileImports(CompilationUnit cu) {
         Map<String, String> fileImports = new HashMap<>();
         for (ImportDeclaration id : cu.getImports()) {
+            if (id.isAsterisk() && !id.isStatic()) {
+                fileImports.put(id.getNameAsString() + ".*", id.getNameAsString());
+            }
             if (!id.isAsterisk() && !id.isStatic()) {
                 String fqcn = id.getNameAsString();
                 int lastDot = fqcn.lastIndexOf('.');

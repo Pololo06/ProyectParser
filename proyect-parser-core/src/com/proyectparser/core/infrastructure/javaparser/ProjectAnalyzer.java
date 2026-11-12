@@ -1,7 +1,5 @@
 package com.proyectparser.core.infrastructure.javaparser;
 
-import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.StaticJavaParser;
 import com.proyectparser.core.domain.model.ClassModel;
 import com.proyectparser.core.domain.model.ProjectModel;
 import com.proyectparser.core.domain.model.RelationshipModel;
@@ -32,10 +30,6 @@ import java.util.Set;
  * (e.g. a missing folder) keeps the previous statistics.
  */
 public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
-
-    static {
-        StaticJavaParser.getParserConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.BLEEDING_EDGE);
-    }
 
     // Trazabilidad de la última corrida (ver RunStatsProvider).
     private AnalysisResult lastResult;

@@ -2,6 +2,7 @@ package com.proyectparser.core.infrastructure.javaparser;
 
 import com.proyectparser.core.domain.model.AttributeModel;
 import com.proyectparser.core.domain.model.ClassModel;
+import com.proyectparser.core.domain.model.ConstructorModel;
 import com.proyectparser.core.domain.model.Kind;
 import com.proyectparser.core.domain.model.MethodModel;
 import com.proyectparser.core.domain.model.ParameterModel;
@@ -53,6 +54,11 @@ class ExternalTypeRegistrar {
                     addSignatureReferences(references, model, method, parameter.getType());
                 }
             }
+            for (ConstructorModel constructor : model.getConstructors()) {
+                for (ParameterModel parameter : constructor.getParameters()) {
+                    addSignatureReferences(references, model, constructor.getTypeParameters(), parameter.getType());
+                }
+            }
             for (String reference : references) {
                 String target = GenericTypeParser.simpleName(reference);
                 if (TypeClassifier.shouldIgnoreBox(target)) {
@@ -72,8 +78,13 @@ class ExternalTypeRegistrar {
 
     private static void addSignatureReferences(Set<String> references, ClassModel model,
             MethodModel method, String type) {
+        addSignatureReferences(references, model, method.getTypeParameters(), type);
+    }
+
+    private static void addSignatureReferences(Set<String> references, ClassModel model,
+            List<String> typeParameters, String type) {
         Set<String> signature = GenericTypeParser.signatureReferences(type, model.getTypeParameters(),
-                method.getTypeParameters());
+                typeParameters);
         // Generic wrappers in signatures do not introduce an external box by themselves.
         int arguments = type.indexOf('<');
         if (arguments >= 0) {

@@ -10,6 +10,25 @@ class TypeClassifier {
         "byte", "short", "int", "long", "float", "double", "boolean", "char", "void"
     );
 
+    // Tipos de java.lang que se usan sin import: el paquete implícito debe ganar a un
+    // comodín no relacionado (p. ej. `import java.util.*; Thread t;` es java.lang.Thread).
+    private static final Set<String> JAVA_LANG_TYPES = Set.of(
+        "Appendable", "ArithmeticException", "ArrayIndexOutOfBoundsException", "ArrayStoreException",
+        "AssertionError", "AutoCloseable", "Boolean", "Byte", "Character", "CharSequence", "Class",
+        "ClassCastException", "ClassLoader", "ClassNotFoundException", "Cloneable", "CloneNotSupportedException",
+        "Comparable", "Deprecated", "Double", "Enum", "Error", "Exception", "Float", "FunctionalInterface",
+        "IllegalAccessException", "IllegalArgumentException", "IllegalMonitorStateException",
+        "IllegalStateException", "IndexOutOfBoundsException", "InheritableThreadLocal", "Integer",
+        "InterruptedException", "Iterable", "Long", "Math", "Module", "NegativeArraySizeException",
+        "NoClassDefFoundError", "NullPointerException", "Number", "NumberFormatException", "Object",
+        "OutOfMemoryError", "Override", "Package", "Process", "ProcessBuilder", "ProcessHandle", "Readable",
+        "Record", "ReflectiveOperationException", "Runnable", "Runtime", "RuntimeException",
+        "RuntimePermission", "SafeVarargs", "SecurityException", "SecurityManager", "Short", "StackOverflowError",
+        "StackTraceElement", "StackWalker", "StrictMath", "String", "StringBuffer", "StringBuilder",
+        "SuppressWarnings", "System", "Thread", "ThreadDeath", "ThreadLocal", "Throwable", "UnsupportedOperationException",
+        "Void"
+    );
+
     // Tipos básicos que actúan como escalares/literales (no deben generar caja externa)
     private static final Set<String> BASIC_SCALARS = Set.of(
         "String", "Object", "Class",
@@ -110,6 +129,9 @@ class TypeClassifier {
         if (typeName == null || typeName.isBlank()) {
             return "(unresolved)";
         }
+        if (JAVA_LANG_TYPES.contains(typeName)) {
+            return "java.lang";
+        }
         if (COMMON_JDK_TYPES.containsKey(typeName)) {
             return COMMON_JDK_TYPES.get(typeName);
         }
@@ -119,5 +141,9 @@ class TypeClassifier {
         // Unknown simple name: caller should prefer file imports; java.lang
         // is only a heuristic for JDK scalars, not a fact.
         return "java.lang";
+    }
+
+    static boolean isJavaLangType(String typeName) {
+        return typeName != null && JAVA_LANG_TYPES.contains(typeName);
     }
 }

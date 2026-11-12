@@ -56,8 +56,8 @@ public final class ProjectFilter {
         if (project.getClasses() != null && filter != null) {
             for (ClassModel clazz : project.getClasses()) {
                 boolean vetoed = clazz.isExternal()
-                        ? filter.isBlacklisted(clazz.getPackageName(), clazz.getName())
-                        : !filter.isAllowed(clazz.getPackageName(), clazz.getName());
+                        ? filter.isBlacklisted(clazz.getPackageName(), clazz.getName(), clazz.id(), clazz.getFqn())
+                        : !filter.isAllowed(clazz.getPackageName(), clazz.getName(), clazz.id(), clazz.getFqn());
                 if (vetoed) {
                     blacklistedClasses.add(clazz.id());
                 }

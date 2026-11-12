@@ -131,9 +131,16 @@ public class DiagramFilter {
      * a este criterio (opción B): la whitelist es solo para internas.
      */
     public boolean isBlacklisted(String packageName, String className) {
+        return isBlacklisted(packageName, className, null, null);
+    }
+
+    /**
+     * Igual que {@link #isBlacklisted(String, String)}, aceptando además el id y el fqn
+     * de la clase: un nombre simple afecta a todos sus homónimos; un id o fqn, solo a esa.
+     */
+    public boolean isBlacklisted(String packageName, String className, String id, String fqn) {
         String pkg = packageName == null ? "" : packageName.trim();
-        String cls = className == null ? "" : className.trim();
-        return blacklistedPackages.contains(pkg) || blacklistedClasses.contains(cls);
+        return blacklistedPackages.contains(pkg) || matchesClass(blacklistedClasses, className, id, fqn);
     }
 
     /**
@@ -141,15 +148,29 @@ public class DiagramFilter {
      * Precedencia: blacklist &gt; whitelist &gt; permitir.
      */
     public boolean isAllowed(String packageName, String className) {
+        return isAllowed(packageName, className, null, null);
+    }
+
+    /**
+     * Igual que {@link #isAllowed(String, String)}, aceptando además el id y el fqn
+     * de la clase: el nombre simple conserva su semántica sobre todos los homónimos.
+     */
+    public boolean isAllowed(String packageName, String className, String id, String fqn) {
         String pkg = packageName == null ? "" : packageName.trim();
-        String cls = className == null ? "" : className.trim();
-        if (blacklistedPackages.contains(pkg) || blacklistedClasses.contains(cls)) {
+        if (blacklistedPackages.contains(pkg) || matchesClass(blacklistedClasses, className, id, fqn)) {
             return false;
         }
         if (isRestrictive()) {
-            return whitelistedPackages.contains(pkg) || whitelistedClasses.contains(cls);
+            return whitelistedPackages.contains(pkg) || matchesClass(whitelistedClasses, className, id, fqn);
         }
         return true;
+    }
+
+    private static boolean matchesClass(Set<String> names, String className, String id, String fqn) {
+        String cls = className == null ? "" : className.trim();
+        return names.contains(cls)
+                || (id != null && names.contains(id))
+                || (fqn != null && names.contains(fqn));
     }
 
     public Set<String> getBlacklistedPackages() {

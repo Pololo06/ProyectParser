@@ -5,6 +5,7 @@ proyect-parser-core/dist/
 Proyecto_Poo/dist/
 Proyecto_Poo/build/
 *.class
+__pycache__/
 .idea/
 *.iml
 *.log
@@ -18,6 +19,7 @@ Proyecto_Poo/dist/lib/
 # build local de Maven
 /target/
 proyect-parser-core/target/
+proyect-parser-cli/target/
 proyect-parser-server/target/
 
 # herramientas de refactor y verificación (no necesarias para ejecutar el proyecto)

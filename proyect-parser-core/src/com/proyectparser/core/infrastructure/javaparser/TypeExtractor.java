@@ -1,11 +1,15 @@
 package com.proyectparser.core.infrastructure.javaparser;
 
-import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ParseProblemException;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.AnnotationDeclaration;
+import com.github.javaparser.ast.body.AnnotationMemberDeclaration;
 import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
+import com.github.javaparser.ast.body.CompactConstructorDeclaration;
 import com.github.javaparser.ast.body.EnumConstantDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
@@ -40,10 +44,17 @@ import java.util.Map;
  */
 class TypeExtractor {
 
+    private final JavaParser parser = new JavaParser(new ParserConfiguration()
+            .setLanguageLevel(ParserConfiguration.LanguageLevel.BLEEDING_EDGE));
+
     List<ClassModel> analyzeFile(File javaFile, Map<String, Map<String, String>> fileImportsByClass)
             throws IOException {
         List<ClassModel> result = new ArrayList<>();
-        CompilationUnit compilationUnit = StaticJavaParser.parse(javaFile);
+        var parsed = parser.parse(javaFile);
+        if (!parsed.isSuccessful()) {
+            throw new ParseProblemException(parsed.getProblems());
+        }
+        CompilationUnit compilationUnit = parsed.getResult().orElseThrow();
         String packageName = compilationUnit.getPackageDeclaration()
                 .map(pd -> pd.getNameAsString()).orElse("");
 
@@ -138,6 +149,7 @@ class TypeExtractor {
             extractMembers(enumDeclaration, attributes, constructors, methods);
         } else if (type instanceof AnnotationDeclaration) {
             kind = Kind.ANNOTATION.label();
+            extractMembers(type, attributes, constructors, methods);
         }
 
         return new ClassModel(name, packageName, kind, isAbstract, stereotypes,
@@ -147,7 +159,7 @@ class TypeExtractor {
 
     /**
      * Fields, constructors and methods declared in the type body, in declaration order.
-     * A record's compact constructor is not a {@link ConstructorDeclaration} and is ignored.
+     * Compact record constructors use the parameters declared in the record header.
      */
     private void extractMembers(TypeDeclaration<?> type, List<AttributeModel> attributes,
                                 List<ConstructorModel> constructors, List<MethodModel> methods) {
@@ -172,6 +184,13 @@ class TypeExtractor {
                         toParameters(constructor.getParameters()),
                         modifierNames(constructor.getModifiers()),
                         typeParameterNames(constructor.getTypeParameters())));
+            } else if (member instanceof CompactConstructorDeclaration constructor
+                    && type instanceof RecordDeclaration record) {
+                constructors.add(new ConstructorModel(constructor.getNameAsString(),
+                        toParameters(record.getParameters()), modifierNames(constructor.getModifiers()), List.of()));
+            } else if (member instanceof AnnotationMemberDeclaration annotationMember) {
+                methods.add(new MethodModel(annotationMember.getNameAsString(),
+                        annotationMember.getType().asString(), List.of(), List.of("public", "abstract"), List.of()));
             } else if (member instanceof MethodDeclaration) {
                 MethodDeclaration method = (MethodDeclaration) member;
                 List<String> modifiers = modifierNames(method.getModifiers());

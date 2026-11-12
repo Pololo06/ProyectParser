@@ -5,6 +5,9 @@ import com.proyectparser.core.domain.model.ProjectModel;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,14 +32,11 @@ class SourceScanner {
     }
 
     void traverseFolder(File folder, List<ClassModel> classes) throws IOException {
-        File[] contents = folder.listFiles();
-        if (contents == null) {
-            return;
-        }
-        for (File file : contents) {
-            if (file.isDirectory()) {
-                traverseFolder(file, classes);
-            } else if (file.getName().endsWith(".java")) {
+        // Files.walk does not follow symlinks; sorting makes repeated runs deterministic.
+        try (var paths = Files.walk(folder.toPath())) {
+            for (Path path : paths.filter(p -> Files.isRegularFile(p, LinkOption.NOFOLLOW_LINKS))
+                    .filter(p -> p.getFileName().toString().endsWith(".java")).sorted().toList()) {
+                File file = path.toFile();
                 try {
                     classes.addAll(extractor.analyzeFile(file, fileImportsByClass));
                     parsedFiles.add(file.getPath());

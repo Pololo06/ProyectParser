@@ -6,11 +6,13 @@ import com.proyectparser.core.domain.policy.DiagramOptions;
 import com.proyectparser.core.domain.policy.ProjectFilter;
 import com.proyectparser.core.domain.port.DiagramRendererPort;
 import com.proyectparser.core.domain.port.DiagramWriterPort;
+import com.proyectparser.core.domain.port.RunStatsProvider;
 import com.proyectparser.core.domain.port.SourceAnalyzerPort;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Use case: analyze, (optionally filter,) render and persist a diagram.
@@ -45,6 +47,14 @@ public class DiagramService {
 
     public Path write(Path target, String content) throws IOException {
         return writer.write(target, content);
+    }
+
+    /**
+     * Stats of the last analysis when the configured analyzer tracks them
+     * (the production {@code ProjectAnalyzer} does). Empty for custom analyzers.
+     */
+    public Optional<RunStatsProvider> getRunStats() {
+        return analyzer instanceof RunStatsProvider stats ? Optional.of(stats) : Optional.empty();
     }
 
     public String generate(String folderPath, DiagramFilter filter, DiagramOptions options) throws IOException {

@@ -14,13 +14,9 @@ import java.util.Set;
  * {@code Outer.Inner}) a una clase interna (su fqn) o a una externa (su paquete).
  * Lo comparten {@link RelationshipDetector} y {@link ExternalTypeRegistrar}.
  *
- * <p>Solo aplica el alcance de Java si el nombre es <em>conflictivo</em>: hay dos o más
- * clases internas con ese nombre simple, o el archivo lo importa de un paquete sin una
- * clase interna con ese nombre. Entonces prueba, en orden: el nombre calificado tal como
- * se escribió, un tipo anidado de la clase o de sus contenedoras, un import explícito y
- * el mismo paquete; si nada encaja, no se resuelve (las relaciones nunca se inventan).
- * Si no es conflictivo, sigue la regla de siempre: la interna con ese nombre simple o
- * una externa con el paquete de la heurística. Los imports con comodín se ignoran.
+ * <p>Prioriza nombres calificados, alcance léxico, imports y paquete local.
+ * Para fuentes parciales conserva la heurística de nombre interno único;
+ * los homónimos ambiguos no se enlazan.
  */
 class TypeResolver {
 
@@ -51,18 +47,12 @@ class TypeResolver {
         return target != null && target.isInternal() ? target.internalFqn() : null;
     }
 
-    /** Destino de {@code reference} escrita en {@code from}; null si es conflictiva y no se resuelve. */
+    /** Destino de {@code reference} escrita en {@code from}; null si es ambigua. */
     Target resolve(ClassModel from, String reference) {
         String name = GenericTypeParser.simpleName(reference);
         List<String> sameName = internalFqnsByName.getOrDefault(name, List.of());
-        String imported = fileImportsByClass.getOrDefault(from.getFqn(), Map.of()).get(name);
-        boolean conflictive = sameName.size() > 1
-                || (imported != null && !internalFqns.contains(imported + "." + name));
-        if (!conflictive) {
-            return sameName.isEmpty()
-                    ? new Target(null, TypeClassifier.resolvePackage(name), true)
-                    : internalTarget(sameName.get(0));
-        }
+        Map<String, String> imports = fileImportsByClass.getOrDefault(from.getFqn(), Map.of());
+        String imported = imports.get(name);
         // 1. Nombre calificado tal como se escribió.
         if (reference.contains(".")) {
             return qualified(from, reference);
@@ -83,7 +73,32 @@ class TypeResolver {
         }
         // 4. Mismo paquete.
         String local = pkg.isEmpty() ? name : pkg + "." + name;
-        return internalFqns.contains(local) ? internalTarget(local) : null;
+        if (internalFqns.contains(local)) {
+            return internalTarget(local);
+        }
+        List<String> wildcardPackages = imports.entrySet().stream()
+                .filter(entry -> entry.getKey().endsWith(".*"))
+                .map(Map.Entry::getValue).sorted().toList();
+        List<String> candidates = wildcardPackages.stream().map(p -> p + "." + name)
+                .filter(internalFqns::contains).toList();
+        if (candidates.size() == 1) {
+            return internalTarget(candidates.get(0));
+        }
+        if (candidates.size() > 1) {
+            return null;
+        }
+        // java.lang se importa implícitamente: un comodín ajeno no lo desplaza.
+        if (TypeClassifier.isJavaLangType(name)) {
+            return new Target(null, "java.lang", true);
+        }
+        if (wildcardPackages.size() == 1) {
+            // Known JDK types keep their package when another wildcard is unrelated.
+            String jdk = TypeClassifier.resolvePackage(name);
+            String external = wildcardPackages.contains(jdk) ? jdk : wildcardPackages.get(0);
+            return new Target(null, external, true);
+        }
+        return sameName.size() == 1 ? internalTarget(sameName.get(0))
+                : sameName.isEmpty() ? new Target(null, TypeClassifier.resolvePackage(name), true) : null;
     }
 
     /** {@code h.b.Foo} / {@code java.sql.Date} (paquete escrito) u {@code Outer.Inner} (tipo escrito). */
