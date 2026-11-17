@@ -38,5 +38,7 @@ package java.math {
 org.evilmind.crtp.AbstractAuditedNode ..> java.math.BigDecimal : <<use>>
 org.evilmind.crtp.AbstractAuditedNode <|-- org.evilmind.crtp.FinancialLedgerNode
 org.evilmind.crtp.AbstractAuditedNode ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.crtp.FinancialLedgerNode ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.crtp.FinancialLedgerNode ..> java.math.BigDecimal : <<use>>
 
 @enduml

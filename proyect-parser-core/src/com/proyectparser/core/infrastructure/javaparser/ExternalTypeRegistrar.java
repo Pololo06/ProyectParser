@@ -42,8 +42,25 @@ class ExternalTypeRegistrar {
         }
         Map<String, ClassModel> externals = new LinkedHashMap<>();   // fqn -> caja
         Set<String> heuristicBoxes = new HashSet<>();                // fqn de las cajas con paquete heurístico
+        // Establish known supertype kinds before a field can create a generic class box.
+        for (ClassModel model : classes) {
+            registerSupertypes(model, model.getExtendedTypes(), RelType.EXTENDS,
+                    model.getKindEnum() == Kind.INTERFACE ? Kind.INTERFACE : Kind.CLASS,
+                    resolver, externals, heuristicBoxes, relationships, seen);
+            registerSupertypes(model, model.getImplementedTypes(), RelType.IMPLEMENTS, Kind.INTERFACE,
+                    resolver, externals, heuristicBoxes, relationships, seen);
+        }
         for (ClassModel model : classes) {
             Set<String> references = new LinkedHashSet<>();
+            for (String supertype : model.getExtendedTypes()) {
+                addSupertypeArguments(references, model, supertype);
+            }
+            for (String supertype : model.getImplementedTypes()) {
+                addSupertypeArguments(references, model, supertype);
+            }
+            for (String bound : model.getTypeParameterBounds()) {
+                references.addAll(GenericTypeParser.visibleReferences(bound, model.getTypeParameters()));
+            }
             for (AttributeModel attribute : model.getAttributes()) {
                 references.addAll(GenericTypeParser.visibleReferences(attribute.getType(),
                         model.getTypeParameters()));
@@ -61,11 +78,13 @@ class ExternalTypeRegistrar {
             }
             for (String reference : references) {
                 String target = GenericTypeParser.simpleName(reference);
-                if (TypeClassifier.shouldIgnoreBox(target)) {
-                    continue;
-                }
                 TypeResolver.Target resolved = resolver.resolve(model, reference);
                 if (resolved == null || resolved.isInternal()) {
+                    continue;
+                }
+                if (TypeClassifier.shouldIgnoreBox(target)
+                        && ("java.lang".equals(resolved.externalPackage())
+                            || "java.util".equals(resolved.externalPackage()))) {
                     continue;
                 }
                 ClassModel box = box(externals, heuristicBoxes, target, resolved);
@@ -74,6 +93,25 @@ class ExternalTypeRegistrar {
             }
         }
         classes.addAll(externals.values());
+    }
+
+    private static void registerSupertypes(ClassModel model, List<String> supertypes,
+            RelType relation, Kind kind, TypeResolver resolver, Map<String, ClassModel> externals,
+            Set<String> heuristicBoxes, List<RelationshipModel> relationships, Set<String> seen) {
+        for (String supertype : supertypes) {
+            String raw = supertype.split("<", 2)[0].strip();
+            TypeResolver.Target resolved = resolver.resolve(model, raw);
+            if (resolved != null && !resolved.isInternal()) {
+                ClassModel target = box(externals, heuristicBoxes, GenericTypeParser.simpleName(raw), resolved, kind);
+                RelationshipDetector.addOnce(relationships, seen, model.getFqn(), target.getFqn(), relation);
+            }
+        }
+    }
+
+    private static void addSupertypeArguments(Set<String> references, ClassModel model, String supertype) {
+        Set<String> arguments = GenericTypeParser.visibleReferences(supertype, model.getTypeParameters());
+        arguments.remove(supertype.split("<", 2)[0].strip());
+        references.addAll(arguments);
     }
 
     private static void addSignatureReferences(Set<String> references, ClassModel model,
@@ -96,10 +134,15 @@ class ExternalTypeRegistrar {
     /** The box for {@code name} in the resolved package, created on first use. */
     private static ClassModel box(Map<String, ClassModel> externals, Set<String> heuristicBoxes,
             String name, TypeResolver.Target resolved) {
+        return box(externals, heuristicBoxes, name, resolved, Kind.CLASS);
+    }
+
+    private static ClassModel box(Map<String, ClassModel> externals, Set<String> heuristicBoxes,
+            String name, TypeResolver.Target resolved, Kind kind) {
         List<String> stereotypes = new ArrayList<>();
         stereotypes.add(ClassModel.EXTERNAL_STEREOTYPE);
         ClassModel candidate = new ClassModel(name,
-                resolved.externalPackage(), Kind.CLASS.label(), false,
+                resolved.externalPackage(), kind.label(), false,
                 stereotypes, new ArrayList<>(), new ArrayList<>(),
                 new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
                 new ArrayList<>(), List.of());

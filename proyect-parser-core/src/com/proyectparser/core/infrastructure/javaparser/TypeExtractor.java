@@ -64,9 +64,8 @@ class TypeExtractor {
         for (TypeDeclaration raw : rawTypes) {
             @SuppressWarnings("unchecked")
             TypeDeclaration<?> type = (TypeDeclaration<?>) raw;
-            // fqn with the enclosing types (p.Outer.Inner); a local class has none and keeps p.Name.
             ClassModel model = buildClassModel(type, packageName);
-            result.add(type.getFullyQualifiedName().map(model::withFqn).orElse(model));
+            result.add(model.withFqn(identityOf(type, packageName)));
         }
         Map<String, String> fileImports = ImportResolver.extractFileImports(compilationUnit);
         for (ClassModel built : result) {
@@ -74,6 +73,25 @@ class TypeExtractor {
                     (oldMap, newMap) -> { oldMap.putAll(newMap); return oldMap; });
         }
         return result;
+    }
+
+    private static String identityOf(TypeDeclaration<?> type, String packageName) {
+        if (type.getFullyQualifiedName().isPresent()) {
+            return type.getFullyQualifiedName().orElseThrow();
+        }
+        var enclosing = type.getParentNode().orElse(null);
+        while (enclosing != null && !(enclosing instanceof TypeDeclaration<?>)) {
+            enclosing = enclosing.getParentNode().orElse(null);
+        }
+        String owner = enclosing instanceof TypeDeclaration<?> declaration
+                ? identityOf(declaration, packageName) : packageName;
+        String prefix = owner.isEmpty() ? "" : owner + ".";
+        if (type.getParentNode().orElse(null) instanceof TypeDeclaration<?>) {
+            return prefix + type.getNameAsString();
+        }
+        // Local types have no Java FQN; source coordinates distinguish disjoint lexical scopes.
+        var position = type.getBegin().orElseThrow();
+        return prefix + "$local$" + position.line + "_" + position.column + "." + type.getNameAsString();
     }
 
     private ClassModel buildClassModel(TypeDeclaration<?> type, String packageName) {
@@ -150,6 +168,25 @@ class TypeExtractor {
         } else if (type instanceof AnnotationDeclaration) {
             kind = Kind.ANNOTATION.label();
             extractMembers(type, attributes, constructors, methods);
+        }
+
+        // Non-static member types inherit the type-variable scope of their owners.
+        TypeDeclaration<?> scope = type;
+        while (!scope.isStatic() && !(scope instanceof RecordDeclaration)
+                && !(scope instanceof EnumDeclaration) && !(scope instanceof AnnotationDeclaration)
+                && !(scope instanceof ClassOrInterfaceDeclaration declaration && declaration.isInterface())) {
+            var parent = scope.getParentNode().orElse(null);
+            if (!(parent instanceof TypeDeclaration<?> enclosing)) {
+                break;
+            }
+            if (enclosing instanceof NodeWithTypeParameters<?> generic) {
+                for (String variable : typeParameterNames(generic.getTypeParameters())) {
+                    if (!typeParameters.contains(variable)) {
+                        typeParameters.add(variable);
+                    }
+                }
+            }
+            scope = enclosing;
         }
 
         return new ClassModel(name, packageName, kind, isAbstract, stereotypes,

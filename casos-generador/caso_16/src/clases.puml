@@ -42,6 +42,7 @@ package java.math {
 org.evilmind.wildcards.FiscalEntity <|-- org.evilmind.wildcards.TaxHoldingEntity
 org.evilmind.wildcards.TaxHoldingEntity ..> java.time.OffsetDateTime : <<use>>
 org.evilmind.wildcards.FiscalEntity ..> java.math.BigDecimal : <<use>>
+org.evilmind.wildcards.TaxHoldingEntity ..> java.math.BigDecimal : <<use>>
 org.evilmind.wildcards.TaxVarianceProcessor ..> java.math.BigDecimal : <<use>>
 org.evilmind.wildcards.TaxVarianceProcessor ..> org.evilmind.wildcards.TaxHoldingEntity : <<use>>
 

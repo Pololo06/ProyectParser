@@ -159,6 +159,7 @@ org.evilmind.domain.InvoiceSecurityDigest ..> java.time.OffsetDateTime : <<use>>
 org.evilmind.controller.InvoiceController "1" --> "1" org.evilmind.service.InvoiceService
 org.evilmind.domain.FiscalInvoice "1" *-- "1" org.evilmind.domain.InvoiceSecurityDigest
 org.evilmind.domain.FiscalInvoice ..> java.math.BigDecimal : <<use>>
+org.evilmind.domain.FiscalInvoice ..> java.time.OffsetDateTime : <<use>>
 org.evilmind.repository.InvoiceRepository <|.. org.evilmind.repository.InMemoryInvoiceRepository
 
 @enduml

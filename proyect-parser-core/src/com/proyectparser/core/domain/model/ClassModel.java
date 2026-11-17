@@ -9,6 +9,8 @@ import java.util.List;
  * <p>Identity: {@link #getFqn()} includes the enclosing types of a nested type
  * ({@code p.Outer.Inner}); {@link #id()} is the simple name while no other class
  * of the project shares it, and the fqn otherwise.
+ * Local types use an enclosing identity plus {@code $local$line_column.Name},
+ * since Java does not assign them a source-level FQN.
  */
 public class ClassModel {
     /** Estereotipo que marca una clase como externa. */

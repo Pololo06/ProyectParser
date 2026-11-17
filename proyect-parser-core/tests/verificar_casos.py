@@ -123,12 +123,24 @@ def generate(output):
     (output / 'ejecucion.log').write_text(run.stdout, encoding='utf-8')
 
 
+def parsed_cases(output):
+    log = (output / 'ejecucion.log').read_text(encoding='utf-8')
+    entries = re.findall(r'^(caso_\d+) parsed (\d+)/(\d+), failed 0(?: \[\])?$', log, re.M)
+    expected = {case.name: len(list((case / 'src' / 'org' / 'evilmind').rglob('*.java')))
+                for case in CASE_ROOT.glob('caso_[0-9][0-9]')}
+    parsed = {name: f'{done}/{total}' for name, done, total in entries}
+    if len(entries) != 25 or set(parsed) != set(expected) or any(
+            int(done) != int(total) or int(total) != expected[name]
+            for name, done, total in entries if name in expected):
+        raise ValueError('Se requieren los 25 casos, sin duplicados, con todos sus Java analizados sin errores')
+    return parsed
+
+
 def comparison(output, report):
     cases = sorted(CASE_ROOT.glob('caso_[0-9][0-9]'))
     if len(cases) != 25:
         raise ValueError(f"Se esperaban 25 casos y se encontraron {len(cases)}")
-    log = (output / 'ejecucion.log').read_text(encoding='utf-8')
-    parsed = dict(re.findall(r'^(caso_\d+) parsed (\d+/\d+), failed 0(?: \[\])?$', log, re.M))
+    parsed = parsed_cases(output)
     rows = []
     details = []
     totals = [0, 0, 0, 0]

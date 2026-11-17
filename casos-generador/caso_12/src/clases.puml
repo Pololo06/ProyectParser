@@ -43,5 +43,6 @@ org.evilmind.template.AbstractRiskEngine <|-- org.evilmind.template.HighFrequenc
 org.evilmind.template.AbstractRiskEngine ..> java.math.BigDecimal : <<use>>
 org.evilmind.template.HighFrequencyRiskEngine ..> java.math.BigDecimal : <<use>>
 org.evilmind.template.AbstractRiskEngine ..> java.time.OffsetDateTime : <<use>>
+org.evilmind.template.HighFrequencyRiskEngine ..> java.time.OffsetDateTime : <<use>>
 
 @enduml

@@ -3,6 +3,8 @@ package com.proyectparser.core.infrastructure.javaparser;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 class TypeClassifier {
 
@@ -116,12 +118,14 @@ class TypeClassifier {
         if (rawType == null || rawType.isBlank()) {
             return references;
         }
-        for (String token : rawType.split("[^A-Za-z0-9_.]+")) {
-            String simple = token.substring(token.lastIndexOf('.') + 1);
-            if (!simple.isEmpty() && Character.isUpperCase(simple.charAt(0))) {
-                references.add(token);
-            }
-        }
+        // Type syntax, not capitalization, determines whether a name is a type.
+        var parsed = new JavaParser().parseType(rawType);
+        parsed.getResult().ifPresent(type -> type.findAll(ClassOrInterfaceType.class).stream()
+                .filter(reference -> reference.getParentNode()
+                        .filter(ClassOrInterfaceType.class::isInstance)
+                        .map(ClassOrInterfaceType.class::cast)
+                        .map(parent -> parent.getScope().orElse(null) != reference).orElse(true))
+                .forEach(reference -> references.add(reference.getNameWithScope())));
         return references;
     }
 

@@ -57,6 +57,9 @@ class TypeResolver {
         if (reference.contains(".")) {
             return qualified(from, reference);
         }
+        if (name.equals(from.getName())) {
+            return internalTarget(from.getFqn());
+        }
         // 2. Tipo anidado de la clase o de sus contenedoras (p.A.B -> p.A.B.X, p.A.X).
         String pkg = from.getPackageName() == null ? "" : from.getPackageName();
         String scope = from.getFqn();

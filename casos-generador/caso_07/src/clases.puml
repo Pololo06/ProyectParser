@@ -20,6 +20,7 @@ package org.evilmind.records {
     +  {readOnly} totalBatchAmount : BigDecimal
     +  {readOnly} processingCutoff : OffsetDateTime
     +  {readOnly} priorityLevel : Short
+    +  SettlementBatchRecord(batchId : Long, batchReference : String, totalBatchAmount : BigDecimal, processingCutoff : OffsetDateTime, priorityLevel : Short) : void <<Create>>
     +  SettlementBatchRecord(batchId : Long, batchReference : String, totalBatchAmount : BigDecimal) : void <<Create>>
     +  isHighPriority() : Boolean
     }

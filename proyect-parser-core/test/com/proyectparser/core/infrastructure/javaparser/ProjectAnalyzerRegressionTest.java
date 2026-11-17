@@ -98,7 +98,11 @@ class ProjectAnalyzerRegressionTest {
     @Test void scanIgnoresSymbolicLinksOutsideSourceTree() throws Exception {
         source("project/A.java", "class A {}");
         source("outside/Secret.java", "class Secret {}");
-        Files.createSymbolicLink(root.resolve("project/link"), root.resolve("outside"));
+        try {
+            Files.createSymbolicLink(root.resolve("project/link"), root.resolve("outside"));
+        } catch (java.nio.file.FileSystemException | UnsupportedOperationException e) {
+            org.junit.jupiter.api.Assumptions.abort("Symbolic links unavailable: " + e.getMessage());
+        }
         ProjectAnalyzer analyzer = new ProjectAnalyzer();
         ProjectModel model = analyzer.analyze(root.resolve("project").toString());
         assertEquals(1, analyzer.getParsedFileCount());

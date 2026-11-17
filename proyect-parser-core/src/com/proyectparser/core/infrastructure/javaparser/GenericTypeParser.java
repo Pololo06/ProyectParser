@@ -29,10 +29,9 @@ class GenericTypeParser {
 
     static Set<String> visibleReferences(String typeString, List<String> first, List<String> second) {
         Set<String> references = TypeClassifier.referencedTypes(typeString);
-        references.removeIf(reference -> {
-            String name = simpleName(reference);
-            return (first != null && first.contains(name)) || (second != null && second.contains(name));
-        });
+        // A type variable is an unqualified identifier; third.party.T is a real type.
+        references.removeIf(reference -> (first != null && first.contains(reference))
+                || (second != null && second.contains(reference)));
         return references;
     }
 

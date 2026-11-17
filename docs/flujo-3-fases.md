@@ -79,7 +79,7 @@ Map<String, Integer> porKind = f.countByKind("ruta/a/src"); // Class, Interface,
 
 **Objetivo:** deducir las relaciones entre las clases del `ProjectModel`. Los extremos se guardan como `id` de clase (nombre simple, o FQN si hay homónimos).
 
-Se infieren exactamente 5 tipos (`RelType`):
+Se infieren 7 tipos (`RelType`):
 
 | Tipo (`RelType`) | Origen en el código | Flecha PlantUML | Ejemplo |
 |---|---|---|---|
@@ -100,8 +100,10 @@ Reglas confirmadas:
 
 ### Tipos externos (`@external`)
 
-- Todo tipo referenciado desde un atributo que **no** es del proyecto, ni primitivo, ni escalar básico (`String`, wrappers, etc.), ni variable de tipo, se registra como caja `ClassModel` con estereotipo `@external`, con su paquete JDK real (por import o nombre calificado).
-- Cada caja externa recibe una `ASSOCIATION` desde la clase que la usa.
+- Los tipos externos usados en atributos, firmas de métodos/constructores, argumentos de supertipos y límites genéricos de clase se registran con `@external`. Los escalares de `java.lang` y contenedores de `java.util` se omiten; un homónimo de otro paquete se conserva.
+- Los usos externos generan `DEPENDENCY`. Las cláusulas `extends` e `implements` conservan `EXTENDS` e `IMPLEMENTS`; las interfaces externas conocidas por esas cláusulas se modelan como interfaces.
+- Los constructores compactos declarados de un record conservan los parámetros de su cabecera; no se inventan constructores implícitos.
+- Las clases locales sin FQN Java usan una identidad del contenedor con `$local$línea_columna.Nombre`, para evitar sobrescribir clases locales homónimas de métodos distintos.
 - En el diagrama las externas van **separadas** (ver Fase 3, bloque `EXTERNAL`). Se pueden ocultar con `DiagramOptions` o vetar con `DiagramFilter` (las externas solo obedecen a blacklist).
 
 ```java

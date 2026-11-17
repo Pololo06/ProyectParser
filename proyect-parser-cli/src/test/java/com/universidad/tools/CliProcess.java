@@ -41,6 +41,8 @@ final class CliProcess {
 
     private static Result start(Path cwd, List<String> command, String stdin)
             throws IOException, InterruptedException {
+        // The harness writes and decodes UTF-8, so the child must use the same protocol.
+        command.addAll(1, List.of("-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8"));
         Process process = new ProcessBuilder(command).directory(cwd.toFile()).start();
         CompletableFuture<String> out = CompletableFuture.supplyAsync(() -> read(process.getInputStream()));
         CompletableFuture<String> err = CompletableFuture.supplyAsync(() -> read(process.getErrorStream()));
