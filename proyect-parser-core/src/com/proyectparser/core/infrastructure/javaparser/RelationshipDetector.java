@@ -40,7 +40,7 @@ class RelationshipDetector {
             for (String parent : model.getExtendedTypes()) {
                 String parentFqn = resolver.internal(model, parent.split("<", 2)[0]);
                 if (parentFqn != null) {
-                    addOnce(relationships, seen, self, parentFqn, RelType.EXTENDS);
+                    addOnce(relationships, seen, self, parentFqn, RelType.EXTENDS, parent);
                 }
                 // generics inside extends clause, e.g. extends Base<Package>
                 for (String inner : GenericTypeParser.visibleReferences(parent, model.getTypeParameters())) {
@@ -53,7 +53,7 @@ class RelationshipDetector {
             for (String parent : model.getImplementedTypes()) {
                 String parentFqn = resolver.internal(model, parent.split("<", 2)[0]);
                 if (parentFqn != null) {
-                    addOnce(relationships, seen, self, parentFqn, RelType.IMPLEMENTS);
+                    addOnce(relationships, seen, self, parentFqn, RelType.IMPLEMENTS, parent);
                 }
                 for (String inner : GenericTypeParser.visibleReferences(parent, model.getTypeParameters())) {
                     String target = resolver.internal(model, inner);
@@ -87,6 +87,9 @@ class RelationshipDetector {
             // DEPENDENCY: types used only in method/constructor signatures (params, returns)
             // or record components already covered as attributes are skipped.
             for (MethodModel method : model.getMethods()) {
+                for (String reference : signatureTypes(method.getSignatureDetails())) {
+                    addDependencies(relationships, seen, resolver, model, associated, reference, method.getTypeParameters());
+                }
                 addDependencies(relationships, seen, resolver, model, associated, method.getReturnType(),
                         method.getTypeParameters());
                 for (ParameterModel parameter : method.getParameters()) {
@@ -95,6 +98,9 @@ class RelationshipDetector {
                 }
             }
             for (ConstructorModel constructor : model.getConstructors()) {
+                for (String reference : signatureTypes(constructor.getSignatureDetails())) {
+                    addDependencies(relationships, seen, resolver, model, associated, reference, constructor.getTypeParameters());
+                }
                 for (ParameterModel parameter : constructor.getParameters()) {
                     addDependencies(relationships, seen, resolver, model, associated, parameter.getType(),
                             constructor.getTypeParameters());
@@ -115,6 +121,12 @@ class RelationshipDetector {
             return null;
         }
         return fqn.substring(0, fqn.length() - model.getName().length() - 1);
+    }
+
+    static List<String> signatureTypes(com.proyectparser.core.domain.model.SignatureDetails details) {
+        List<String> types = new java.util.ArrayList<>(details.typeParameterBounds());
+        types.addAll(details.thrownTypes());
+        return types;
     }
 
     private static RelType preferredFieldRelation(RelType first, RelType second, boolean recursive) {
@@ -145,7 +157,12 @@ class RelationshipDetector {
 
     static void addOnce(List<RelationshipModel> relationships, Set<String> seen,
                         String source, String target, RelType type) {
-        RelationshipModel rel = new RelationshipModel(source, target, type.label());
+        addOnce(relationships, seen, source, target, type, null);
+    }
+
+    static void addOnce(List<RelationshipModel> relationships, Set<String> seen,
+                        String source, String target, RelType type, String targetType) {
+        RelationshipModel rel = new RelationshipModel(source, target, type.label(), targetType);
         String nesting = target + "|" + RelType.NESTING.label() + "|" + source;
         if (type != RelType.NESTING && seen.contains(nesting)) {
             return;

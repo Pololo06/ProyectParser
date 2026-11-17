@@ -15,6 +15,7 @@ package org.evilmind.resilience {
     +  {static} main(args : String[]) : void
     }
     interface FiscalContract <<Sealed>> {
+    permits StandardFiscalLedger, CustomFiscalLedger
     +  {static, readOnly} DEFAULT_SURCHARGE_RATE : BigDecimal = new BigDecimal("0.015")
     +  {abstract} calculateBaseTax(grossAmount : BigDecimal) : BigDecimal
     +  {default} calculateTaxWithSurcharge(grossAmount : BigDecimal) : BigDecimal

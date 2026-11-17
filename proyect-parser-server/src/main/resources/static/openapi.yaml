@@ -564,6 +564,22 @@ components:
         type:
           type: string
 
+    SignatureDetails:
+      type: object
+      properties:
+        typeParameterDeclarations:
+          type: array
+          items:
+            type: string
+        typeParameterBounds:
+          type: array
+          items:
+            type: string
+        thrownTypes:
+          type: array
+          items:
+            type: string
+
     Method:
       type: object
       properties:
@@ -584,6 +600,9 @@ components:
           items:
             type: string
 
+        signatureDetails:
+          $ref: '#/components/schemas/SignatureDetails'
+
     Constructor:
       type: object
       properties:
@@ -601,6 +620,9 @@ components:
           type: array
           items:
             type: string
+
+        signatureDetails:
+          $ref: '#/components/schemas/SignatureDetails'
 
     Class:
       type: object
@@ -655,6 +677,19 @@ components:
           items:
             type: string
 
+        typeParameterDeclarations:
+          type: array
+          items:
+            type: string
+        typeParameterBounds:
+          type: array
+          items:
+            type: string
+        permittedTypes:
+          type: array
+          items:
+            type: string
+
     Relationship:
       type: object
       properties:
@@ -666,7 +701,11 @@ components:
           description: Class id or external id.
         type:
           type: string
-          enum: [EXTENDS, IMPLEMENTS, ASSOCIATION, DEPENDENCY, NESTING]
+          enum: [EXTENDS, IMPLEMENTS, ASSOCIATION, AGGREGATION, COMPOSITION, DEPENDENCY, NESTING]
+        targetType:
+          type: string
+          nullable: true
+          description: Declared supertype expression including generic arguments, separate from target identity.
 
     AnalysisResponse:
       type: object

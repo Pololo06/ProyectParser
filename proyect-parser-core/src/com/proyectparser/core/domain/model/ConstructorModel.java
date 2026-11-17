@@ -8,6 +8,15 @@ public class ConstructorModel {
     private List<ParameterModel> parameters;
     private List<String> modifiers;
     private List<String> typeParameters;
+    private SignatureDetails signatureDetails = SignatureDetails.empty();
+
+    public SignatureDetails getSignatureDetails() { return signatureDetails; }
+
+    public ConstructorModel withSignatureDetails(SignatureDetails details) {
+        ConstructorModel copy = new ConstructorModel(name, parameters, modifiers, typeParameters);
+        copy.signatureDetails = java.util.Objects.requireNonNull(details);
+        return copy;
+    }
 
     public ConstructorModel(String name, List<ParameterModel> parameters,
                             List<String> modifiers, List<String> typeParameters) {

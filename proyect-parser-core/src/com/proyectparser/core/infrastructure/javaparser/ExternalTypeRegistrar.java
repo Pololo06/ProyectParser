@@ -66,12 +66,18 @@ class ExternalTypeRegistrar {
                         model.getTypeParameters()));
             }
             for (MethodModel method : model.getMethods()) {
+                for (String reference : RelationshipDetector.signatureTypes(method.getSignatureDetails())) {
+                    addSignatureReferences(references, model, method.getTypeParameters(), reference);
+                }
                 addSignatureReferences(references, model, method, method.getReturnType());
                 for (ParameterModel parameter : method.getParameters()) {
                     addSignatureReferences(references, model, method, parameter.getType());
                 }
             }
             for (ConstructorModel constructor : model.getConstructors()) {
+                for (String reference : RelationshipDetector.signatureTypes(constructor.getSignatureDetails())) {
+                    addSignatureReferences(references, model, constructor.getTypeParameters(), reference);
+                }
                 for (ParameterModel parameter : constructor.getParameters()) {
                     addSignatureReferences(references, model, constructor.getTypeParameters(), parameter.getType());
                 }
@@ -103,7 +109,7 @@ class ExternalTypeRegistrar {
             TypeResolver.Target resolved = resolver.resolve(model, raw);
             if (resolved != null && !resolved.isInternal()) {
                 ClassModel target = box(externals, heuristicBoxes, GenericTypeParser.simpleName(raw), resolved, kind);
-                RelationshipDetector.addOnce(relationships, seen, model.getFqn(), target.getFqn(), relation);
+                RelationshipDetector.addOnce(relationships, seen, model.getFqn(), target.getFqn(), relation, supertype);
             }
         }
     }

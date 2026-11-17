@@ -37,6 +37,12 @@ class StrictComparatorTest(unittest.TestCase):
     def test_complete_matching_corpus_passes(self):
         self.assertTrue(self.compare())
 
+    def test_permits_and_specialization_are_semantic_content(self):
+        for declaration in ('  interface Root {\n    permits A, B\n  }\n',
+                            '  class Example {\n    + <T extends Number> convert(value : T) : T throws Failure\n  }\n'):
+            missing = declaration.replace('    permits A, B\n', '').replace('<T extends Number> ', '').replace(' throws Failure', '')
+            self.assertNotEqual(base.extract(declaration, True), base.extract(missing, True))
+
     def test_missing_and_additional_content_fail(self):
         for content in ('  class Example {\n  }\n', self.source + 'Example ..> Phantom : <<use>>\n',
                         self.source.replace('+ value : int', '+ value : int\n    + extra : int')):

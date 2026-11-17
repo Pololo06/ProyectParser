@@ -45,7 +45,7 @@ package java.math {
 
 ' --- Grafo de relaciones ---
 org.evilmind.generics.IdentifiablePayload <|.. org.evilmind.generics.TaxPaymentPayload
-org.evilmind.generics.AbstractPayloadRepository <|-- org.evilmind.generics.TaxPaymentRepository
+org.evilmind.generics.AbstractPayloadRepository <|-- org.evilmind.generics.TaxPaymentRepository : AbstractPayloadRepository<TaxPaymentPayload>
 org.evilmind.generics.AbstractPayloadRepository ..> org.evilmind.generics.IdentifiablePayload : <<use>>
 org.evilmind.generics.TaxPaymentRepository ..> org.evilmind.generics.TaxPaymentPayload : <<use>>
 org.evilmind.generics.AbstractPayloadRepository ..> java.math.BigDecimal : <<use>>

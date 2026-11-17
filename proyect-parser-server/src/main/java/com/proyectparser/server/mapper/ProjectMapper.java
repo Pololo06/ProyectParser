@@ -117,14 +117,14 @@ public class ProjectMapper {
         for (MethodModel method : safe(model.getMethods())) {
             methods.add(new MethodDto(method.getName(), method.getReturnType(),
                     parameters(method.getParameters()), safe(method.getModifiers()),
-                    safe(method.getTypeParameters())));
+                    safe(method.getTypeParameters()), method.getSignatureDetails()));
         }
 
         List<ConstructorDto> constructors = new ArrayList<>();
         for (ConstructorModel constructor : safe(model.getConstructors())) {
             constructors.add(new ConstructorDto(constructor.getName(),
                     parameters(constructor.getParameters()), safe(constructor.getModifiers()),
-                    safe(constructor.getTypeParameters())));
+                    safe(constructor.getTypeParameters()), constructor.getSignatureDetails()));
         }
 
         return new ClassDto(
@@ -142,7 +142,8 @@ public class ProjectMapper {
                 safe(model.getExtendedTypes()),
                 safe(model.getImplementedTypes()),
                 safe(model.getEnumConstants()),
-                safe(model.getTypeParameters()));
+                safe(model.getTypeParameters()), model.getTypeParameterDeclarations(),
+                model.getTypeParameterBounds(), model.getPermittedTypes());
     }
 
     private List<ParameterDto> parameters(List<ParameterModel> parameters) {
@@ -157,7 +158,7 @@ public class ProjectMapper {
         List<RelationshipDto> relationships = new ArrayList<>();
         for (RelationshipModel relationship : safe(project.getRelationships())) {
             relationships.add(new RelationshipDto(
-                    relationship.getSource(), relationship.getTarget(), relationship.getType()));
+                    relationship.getSource(), relationship.getTarget(), relationship.getType(), relationship.getTargetType()));
         }
         return relationships;
     }

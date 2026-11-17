@@ -6,7 +6,9 @@ import com.proyectparser.core.domain.model.ProjectModel;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,10 +34,22 @@ class SourceScanner {
     }
 
     void traverseFolder(File folder, List<ClassModel> classes) throws IOException {
-        // Files.walk does not follow symlinks; sorting makes repeated runs deterministic.
-        try (var paths = Files.walk(folder.toPath())) {
-            for (Path path : paths.filter(p -> Files.isRegularFile(p, LinkOption.NOFOLLOW_LINKS))
-                    .filter(p -> p.getFileName().toString().endsWith(".java")).sorted().toList()) {
+        List<Path> sources = new ArrayList<>();
+        Path root = folder.toPath();
+        // Do not follow symbolic links or Windows junctions (directory reparse points).
+        Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+            @Override public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attributes) {
+                return !dir.equals(root) && attributes.isOther()
+                        ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+            }
+            @Override public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                if (attributes.isRegularFile() && file.getFileName().toString().endsWith(".java")) {
+                    sources.add(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+            for (Path path : sources.stream().sorted().toList()) {
                 File file = path.toFile();
                 try {
                     classes.addAll(extractor.analyzeFile(file, fileImportsByClass));
@@ -47,7 +61,6 @@ class SourceScanner {
                     // RNF-04/RNF-06: no System.err here; failures are exposed via
                     // getFailedFiles()/getFailureReasons()/getLastAnalysisSummary().
                 }
-            }
         }
     }
 

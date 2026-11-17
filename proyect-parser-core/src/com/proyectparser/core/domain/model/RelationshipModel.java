@@ -8,6 +8,14 @@ public class RelationshipModel {
     private String source;
     private String target;
     private String type;
+    private String targetType;
+
+    /** Declared supertype expression, including generic arguments; identity remains target. */
+    public String getTargetType() { return targetType; }
+    public RelationshipModel(String source, String target, String type, String targetType) {
+        this(source, target, type);
+        this.targetType = targetType;
+    }
 
     public RelationshipModel(String source, String target, String type) {
         this.source = source;

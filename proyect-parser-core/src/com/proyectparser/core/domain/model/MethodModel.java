@@ -9,6 +9,15 @@ public class MethodModel {
     private List<ParameterModel> parameters;
     private List<String> modifiers;
     private List<String> typeParameters;
+    private SignatureDetails signatureDetails = SignatureDetails.empty();
+
+    public SignatureDetails getSignatureDetails() { return signatureDetails; }
+
+    public MethodModel withSignatureDetails(SignatureDetails details) {
+        MethodModel copy = new MethodModel(name, returnType, parameters, modifiers, typeParameters);
+        copy.signatureDetails = java.util.Objects.requireNonNull(details);
+        return copy;
+    }
 
     public MethodModel(String name, String returnType, List<ParameterModel> parameters,
                        List<String> modifiers, List<String> typeParameters) {

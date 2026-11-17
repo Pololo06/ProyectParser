@@ -29,6 +29,8 @@ import com.proyectparser.core.domain.model.ConstructorModel;
 import com.proyectparser.core.domain.model.Kind;
 import com.proyectparser.core.domain.model.MethodModel;
 import com.proyectparser.core.domain.model.ParameterModel;
+import com.proyectparser.core.domain.model.SignatureDetails;
+import com.github.javaparser.ast.body.CallableDeclaration;
 
 import java.io.File;
 import java.io.IOException;
@@ -191,7 +193,10 @@ class TypeExtractor {
 
         return new ClassModel(name, packageName, kind, isAbstract, stereotypes,
                 attributes, methods, constructors, extendedTypes, implementedTypes, enumConstants,
-                typeParameters).withTypeParameterDetails(bounds, declarations);
+                typeParameters).withTypeParameterDetails(bounds, declarations)
+                .withPermittedTypes(type instanceof ClassOrInterfaceDeclaration declaration
+                        ? declaration.getPermittedTypes().stream().map(ClassOrInterfaceType::asString).toList()
+                        : List.of());
     }
 
     /**
@@ -220,7 +225,7 @@ class TypeExtractor {
                         constructor.getNameAsString(),
                         toParameters(constructor.getParameters()),
                         modifierNames(constructor.getModifiers()),
-                        typeParameterNames(constructor.getTypeParameters())));
+                        typeParameterNames(constructor.getTypeParameters())).withSignatureDetails(signatureDetails(constructor)));
             } else if (member instanceof CompactConstructorDeclaration constructor
                     && type instanceof RecordDeclaration record) {
                 constructors.add(new ConstructorModel(constructor.getNameAsString(),
@@ -243,7 +248,7 @@ class TypeExtractor {
                         method.getType().asString(),
                         toParameters(method.getParameters()),
                         modifiers,
-                        typeParameterNames(method.getTypeParameters())));
+                        typeParameterNames(method.getTypeParameters())).withSignatureDetails(signatureDetails(method)));
             }
         }
     }
@@ -257,6 +262,13 @@ class TypeExtractor {
                 .map(Object::toString)
                 .filter(text -> !text.contains("\n"))
                 .orElse(null);
+    }
+
+    private static SignatureDetails signatureDetails(CallableDeclaration<?> declaration) {
+        return new SignatureDetails(declaration.getTypeParameters().stream().map(TypeParameter::toString).toList(),
+                declaration.getTypeParameters().stream().flatMap(t -> t.getTypeBound().stream())
+                        .map(ClassOrInterfaceType::asString).toList(),
+                declaration.getThrownExceptions().stream().map(Object::toString).toList());
     }
 
     private static void addImplicit(List<String> modifiers, String... implicit) {

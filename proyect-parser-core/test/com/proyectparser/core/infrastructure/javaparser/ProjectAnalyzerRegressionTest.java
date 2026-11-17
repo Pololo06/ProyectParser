@@ -109,6 +109,26 @@ class ProjectAnalyzerRegressionTest {
         assertEquals("A", model.getClasses().get(0).getName());
     }
 
+    @Test
+    @org.junit.jupiter.api.condition.EnabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
+    void scanIgnoresWindowsJunctionsOutsideSourceTree() throws Exception {
+        source("project/A.java", "class A {}");
+        source("outside/Secret.java", "class Secret {}");
+        var process = new ProcessBuilder("cmd.exe", "/d", "/c", "mklink", "/J",
+                root.resolve("project/link").toString(), root.resolve("outside").toString())
+                .redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes());
+        assertEquals(0, process.waitFor(), output);
+        try {
+            var analyzer = new ProjectAnalyzer();
+            var model = analyzer.analyze(root.resolve("project").toString());
+            assertEquals(1, analyzer.getParsedFileCount());
+            assertEquals(java.util.List.of("A"), model.getClasses().stream().map(c -> c.getName()).toList());
+        } finally {
+            Files.delete(root.resolve("project/link"));
+        }
+    }
+
     @Test void parseFailureIsReportedWithoutDiscardingValidSources() throws Exception {
         source("A.java", "class A {}");
         source("Broken.java", "class Broken { ??? }");

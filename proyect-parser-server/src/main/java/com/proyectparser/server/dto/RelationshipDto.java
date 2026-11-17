@@ -6,5 +6,5 @@ package com.proyectparser.server.dto;
  * <p>{@code type} is one of {@code EXTENDS}, {@code IMPLEMENTS},
  * {@code ASSOCIATION}, {@code DEPENDENCY} or {@code NESTING}.</p>
  */
-public record RelationshipDto(String source, String target, String type) {
+public record RelationshipDto(String source, String target, String type, String targetType) {
 }

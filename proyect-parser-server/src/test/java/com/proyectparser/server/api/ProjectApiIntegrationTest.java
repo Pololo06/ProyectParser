@@ -28,6 +28,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class ProjectApiIntegrationTest {
 
+    @Test
+    void analysisPreservesDeclarationMetadataAcrossHttpBoundary() throws Exception {
+        String source = "sealed interface Root permits Child {} final class Child implements Root {} "
+                + "class Base<T> {} class Example extends Base<String> { "
+                + "<X extends java.io.Closeable> X open(X x) throws java.io.IOException { return x; } }";
+        String body = "{\"projectName\":\"declarations\",\"files\":[{\"path\":\"Example.java\",\"content\":"
+                + quote(source) + "}]}";
+        mockMvc.perform(post("/api/v1/analysis/json").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.classes[?(@.name == 'Root')].permittedTypes[0]", hasItem("Child")))
+                .andExpect(jsonPath("$.relationships[?(@.source == 'Example')].targetType", hasItem("Base<String>")))
+                .andExpect(jsonPath("$.classes[?(@.name == 'Example')].methods[0].signatureDetails.typeParameterDeclarations[0]",
+                        hasItem("X extends java.io.Closeable")))
+                .andExpect(jsonPath("$.classes[?(@.name == 'Example')].methods[0].signatureDetails.thrownTypes[0]",
+                        hasItem("java.io.IOException")));
+    }
+
     private static final String CURSO = """
             package com.example.model;
 

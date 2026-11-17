@@ -23,6 +23,9 @@ public record ClassDto(
         List<String> extendedTypes,
         List<String> implementedTypes,
         List<String> enumConstants,
-        List<String> typeParameters
+        List<String> typeParameters,
+        List<String> typeParameterDeclarations,
+        List<String> typeParameterBounds,
+        List<String> permittedTypes
 ) {
 }

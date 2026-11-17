@@ -75,7 +75,7 @@ public class ProjectAnalyzer implements SourceAnalyzerPort, RunStatsProvider {
         List<RelationshipModel> translated = new ArrayList<>();
         for (RelationshipModel rel : relationships) {
             translated.add(new RelationshipModel(idByFqn.getOrDefault(rel.getSource(), rel.getSource()),
-                    idByFqn.getOrDefault(rel.getTarget(), rel.getTarget()), rel.getType()));
+                    idByFqn.getOrDefault(rel.getTarget(), rel.getTarget()), rel.getType(), rel.getTargetType()));
         }
         return new ProjectModel(projectName, identified, translated);
     }

@@ -31,6 +31,14 @@ public class ClassModel {
     private List<String> typeParameterDeclarations = List.of();
     private String fqn;
     private String id;
+    private List<String> permittedTypes = List.of();
+
+    public List<String> getPermittedTypes() { return permittedTypes; }
+    public ClassModel withPermittedTypes(List<String> types) {
+        ClassModel copy = copy();
+        copy.permittedTypes = List.copyOf(types);
+        return copy;
+    }
 
     public ClassModel(String name, String packageName, String kind, boolean isAbstract,
                       List<String> stereotypes, List<AttributeModel> attributes,
@@ -84,6 +92,7 @@ public class ClassModel {
         copy.fqn = fqn;
         copy.typeParameterBounds = typeParameterBounds;
         copy.typeParameterDeclarations = typeParameterDeclarations;
+        copy.permittedTypes = permittedTypes;
         copy.id = id;
         return copy;
     }

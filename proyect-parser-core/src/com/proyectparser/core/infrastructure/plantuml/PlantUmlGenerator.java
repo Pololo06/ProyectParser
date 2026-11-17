@@ -366,6 +366,10 @@ public class PlantUmlGenerator implements DiagramRendererPort {
             }
         }
 
+        if (!model.getPermittedTypes().isEmpty()) {
+            builder.append(indent).append("  permits ").append(String.join(", ", model.getPermittedTypes())).append("\n");
+        }
+
         // enum literals first: public static final fields of the enum type
         if (model.getKindEnum() == Kind.ENUM && model.getEnumConstants() != null) {
             for (String constant : model.getEnumConstants()) {
@@ -390,8 +394,9 @@ public class PlantUmlGenerator implements DiagramRendererPort {
         if (opt.isShowConstructors() && model.getConstructors() != null) {
             for (ConstructorModel constructor : model.getConstructors()) {
                 appendMember(builder, indent, visibilityOf(constructor.getModifiers(), false), List.of(),
-                        constructor.getName() + "(" + formatParameters(constructor.getParameters(), opt)
-                                + ") : void <<Create>>");
+                        genericPrefix(constructor.getSignatureDetails()) + constructor.getName()
+                                + "(" + formatParameters(constructor.getParameters(), opt)
+                                + ") : void <<Create>>" + throwsSuffix(constructor.getSignatureDetails()));
             }
         }
 
@@ -403,12 +408,21 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 }
                 appendMember(builder, indent, visibilityOf(method.getModifiers(), isInterface),
                         methodModifiers(method.getModifiers(), isInterface),
-                        method.getName() + "(" + formatParameters(method.getParameters(), opt) + ") : "
-                                + method.getReturnType());
+                        genericPrefix(method.getSignatureDetails()) + method.getName()
+                                + "(" + formatParameters(method.getParameters(), opt) + ") : "
+                                + method.getReturnType() + throwsSuffix(method.getSignatureDetails()));
             }
         }
 
         builder.append(indent).append("}\n\n");
+    }
+
+    private static String genericPrefix(com.proyectparser.core.domain.model.SignatureDetails details) {
+        return details.genericPrefix();
+    }
+
+    private static String throwsSuffix(com.proyectparser.core.domain.model.SignatureDetails details) {
+        return details.throwsSuffix();
     }
 
     /** One member line: {@code -  {static, readOnly} name : Type}. */
@@ -553,6 +567,8 @@ public class PlantUmlGenerator implements DiagramRendererPort {
                 .append(aliases.getOrDefault(right, right));
         if (kind == RelType.DEPENDENCY) {
             builder.append(" : <<use>>");
+        } else if (inheritance && relationship.getTargetType() != null && relationship.getTargetType().contains("<")) {
+            builder.append(" : ").append(relationship.getTargetType());
         }
         builder.append("\n");
     }

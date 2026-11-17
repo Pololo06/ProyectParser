@@ -45,10 +45,10 @@ def member_signature(kind, owner, visibility, body, expected):
     modifiers = tuple(sorted(token for match in MODIFIER.findall(body) for token in match if token))
     body = MODIFIER.sub('', body).strip()
     if expected:
-        method = re.fullmatch(r'(\w+)\((.*)\) : (.+)', body)
+        method = re.fullmatch(r'((?:<.*> )?\w+)\((.*)\) : (.+)', body)
         if method:
             name, raw_parameters, data_type = method.groups()
-            data_type = 'constructor' if data_type == 'void <<Create>>' else data_type
+            data_type = data_type.replace('void <<Create>>', 'constructor', 1)
             parameters = [parameter.split(' : ', 1) for parameter in split_parameters(raw_parameters)]
         else:
             name, data_type = body.split(' : ', 1)
@@ -88,7 +88,7 @@ def extract(source, expected):
                 raise ValueError(f"Nombre simple repetido en un caso: {owner}")
             if 'Record' in stereotypes:
                 kind = 'record'
-            types[owner] = (kind, compact_type(generics), stereotypes - {'Record', 'Abstract', 'Interface'})
+            types[owner] = (kind, compact_type(generics), stereotypes - {'Record', 'Abstract', 'Interface'}, ())
             continue
         if line.strip() == '}':
             owner = None
@@ -99,7 +99,10 @@ def extract(source, expected):
                        target.rsplit('.', 1)[-1], label or ''))
         if owner is None:
             continue
-        kind, _, stereotypes = types[owner]
+        kind, generics, stereotypes, permitted = types[owner]
+        if line.strip().startswith('permits '):
+            permitted = tuple(sorted(compact_type(item) for item in line.strip()[8:].split(',')))
+            types[owner] = (kind, generics, stereotypes, permitted)
         stereotype = re.fullmatch(r'\s*<<(.*?)>>', line)
         if stereotype:
             stereotypes.add(stereotype[1])
@@ -169,8 +172,8 @@ def comparison(output, report):
             continue
         details.append(f'### {name}\n')
         for label, before, after in (
-            ('Tipos', {str((n, k, g, sorted(s))) for n, (k, g, s) in expected_types.items()},
-             {str((n, k, g, sorted(s))) for n, (k, g, s) in actual_types.items()}),
+            ('Tipos', {str((n, k, g, sorted(s), p)) for n, (k, g, s, p) in expected_types.items()},
+             {str((n, k, g, sorted(s), p)) for n, (k, g, s, p) in actual_types.items()}),
             ('Miembros', expected_members, actual_members),
             ('Relaciones', expected_edges, actual_edges),
         ):

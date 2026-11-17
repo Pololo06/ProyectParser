@@ -8,6 +8,7 @@ public record MethodDto(
         String returnType,
         List<ParameterDto> parameters,
         List<String> modifiers,
-        List<String> typeParameters
+        List<String> typeParameters,
+        com.proyectparser.core.domain.model.SignatureDetails signatureDetails
 ) {
 }

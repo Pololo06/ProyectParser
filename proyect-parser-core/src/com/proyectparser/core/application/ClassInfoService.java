@@ -65,8 +65,9 @@ public class ClassInfoService {
             model.getConstructors().forEach(constructor -> {
                 String visibility = visibilityKeyword(constructor.getModifiers());
                 String prefix = visibility.isEmpty() ? "" : visibility + " ";
-                constructorSignatures.add(prefix + constructor.getName() + "("
-                        + formatParameters(constructor.getParameters()) + ")");
+                constructorSignatures.add(prefix + constructor.getSignatureDetails().genericPrefix()
+                        + constructor.getName() + "(" + formatParameters(constructor.getParameters()) + ")"
+                        + constructor.getSignatureDetails().throwsSuffix());
             });
 
             List<String> getters = new ArrayList<>();
@@ -92,8 +93,10 @@ public class ClassInfoService {
         if (!visibility.isEmpty()) {
             sb.append(visibility).append(" ");
         }
-        sb.append(method.getReturnType()).append(" ").append(method.getName()).append("(")
-                .append(formatParameters(method.getParameters())).append(")");
+        sb.append(method.getSignatureDetails().genericPrefix()).append(method.getReturnType())
+                .append(" ").append(method.getName()).append("(")
+                .append(formatParameters(method.getParameters())).append(")")
+                .append(method.getSignatureDetails().throwsSuffix());
         return sb.toString();
     }
 
